@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:primevue.org)",
+      "mcp__primevue__get_component",
+      "mcp__primevue__get_example",
+      "mcp__primevue__get_component_props",
+      "mcp__primevue__search_components",
+      "mcp__primevue__get_form_components"
+    ]
+  }
+}
