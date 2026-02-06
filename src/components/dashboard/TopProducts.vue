@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
 import { topProducts } from '@/data/mockData'
-
-const formatCurrency = (value: number) => {
-  return '$' + value.toLocaleString()
-}
+import { formatCurrency } from '@/utils/format'
 
 const getInitials = (name: string) => {
   return name

@@ -4,6 +4,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import { recentOrders } from '@/data/mockData'
+import { formatCurrency } from '@/utils/format'
 
 const getStatusSeverity = (status: string) => {
   switch (status) {
@@ -16,10 +17,6 @@ const getStatusSeverity = (status: string) => {
     default:
       return 'info'
   }
-}
-
-const formatCurrency = (value: number) => {
-  return '$' + value.toFixed(2)
 }
 </script>
 

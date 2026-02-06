@@ -1,0 +1,673 @@
+openapi: 3.0.3
+info:
+  title: POS Reports & Analytics API
+  description: API for X-Reading, Z-Reading, sales reports, and VAT summaries
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  # X-Reading
+  /reports/x-reading:
+    post:
+      summary: Generate X-Reading
+      tags: [X-Reading]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [terminal_id]
+              properties:
+                terminal_id:
+                  type: string
+      responses:
+        '201':
+          description: X-Reading generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XReading'
+
+    get:
+      summary: List X-Readings
+      tags: [X-Reading]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: terminal_id
+          in: query
+          schema:
+            type: string
+        - name: shift_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: X-Reading list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XReading'
+
+  # Z-Reading
+  /reports/z-reading:
+    post:
+      summary: Generate Z-Reading
+      tags: [Z-Reading]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [terminal_id, supervisor_pin]
+              properties:
+                terminal_id:
+                  type: string
+                supervisor_pin:
+                  type: string
+                force_duplicate:
+                  type: boolean
+                  description: Override duplicate Z-Reading warning
+      responses:
+        '201':
+          description: Z-Reading generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZReading'
+        '400':
+          description: Duplicate Z-Reading (unless force_duplicate)
+
+    get:
+      summary: List Z-Readings
+      tags: [Z-Reading]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: terminal_id
+          in: query
+          schema:
+            type: string
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Z-Reading list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ZReading'
+
+  /reports/z-reading/{z_counter}:
+    get:
+      summary: Get Z-Reading by counter
+      tags: [Z-Reading]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: z_counter
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: terminal_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Z-Reading found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZReading'
+        '404':
+          description: Not found
+
+  # Daily Sales Report
+  /reports/daily-sales:
+    get:
+      summary: Get daily sales report
+      tags: [Sales Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: terminal_id
+          in: query
+          schema:
+            type: string
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Daily sales report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailySalesReport'
+
+  /reports/sales-summary:
+    get:
+      summary: Get sales summary for date range
+      tags: [Sales Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+      responses:
+        '200':
+          description: Sales summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesSummaryReport'
+
+  # VAT Report
+  /reports/vat-summary:
+    get:
+      summary: Get VAT summary for BIR filing
+      tags: [VAT Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: VAT summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VATSummaryReport'
+
+  # Product Performance
+  /reports/product-performance:
+    get:
+      summary: Get product performance report
+      tags: [Performance Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [quantity, revenue, profit]
+      responses:
+        '200':
+          description: Product performance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPerformanceReport'
+
+  # Cashier Performance
+  /reports/cashier-performance:
+    get:
+      summary: Get cashier performance report
+      tags: [Performance Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cashier performance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashierPerformanceReport'
+
+  # Export
+  /reports/export:
+    post:
+      summary: Export report to PDF/CSV
+      tags: [Export]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [report_type, format]
+              properties:
+                report_type:
+                  type: string
+                  enum: [x-reading, z-reading, daily-sales, vat-summary]
+                report_id:
+                  type: string
+                  format: uuid
+                parameters:
+                  type: object
+                format:
+                  type: string
+                  enum: [pdf, csv]
+      responses:
+        '200':
+          description: Export file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    XReading:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        x_counter:
+          type: integer
+        terminal_id:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        shift_id:
+          type: string
+          format: uuid
+        cashier_id:
+          type: string
+          format: uuid
+        cashier_name:
+          type: string
+        gross_sales:
+          type: number
+        discount_total:
+          type: number
+        net_sales:
+          type: number
+        vatable_sales:
+          type: number
+        vat_amount:
+          type: number
+        vat_exempt_sales:
+          type: number
+        zero_rated_sales:
+          type: number
+        transaction_count:
+          type: integer
+        beginning_or:
+          type: string
+        ending_or:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+
+    ZReading:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        z_counter:
+          type: integer
+        terminal_id:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        beginning_or:
+          type: string
+        ending_or:
+          type: string
+        gross_sales:
+          type: number
+        discount_total:
+          type: number
+        net_sales:
+          type: number
+        vatable_sales:
+          type: number
+        vat_amount:
+          type: number
+        vat_exempt_sales:
+          type: number
+        zero_rated_sales:
+          type: number
+        void_count:
+          type: integer
+        void_amount:
+          type: number
+        refund_count:
+          type: integer
+        refund_amount:
+          type: number
+        transaction_count:
+          type: integer
+        generated_by:
+          type: string
+          format: uuid
+        generated_by_name:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+
+    DailySalesReport:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        gross_sales:
+          type: number
+        discount_total:
+          type: number
+        net_sales:
+          type: number
+        vat_breakdown:
+          $ref: '#/components/schemas/VATBreakdown'
+        transaction_count:
+          type: integer
+        average_ticket:
+          type: number
+        void_count:
+          type: integer
+        refund_count:
+          type: integer
+        hourly_breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              hour:
+                type: integer
+              sales:
+                type: number
+              transaction_count:
+                type: integer
+        payment_breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              method:
+                type: string
+              amount:
+                type: number
+              count:
+                type: integer
+
+    SalesSummaryReport:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        total_gross:
+          type: number
+        total_net:
+          type: number
+        total_vat:
+          type: number
+        total_transactions:
+          type: integer
+        daily_average:
+          type: number
+        breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              period:
+                type: string
+              gross_sales:
+                type: number
+              net_sales:
+                type: number
+              transaction_count:
+                type: integer
+
+    VATBreakdown:
+      type: object
+      properties:
+        vatable_sales:
+          type: number
+        vat_amount:
+          type: number
+        vat_exempt_sales:
+          type: number
+        zero_rated_sales:
+          type: number
+        total_sales:
+          type: number
+
+    VATSummaryReport:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        vatable_sales:
+          type: number
+        output_vat:
+          type: number
+        vat_exempt_sales:
+          type: number
+        zero_rated_sales:
+          type: number
+        sc_pwd_discount:
+          type: number
+        total_sales:
+          type: number
+        transaction_details:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              or_number:
+                type: string
+              vatable:
+                type: number
+              vat:
+                type: number
+              exempt:
+                type: number
+              zero_rated:
+                type: number
+
+    ProductPerformanceReport:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              product_name:
+                type: string
+              category:
+                type: string
+              quantity_sold:
+                type: integer
+              revenue:
+                type: number
+              profit:
+                type: number
+              profit_margin:
+                type: number
+
+    CashierPerformanceReport:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        cashiers:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              transaction_count:
+                type: integer
+              total_sales:
+                type: number
+              average_transaction:
+                type: number
+              void_count:
+                type: integer
+              void_rate:
+                type: number
+              refund_count:
+                type: integer

@@ -1,0 +1,938 @@
+openapi: 3.0.3
+info:
+  title: POS Product & Inventory API
+  description: API for product catalog, variants, stock management, and suppliers
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  # Categories
+  /categories:
+    get:
+      summary: List categories
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: parent_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+    post:
+      summary: Create category
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+
+  # Products
+  /products:
+    get:
+      summary: List products
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: supplier_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search by name or barcode
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+    post:
+      summary: Create product
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      summary: Get product details
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product details with variants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductWithVariants'
+
+    put:
+      summary: Update product
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/barcode/{barcode}:
+    get:
+      summary: Lookup product by barcode
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product variant found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantWithProduct'
+        '404':
+          description: Barcode not found
+
+  # Variants
+  /products/{product_id}/variants:
+    get:
+      summary: List product variants
+      tags: [Variants]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Variant list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductVariant'
+
+    post:
+      summary: Create variant
+      tags: [Variants]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVariantRequest'
+      responses:
+        '201':
+          description: Variant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariant'
+
+  /variants/{id}:
+    put:
+      summary: Update variant
+      tags: [Variants]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVariantRequest'
+      responses:
+        '200':
+          description: Variant updated
+
+  # Stock Movements
+  /variants/{variant_id}/stock:
+    get:
+      summary: Get stock level and recent movements
+      tags: [Stock]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: variant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stock information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockInfo'
+
+  /stock/receive:
+    post:
+      summary: Record stock receipt
+      tags: [Stock]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockReceiveRequest'
+      responses:
+        '201':
+          description: Stock received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+
+  /stock/adjust:
+    post:
+      summary: Adjust stock (inventory correction)
+      tags: [Stock]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustRequest'
+      responses:
+        '201':
+          description: Stock adjusted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+
+  # Suppliers
+  /suppliers:
+    get:
+      summary: List suppliers
+      tags: [Suppliers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Supplier list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Supplier'
+
+    post:
+      summary: Create supplier
+      tags: [Suppliers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupplierRequest'
+      responses:
+        '201':
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+
+  # Alerts
+  /alerts/stock:
+    get:
+      summary: Get low stock alerts
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: acknowledged
+          in: query
+          schema:
+            type: boolean
+        - name: alert_type
+          in: query
+          schema:
+            type: string
+            enum: [low_stock, out_of_stock, expiring_soon, expired]
+      responses:
+        '200':
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockAlert'
+
+  /alerts/{id}/acknowledge:
+    post:
+      summary: Acknowledge alert
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Alert acknowledged
+
+  # Sync
+  /sync/products:
+    get:
+      summary: Get product catalog for terminal sync
+      tags: [Sync]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branch_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product sync data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSyncResponse'
+
+  /sync/stock:
+    post:
+      summary: Upload stock movements from terminal
+      tags: [Sync]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockSyncRequest'
+      responses:
+        '200':
+          description: Sync successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockSyncResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+        is_active:
+          type: boolean
+
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        category_id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+          nullable: true
+        base_price:
+          type: number
+        cost_price:
+          type: number
+        tax_type:
+          type: string
+          enum: [vatable, exempt, zero_rated]
+        has_variants:
+          type: boolean
+        low_stock_threshold:
+          type: integer
+        track_batches:
+          type: boolean
+        is_active:
+          type: boolean
+        image_url:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ProductWithVariants:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductVariant'
+            total_stock:
+              type: integer
+
+    CreateProductRequest:
+      type: object
+      required: [name, category_id, base_price, tax_type]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        base_price:
+          type: number
+          minimum: 0
+        cost_price:
+          type: number
+          minimum: 0
+        tax_type:
+          type: string
+          enum: [vatable, exempt, zero_rated]
+        low_stock_threshold:
+          type: integer
+          minimum: 0
+        track_batches:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateVariantRequest'
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        base_price:
+          type: number
+        cost_price:
+          type: number
+        tax_type:
+          type: string
+          enum: [vatable, exempt, zero_rated]
+        low_stock_threshold:
+          type: integer
+        is_active:
+          type: boolean
+
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        barcode:
+          type: string
+          nullable: true
+        name:
+          type: string
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+        price_override:
+          type: number
+          nullable: true
+        cost_override:
+          type: number
+          nullable: true
+        is_active:
+          type: boolean
+        current_stock:
+          type: integer
+
+    VariantWithProduct:
+      allOf:
+        - $ref: '#/components/schemas/ProductVariant'
+        - type: object
+          properties:
+            product:
+              $ref: '#/components/schemas/Product'
+
+    CreateVariantRequest:
+      type: object
+      required: [name]
+      properties:
+        sku:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+        price_override:
+          type: number
+        cost_override:
+          type: number
+
+    UpdateVariantRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+        price_override:
+          type: number
+        cost_override:
+          type: number
+        is_active:
+          type: boolean
+
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        batch_id:
+          type: string
+          format: uuid
+          nullable: true
+        quantity:
+          type: integer
+        movement_type:
+          type: string
+          enum: [receive, sale, adjustment, transfer_in, transfer_out, return, void]
+        reference_type:
+          type: string
+          nullable: true
+        reference_id:
+          type: string
+          format: uuid
+          nullable: true
+        unit_cost:
+          type: number
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    StockInfo:
+      type: object
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        current_stock:
+          type: integer
+        low_stock_threshold:
+          type: integer
+        is_low_stock:
+          type: boolean
+        recent_movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovement'
+
+    StockReceiveRequest:
+      type: object
+      required: [variant_id, quantity]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        unit_cost:
+          type: number
+        batch_number:
+          type: string
+        expiry_date:
+          type: string
+          format: date
+        supplier_id:
+          type: string
+          format: uuid
+
+    StockAdjustRequest:
+      type: object
+      required: [variant_id, quantity, reason]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          description: Can be positive (add) or negative (subtract)
+        reason:
+          type: string
+
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        contact_person:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        payment_terms:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    CreateSupplierRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        contact_person:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        payment_terms:
+          type: string
+
+    StockAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        variant:
+          $ref: '#/components/schemas/ProductVariant'
+        product:
+          $ref: '#/components/schemas/Product'
+        alert_type:
+          type: string
+          enum: [low_stock, out_of_stock, expiring_soon, expired]
+        current_value:
+          type: number
+        threshold:
+          type: number
+        acknowledged:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    ProductSyncResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductWithVariants'
+        suppliers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Supplier'
+        deleted_ids:
+          type: object
+          properties:
+            categories:
+              type: array
+              items:
+                type: string
+            products:
+              type: array
+              items:
+                type: string
+            variants:
+              type: array
+              items:
+                type: string
+        sync_timestamp:
+          type: string
+          format: date-time
+
+    StockSyncRequest:
+      type: object
+      required: [terminal_id, branch_id, movements]
+      properties:
+        terminal_id:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovement'
+        batches:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              variant_id:
+                type: string
+              batch_number:
+                type: string
+              expiry_date:
+                type: string
+              received_date:
+                type: string
+
+    StockSyncResponse:
+      type: object
+      properties:
+        synced_movement_ids:
+          type: array
+          items:
+            type: string
+        server_movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovement'
+        sync_timestamp:
+          type: string
+          format: date-time
+
+    ProductListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductWithVariants'
+        meta:
+          type: object
+          properties:
+            current_page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer

@@ -2,17 +2,19 @@
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
-import type { Product, ProductStatus } from '@/types'
+import type { DisplayProduct, ProductStatus } from '@/types'
+import { formatCurrency } from '@/utils/format'
 
 const props = defineProps<{
-  product: Product
+  product: DisplayProduct
   selected?: boolean
 }>()
 
 const emit = defineEmits<{
   select: [id: string]
-  edit: [product: Product]
-  delete: [product: Product]
+  view: [product: DisplayProduct]
+  edit: [product: DisplayProduct]
+  delete: [product: DisplayProduct]
 }>()
 
 const getStatusSeverity = (status: ProductStatus) => {
@@ -28,10 +30,6 @@ const getStatusSeverity = (status: ProductStatus) => {
   }
 }
 
-const formatCurrency = (value: number) => {
-  return '$' + value.toFixed(2)
-}
-
 const getInitials = (name: string) => {
   return name
     .split(' ')
@@ -41,11 +39,11 @@ const getInitials = (name: string) => {
     .toUpperCase()
 }
 
-const hasDiscount = (product: Product) => {
+const hasDiscount = (product: DisplayProduct) => {
   return product.cost && product.price > product.cost * 1.5
 }
 
-const getDiscountPercent = (product: Product) => {
+const getDiscountPercent = (product: DisplayProduct) => {
   if (!product.cost || product.cost === 0) return 0
   return Math.round(((product.price - product.cost) / product.price) * 100)
 }
@@ -78,7 +76,7 @@ const getDiscountPercent = (product: Product) => {
         />
       </div>
     </div>
-    <div class="product-card-image">
+    <div class="product-card-image" @click="emit('view', product)">
       <div v-if="!product.image" class="product-card-placeholder">
         {{ getInitials(product.name) }}
       </div>
@@ -90,7 +88,7 @@ const getDiscountPercent = (product: Product) => {
         class="product-card-discount"
       />
     </div>
-    <div class="product-card-content">
+    <div class="product-card-content" @click="emit('view', product)">
       <span class="product-card-category">{{ product.category }}</span>
       <h3 class="product-card-name">{{ product.name }}</h3>
       <span class="product-card-sku">{{ product.sku }}</span>
@@ -115,6 +113,7 @@ const getDiscountPercent = (product: Product) => {
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .product-card:hover {
@@ -130,12 +129,18 @@ const getDiscountPercent = (product: Product) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.375rem;
+  padding: 0.5rem;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   z-index: 10;
+}
+
+.product-card-header :deep(.p-checkbox) {
+  background: var(--p-surface-0);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .product-card-actions {
@@ -151,11 +156,15 @@ const getDiscountPercent = (product: Product) => {
 
 .product-card-image {
   position: relative;
-  aspect-ratio: 4 / 3;
-  background: var(--p-surface-100);
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .product-card-placeholder {
@@ -165,9 +174,9 @@ const getDiscountPercent = (product: Product) => {
 }
 
 .product-card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .product-card-discount {
@@ -182,6 +191,7 @@ const getDiscountPercent = (product: Product) => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  cursor: pointer;
 }
 
 .product-card-category {

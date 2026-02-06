@@ -3,19 +3,17 @@ import { ref } from 'vue'
 import Toolbar from 'primevue/toolbar'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import Menu from 'primevue/menu'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
-import { categories } from '@/types'
 
 const search = defineModel<string>('search', { default: '' })
 const view = defineModel<string>('view', { default: 'grid' })
-const category = defineModel<string | null>('category', { default: null })
 
 const props = defineProps<{
   selectedCount: number
+  activeFilterCount: number
 }>()
 
 const emit = defineEmits<{
@@ -23,10 +21,17 @@ const emit = defineEmits<{
   bulkDelete: []
   bulkActivate: []
   bulkDeactivate: []
+  bulkReceiveStock: []
+  openFilters: []
 }>()
 
 const bulkMenu = ref()
 const bulkMenuItems = ref([
+  {
+    label: 'Receive Stock',
+    icon: 'pi pi-plus',
+    command: () => emit('bulkReceiveStock')
+  },
   {
     label: 'Set Active',
     icon: 'pi pi-check-circle',
@@ -51,11 +56,6 @@ const viewOptions = [
   { icon: 'pi pi-list', value: 'list' }
 ]
 
-const categoryOptions = [
-  { label: 'All Categories', value: null },
-  ...categories.map(c => ({ label: c, value: c }))
-]
-
 const toggleBulkMenu = (event: Event) => {
   bulkMenu.value.toggle(event)
 }
@@ -73,34 +73,12 @@ const toggleBulkMenu = (event: Event) => {
             class="search-input"
           />
         </IconField>
-        <Select
-          v-model="category"
-          :options="categoryOptions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Category"
-          class="category-filter"
-        />
       </div>
-    </template>
-
-    <template #center>
-      <SelectButton
-        v-model="view"
-        :options="viewOptions"
-        optionValue="value"
-        :allowEmpty="false"
-      >
-        <template #option="{ option }">
-          <i :class="option.icon"></i>
-        </template>
-      </SelectButton>
     </template>
 
     <template #end>
       <div class="toolbar-end">
         <template v-if="selectedCount > 0">
-          <span class="selected-count">{{ selectedCount }} selected</span>
           <Button
             label="Bulk Actions"
             icon="pi pi-chevron-down"
@@ -112,7 +90,26 @@ const toggleBulkMenu = (event: Event) => {
           <Menu ref="bulkMenu" :model="bulkMenuItems" :popup="true" />
         </template>
         <Button
-          label="Add Product"
+          icon="pi pi-filter"
+          severity="secondary"
+          outlined
+          :badge="activeFilterCount > 0 ? String(activeFilterCount) : undefined"
+          badgeSeverity="primary"
+          @click="emit('openFilters')"
+          v-tooltip.bottom="'Filters'"
+        />
+        <SelectButton
+          v-model="view"
+          :options="viewOptions"
+          optionValue="value"
+          :allowEmpty="false"
+        >
+          <template #option="{ option }">
+            <i :class="option.icon"></i>
+          </template>
+        </SelectButton>
+        <Button
+          label="Create"
           icon="pi pi-plus"
           @click="emit('add')"
         />
@@ -131,14 +128,12 @@ const toggleBulkMenu = (event: Event) => {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex: 1;
 }
 
 .search-input {
-  width: 250px;
-}
-
-.category-filter {
-  width: 180px;
+  flex: 1;
+  min-width: 200px;
 }
 
 .toolbar-end {
@@ -147,28 +142,29 @@ const toggleBulkMenu = (event: Event) => {
   align-items: center;
 }
 
-.selected-count {
-  font-size: 0.875rem;
-  color: var(--p-text-muted-color);
-  padding-right: 0.5rem;
-}
-
-@media (max-width: 768px) {
-  .toolbar-start {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .search-input,
-  .category-filter {
-    width: 100%;
+@media (max-width: 879.98px) {
+  .product-toolbar {
+    margin-bottom: 1rem;
+    border-radius: 8px;
   }
 
   .product-toolbar :deep(.p-toolbar-start),
   .product-toolbar :deep(.p-toolbar-center),
   .product-toolbar :deep(.p-toolbar-end) {
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .search-input {
+    min-width: 120px;
+  }
+
+  .toolbar-end :deep(.p-button-label) {
+    display: none;
+  }
+
+  .toolbar-end {
+    gap: 0.375rem;
   }
 }
 </style>

@@ -1,4 +1,4 @@
-import type { StatsData, Order, Product, ChartData } from '@/types'
+import type { StatsData, Order, DisplayProduct, ChartData } from '@/types'
 
 export const statsData: StatsData[] = [
   {
@@ -46,7 +46,7 @@ export const recentOrders: Order[] = [
   { id: 'ORD-008', customer: 'Amanda White', date: '2024-01-14 15:20', amount: 199.99, status: 'pending', paymentMethod: 'Credit Card' }
 ]
 
-export const products: Product[] = [
+export const products: DisplayProduct[] = [
   {
     id: 'PROD-001',
     name: 'Wireless Earbuds Pro',
@@ -79,7 +79,8 @@ export const products: Product[] = [
     sold: 189,
     revenue: 2835,
     createdAt: '2024-01-02',
-    updatedAt: '2024-01-14'
+    updatedAt: '2024-01-14',
+    expirationDate: '2025-06-15'
   },
   {
     id: 'PROD-003',
@@ -130,7 +131,8 @@ export const products: Product[] = [
     sold: 128,
     revenue: 3840,
     createdAt: '2024-01-05',
-    updatedAt: '2024-01-11'
+    updatedAt: '2024-01-11',
+    expirationDate: '2026-02-10'
   },
   {
     id: 'PROD-006',
@@ -181,7 +183,8 @@ export const products: Product[] = [
     sold: 210,
     revenue: 5880,
     createdAt: '2024-01-08',
-    updatedAt: '2024-01-15'
+    updatedAt: '2024-01-15',
+    expirationDate: '2026-02-08'
   },
   {
     id: 'PROD-009',
@@ -232,7 +235,8 @@ export const products: Product[] = [
     sold: 156,
     revenue: 2808,
     createdAt: '2024-01-11',
-    updatedAt: '2024-01-13'
+    updatedAt: '2024-01-13',
+    expirationDate: '2026-12-01'
   },
   {
     id: 'PROD-012',
@@ -317,7 +321,8 @@ export const products: Product[] = [
     sold: 180,
     revenue: 4320,
     createdAt: '2024-01-15',
-    updatedAt: '2024-01-15'
+    updatedAt: '2024-01-15',
+    expirationDate: '2026-02-15'
   }
 ]
 

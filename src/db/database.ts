@@ -1595,14 +1595,14 @@ class DatabaseService {
     if (!existingCols.has('transaction_id')) {
       await this.adapter.execute('ALTER TABLE payments ADD COLUMN transaction_id TEXT')
     }
-    if (!existingCols.has('method')) {
-      await this.adapter.execute('ALTER TABLE payments ADD COLUMN method TEXT')
-    }
     if (!existingCols.has('tendered')) {
       await this.adapter.execute('ALTER TABLE payments ADD COLUMN tendered REAL')
     }
     if (!existingCols.has('change_amount')) {
       await this.adapter.execute('ALTER TABLE payments ADD COLUMN change_amount REAL')
+    }
+    if (!existingCols.has('last_four_digits')) {
+      await this.adapter.execute('ALTER TABLE payments ADD COLUMN last_four_digits TEXT')
     }
 
     // Seed default OR series for development

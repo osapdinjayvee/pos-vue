@@ -1,0 +1,809 @@
+openapi: 3.0.3
+info:
+  title: POS Sales & Checkout API
+  description: API for transactions, payments, voids, refunds, and receipts
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  # Transactions
+  /transactions:
+    post:
+      summary: Create transaction (sale)
+      tags: [Transactions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+    get:
+      summary: List transactions
+      tags: [Transactions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shift_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [completed, voided]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+
+  /transactions/{id}:
+    get:
+      summary: Get transaction details
+      tags: [Transactions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transaction with items and payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionDetail'
+
+  /transactions/by-or/{or_number}:
+    get:
+      summary: Find transaction by OR number
+      tags: [Transactions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: or_number
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionDetail'
+        '404':
+          description: Not found
+
+  # Voids
+  /transactions/{id}/void:
+    post:
+      summary: Void a transaction
+      tags: [Voids]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+      responses:
+        '200':
+          description: Transaction voided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Void'
+        '400':
+          description: Cannot void (already voided, has refunds, etc.)
+
+  # Refunds
+  /refunds:
+    post:
+      summary: Process refund
+      tags: [Refunds]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '201':
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+
+  /refunds/{id}:
+    get:
+      summary: Get refund details
+      tags: [Refunds]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Refund details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundDetail'
+
+  # OR Series
+  /or-series/current:
+    get:
+      summary: Get current OR series for terminal
+      tags: [OR Series]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: terminal_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current OR series
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ORSeries'
+
+  /or-series/allocate:
+    post:
+      summary: Allocate new OR series for terminal
+      tags: [OR Series]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [terminal_id, quantity]
+              properties:
+                terminal_id:
+                  type: string
+                quantity:
+                  type: integer
+                  description: How many ORs to allocate
+      responses:
+        '201':
+          description: New OR series allocated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ORSeries'
+
+  # Discounts
+  /discounts:
+    get:
+      summary: List active discounts
+      tags: [Discounts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Discount list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Discount'
+
+  /discounts/validate:
+    post:
+      summary: Validate discount code
+      tags: [Discounts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, cart_total]
+              properties:
+                code:
+                  type: string
+                cart_total:
+                  type: number
+      responses:
+        '200':
+          description: Discount valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+        '400':
+          description: Invalid or expired discount
+
+  # Receipt
+  /receipts/{transaction_id}:
+    get:
+      summary: Get receipt data for transaction
+      tags: [Receipts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receipt data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptData'
+
+  /receipts/refund/{refund_id}:
+    get:
+      summary: Get refund receipt data
+      tags: [Receipts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: refund_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Refund receipt data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundReceiptData'
+
+  # Sync
+  /sync/transactions:
+    post:
+      summary: Upload transactions from terminal
+      tags: [Sync]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionSyncRequest'
+      responses:
+        '200':
+          description: Sync successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionSyncResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    CreateTransactionRequest:
+      type: object
+      required: [items, payments]
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            required: [variant_id, quantity, unit_price]
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 1
+              unit_price:
+                type: number
+              line_discount:
+                type: number
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentInput'
+        discount_type:
+          type: string
+          enum: [senior_citizen, pwd, promo]
+        discount_id_number:
+          type: string
+        discount_id_name:
+          type: string
+        notes:
+          type: string
+
+    PaymentInput:
+      type: object
+      required: [method, amount]
+      properties:
+        method:
+          type: string
+          enum: [cash, card, gcash, maya, other_ewallet]
+        amount:
+          type: number
+        tendered:
+          type: number
+        reference_number:
+          type: string
+        card_last_four:
+          type: string
+        card_type:
+          type: string
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        or_number:
+          type: string
+        shift_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          format: uuid
+          nullable: true
+        subtotal:
+          type: number
+        discount_total:
+          type: number
+        vatable_sales:
+          type: number
+        vat_amount:
+          type: number
+        vat_exempt_sales:
+          type: number
+        zero_rated_sales:
+          type: number
+        total_amount:
+          type: number
+        discount_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [completed, voided]
+        created_at:
+          type: string
+          format: date-time
+
+    TransactionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Transaction'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TransactionItem'
+            payments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Payment'
+            void:
+              $ref: '#/components/schemas/Void'
+            refunds:
+              type: array
+              items:
+                $ref: '#/components/schemas/Refund'
+
+    TransactionItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        variant_name:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+        line_discount:
+          type: number
+        line_total:
+          type: number
+        tax_type:
+          type: string
+          enum: [vatable, exempt, zero_rated]
+        vatable_amount:
+          type: number
+        vat_amount:
+          type: number
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        method:
+          type: string
+        amount:
+          type: number
+        tendered:
+          type: number
+          nullable: true
+        change_amount:
+          type: number
+          nullable: true
+        reference_number:
+          type: string
+          nullable: true
+        card_last_four:
+          type: string
+          nullable: true
+        card_type:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    VoidRequest:
+      type: object
+      required: [reason, supervisor_pin]
+      properties:
+        reason:
+          type: string
+        supervisor_pin:
+          type: string
+
+    Void:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        transaction_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        supervisor_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    RefundRequest:
+      type: object
+      required: [original_transaction_id, items, reason, refund_method, supervisor_pin]
+      properties:
+        original_transaction_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            required: [original_item_id, quantity]
+            properties:
+              original_item_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              return_to_stock:
+                type: boolean
+                default: true
+        reason:
+          type: string
+        refund_method:
+          type: string
+          enum: [cash, card, gcash, maya, store_credit]
+        reference_number:
+          type: string
+        supervisor_pin:
+          type: string
+
+    Refund:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        original_transaction_id:
+          type: string
+          format: uuid
+        refund_or_number:
+          type: string
+        total_refund_amount:
+          type: number
+        reason:
+          type: string
+        supervisor_id:
+          type: string
+          format: uuid
+        refund_method:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    RefundDetail:
+      allOf:
+        - $ref: '#/components/schemas/Refund'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  original_item:
+                    $ref: '#/components/schemas/TransactionItem'
+                  quantity:
+                    type: integer
+                  refund_amount:
+                    type: number
+            original_transaction:
+              $ref: '#/components/schemas/Transaction'
+
+    ORSeries:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        prefix:
+          type: string
+        branch_code:
+          type: string
+        start_number:
+          type: integer
+        end_number:
+          type: integer
+        current_number:
+          type: integer
+        remaining:
+          type: integer
+        usage_percentage:
+          type: number
+        ptu_number:
+          type: string
+        ptu_valid_until:
+          type: string
+          format: date
+        machine_serial:
+          type: string
+        is_active:
+          type: boolean
+
+    Discount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [percentage, fixed_amount, senior_citizen, pwd]
+        value:
+          type: number
+        min_purchase:
+          type: number
+        max_discount:
+          type: number
+          nullable: true
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        requires_id:
+          type: boolean
+
+    ReceiptData:
+      type: object
+      properties:
+        business:
+          type: object
+          properties:
+            name:
+              type: string
+            address:
+              type: string
+            tin:
+              type: string
+            branch_code:
+              type: string
+        transaction:
+          $ref: '#/components/schemas/TransactionDetail'
+        or_series:
+          type: object
+          properties:
+            ptu_number:
+              type: string
+            machine_serial:
+              type: string
+            min_number:
+              type: string
+        cashier:
+          type: object
+          properties:
+            name:
+              type: string
+        formatted:
+          type: string
+          description: Pre-formatted receipt text
+
+    RefundReceiptData:
+      type: object
+      properties:
+        business:
+          type: object
+        refund:
+          $ref: '#/components/schemas/RefundDetail'
+        formatted:
+          type: string
+
+    TransactionSyncRequest:
+      type: object
+      required: [terminal_id, branch_id]
+      properties:
+        terminal_id:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionDetail'
+        voids:
+          type: array
+          items:
+            $ref: '#/components/schemas/Void'
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefundDetail'
+
+    TransactionSyncResponse:
+      type: object
+      properties:
+        synced_transaction_ids:
+          type: array
+          items:
+            type: string
+        synced_void_ids:
+          type: array
+          items:
+            type: string
+        synced_refund_ids:
+          type: array
+          items:
+            type: string
+        or_series_status:
+          type: object
+          properties:
+            current_number:
+              type: integer
+            remaining:
+              type: integer
+            alert:
+              type: boolean
+        sync_timestamp:
+          type: string
+          format: date-time
+
+    TransactionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        meta:
+          type: object
+          properties:
+            current_page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer

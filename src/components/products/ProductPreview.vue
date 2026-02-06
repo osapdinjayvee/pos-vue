@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import Tag from 'primevue/tag'
-import type { Product, ProductStatus } from '@/types'
+import type { DisplayProduct, ProductStatus } from '@/types'
+import { formatCurrency } from '@/utils/format'
 
 const props = defineProps<{
-  product: Partial<Product>
+  product: Partial<DisplayProduct>
+}>()
+
+const emit = defineEmits<{
+  'image-click': []
 }>()
 
 const getStatusSeverity = (status?: ProductStatus) => {
@@ -32,11 +37,6 @@ const getStatusLabel = (status?: ProductStatus) => {
   }
 }
 
-const formatCurrency = (value?: number) => {
-  if (!value) return '$0.00'
-  return '$' + value.toFixed(2)
-}
-
 const getInitials = (name?: string) => {
   if (!name) return '?'
   return name
@@ -50,13 +50,22 @@ const getInitials = (name?: string) => {
 
 <template>
   <div class="product-preview">
-    <h4 class="preview-title">Product Preview</h4>
     <div class="preview-card">
-      <div class="preview-image">
+      <div
+        class="preview-image"
+        :class="{ 'has-image': product.image }"
+        @click="emit('image-click')"
+      >
         <div v-if="!product.image" class="preview-placeholder">
-          {{ getInitials(product.name) }}
+          <i class="pi pi-camera"></i>
+          <span>Click to upload</span>
         </div>
-        <img v-else :src="product.image" :alt="product.name" />
+        <template v-else>
+          <img :src="product.image" :alt="product.name" />
+          <div class="image-overlay">
+            <i class="pi pi-pencil"></i>
+          </div>
+        </template>
         <Tag
           :value="getStatusLabel(product.status)"
           :severity="getStatusSeverity(product.status)"
@@ -83,19 +92,7 @@ const getInitials = (name?: string) => {
 
 <style scoped>
 .product-preview {
-  background: var(--p-surface-50);
-  border-radius: 12px;
-  padding: 1.5rem;
   height: 100%;
-}
-
-.preview-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--p-text-muted-color);
-  margin: 0 0 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .preview-card {
@@ -107,23 +104,71 @@ const getInitials = (name?: string) => {
 
 .preview-image {
   position: relative;
-  aspect-ratio: 1;
-  background: var(--p-surface-100);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  aspect-ratio: 4 / 3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.preview-image:hover {
+  border-color: var(--p-primary-color);
+  box-shadow: 0 0 0 2px var(--p-primary-100);
 }
 
 .preview-placeholder {
-  font-size: 3rem;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--p-surface-400);
+  transition: color 0.2s ease;
+}
+
+.preview-placeholder i {
+  font-size: 2rem;
+}
+
+.preview-placeholder span {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.preview-image:hover .preview-placeholder {
+  color: var(--p-primary-color);
 }
 
 .preview-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.image-overlay i {
+  color: white;
+  font-size: 0.875rem;
+}
+
+.preview-image.has-image:hover .image-overlay {
+  opacity: 1;
 }
 
 .preview-status {
