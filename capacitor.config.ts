@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.pos.app',
   appName: 'POS App',
   webDir: 'dist',
-  bundledWebRuntime: false,
 
   plugins: {
     CapacitorSQLite: {
