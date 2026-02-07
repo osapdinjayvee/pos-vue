@@ -2,7 +2,6 @@
 import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import StatsCard from '@/components/dashboard/StatsCard.vue'
-import RevenueChart from '@/components/dashboard/RevenueChart.vue'
 import SalesChart from '@/components/dashboard/SalesChart.vue'
 import PaymentChart from '@/components/dashboard/PaymentChart.vue'
 import RecentOrders from '@/components/dashboard/RecentOrders.vue'
@@ -33,8 +32,12 @@ const {
   loadDashboard,
   changePeriod,
   ensureFreshData,
-  refreshData
+  refreshData,
+  getPeriodDates
 } = useAnalytics()
+
+// Reactive date range derived from current period
+const periodDates = computed(() => getPeriodDates())
 
 // Derive stats cards from live analytics data
 const liveStatsData = computed<StatsData[]>(() => {
@@ -130,10 +133,12 @@ onMounted(async () => {
       @refresh="refreshData"
     />
 
+    <!-- Row 1: Stats Cards -->
     <div class="stats-row">
       <StatsCard v-for="stat in liveStatsData" :key="stat.label" :data="stat" />
     </div>
 
+    <!-- Row 2: Sales Trend + Period Comparison -->
     <div class="charts-row">
       <SalesTrendChart
         :chartData="salesTrend"
@@ -146,27 +151,29 @@ onMounted(async () => {
       />
     </div>
 
-    <div class="charts-row">
-      <RevenueChart />
-      <PaymentChart />
-    </div>
-
+    <!-- Row 3: Category Breakdown + Payment Methods -->
     <div class="data-row">
-      <SalesChart />
-      <TopProducts />
+      <SalesChart :dateFrom="periodDates.from" :dateTo="periodDates.to" />
+      <PaymentChart :dateFrom="periodDates.from" :dateTo="periodDates.to" />
     </div>
 
+    <!-- Row 4: Top Products + Recent Transactions -->
+    <div class="data-row">
+      <TopProducts :dateFrom="periodDates.from" :dateTo="periodDates.to" />
+      <RecentOrders :dateFrom="periodDates.from" :dateTo="periodDates.to" />
+    </div>
+
+    <!-- Row 5: Inventory, Customers, EIS -->
     <div class="data-row">
       <LowStockList
         @view-product="handleViewProduct"
         @add-stock="handleAddStock"
       />
       <CustomerSummaryWidget />
-      <EISDashboardWidget />
     </div>
 
     <div class="full-width-row">
-      <RecentOrders />
+      <EISDashboardWidget />
     </div>
   </div>
 </template>

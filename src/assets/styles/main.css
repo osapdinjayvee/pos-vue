@@ -51,7 +51,6 @@ html, body {
   height: 100vh;
   transition: margin-left 0.3s ease;
   background: var(--p-surface-50);
-  overflow: hidden;
   width: calc(100% - 280px);
 }
 
@@ -207,7 +206,6 @@ html, body {
   display: grid;
   gap: 1.5rem;
   max-width: 100%;
-  overflow: hidden;
 }
 
 .stats-row {

@@ -50,6 +50,19 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     }
   }
 
+  async function loadMetricsForPeriod(dateFrom: string, dateTo: string, branchId?: string) {
+    isLoading.value = true
+    error.value = null
+    try {
+      todayMetrics.value = await analyticsService.getMetricsForPeriod(dateFrom, dateTo, branchId || selectedBranch.value)
+    } catch (e: any) {
+      error.value = e.message || 'Failed to load period metrics'
+      console.error('Error loading period metrics:', e)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function loadSalesTrend(period?: AnalyticsPeriod, branchId?: string) {
     isLoading.value = true
     error.value = null
@@ -171,6 +184,7 @@ export const useAnalyticsStore = defineStore('analytics', () => {
 
     // Actions
     loadTodayMetrics,
+    loadMetricsForPeriod,
     loadSalesTrend,
     loadPeriodComparison,
     loadDashboard,

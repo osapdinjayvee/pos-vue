@@ -60,8 +60,12 @@ export function useAnalytics() {
 
   async function changePeriod(period: AnalyticsPeriod, dateFrom?: string, dateTo?: string) {
     store.setPeriod(period, dateFrom, dateTo)
-    await store.loadSalesTrend(period)
-    await store.loadPeriodComparison(period)
+    const dates = analyticsService.resolvePeriodDates(period, dateFrom, dateTo)
+    await Promise.all([
+      store.loadMetricsForPeriod(dates.from, dates.to),
+      store.loadSalesTrend(period),
+      store.loadPeriodComparison(period)
+    ])
   }
 
   async function ensureFreshData() {

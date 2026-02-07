@@ -24,17 +24,60 @@ class AnalyticsService {
 
     let sql = `
       SELECT
-        COALESCE(SUM(total), 0) as gross_sales,
-        COALESCE(SUM(total - discount_amount), 0) as net_sales,
+        COALESCE(SUM(total_amount), 0) as gross_sales,
+        COALESCE(SUM(total_amount - discount_total), 0) as net_sales,
         COUNT(*) as transaction_count,
-        CASE WHEN COUNT(*) > 0 THEN SUM(total) / COUNT(*) ELSE 0 END as avg_ticket,
-        COALESCE(SUM(CASE WHEN status = 'void' THEN 1 ELSE 0 END), 0) as void_count,
-        COALESCE(SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END), 0) as refund_count
-      FROM orders
+        CASE WHEN COUNT(*) > 0 THEN SUM(total_amount) / COUNT(*) ELSE 0 END as avg_ticket,
+        COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
+        0 as refund_count
+      FROM transactions
       WHERE date(created_at) = ?
-        AND status IN ('completed', 'void', 'refunded')
+        AND status IN ('completed', 'voided')
     `
     const params: any[] = [today]
+
+    if (branchId) {
+      sql += ' AND branch_id = ?'
+      params.push(branchId)
+    }
+
+    const result = await db.getOne<{
+      gross_sales: number
+      net_sales: number
+      transaction_count: number
+      avg_ticket: number
+      void_count: number
+      refund_count: number
+    }>(sql, params)
+
+    return {
+      grossSales: result?.gross_sales || 0,
+      netSales: result?.net_sales || 0,
+      transactionCount: result?.transaction_count || 0,
+      averageTicket: result?.avg_ticket || 0,
+      voidCount: result?.void_count || 0,
+      refundCount: result?.refund_count || 0,
+      lastUpdated: new Date().toISOString()
+    }
+  }
+
+  /**
+   * Get metrics for an arbitrary date range (period-aware version of getTodayMetrics)
+   */
+  async getMetricsForPeriod(dateFrom: string, dateTo: string, branchId?: string): Promise<TodayMetrics> {
+    let sql = `
+      SELECT
+        COALESCE(SUM(total_amount), 0) as gross_sales,
+        COALESCE(SUM(total_amount - discount_total), 0) as net_sales,
+        COUNT(*) as transaction_count,
+        CASE WHEN COUNT(*) > 0 THEN SUM(total_amount) / COUNT(*) ELSE 0 END as avg_ticket,
+        COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
+        0 as refund_count
+      FROM transactions
+      WHERE date(created_at) >= ? AND date(created_at) <= ?
+        AND status IN ('completed', 'voided')
+    `
+    const params: any[] = [dateFrom, dateTo]
 
     if (branchId) {
       sql += ' AND branch_id = ?'
