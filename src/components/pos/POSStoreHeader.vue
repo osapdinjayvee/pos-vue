@@ -1,53 +1,47 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { vatService } from '@/services/vatService'
 
-defineProps<{
+const props = defineProps<{
   hasTransaction: boolean
+  hasOpenShift?: boolean
   grandTotal: number
   subtotal: number
   discountTotal: number
-  storeName?: string
-  branchName?: string
-  address?: string
-  tin?: string
-  accreditationNo?: string
   terminalId?: string
-  businessDate?: string
+  cashierName?: string
 }>()
 
 function fmt(n: number): string {
   return vatService.formatCurrency(n)
 }
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  const name = props.cashierName || 'Cashier'
+  if (hour < 12) return `Good morning, ${name}!`
+  if (hour < 18) return `Good afternoon, ${name}!`
+  return `Good evening, ${name}!`
+})
 </script>
 
 <template>
-  <!-- Idle: store info -->
-  <div v-if="!hasTransaction" class="shrink-0 text-white" style="background-color: var(--p-primary-color)">
-    <div class="px-5 pt-6 pb-5 text-center">
-      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white m-0">{{ storeName || 'POS Terminal' }}</h1>
-      <p v-if="address" class="text-sm text-white/70 mt-2 mb-0">{{ address }}</p>
+  <!-- Idle + shift open: greeting + stats -->
+  <div v-if="!hasTransaction && hasOpenShift" class="shrink-0 header-idle">
+    <div class="px-6 pt-6 pb-2 text-center">
+      <h2 class="text-2xl font-extrabold text-white m-0 tracking-tight">{{ greeting }}</h2>
+      <p class="text-sm text-white/50 mt-1.5 mb-0">Scan a product to begin</p>
     </div>
 
-    <div class="mx-5 border-t border-white/15"></div>
+    <div class="pb-4"></div>
+  </div>
 
-    <div class="px-5 py-3 flex items-center justify-center gap-4 text-xs text-white/60">
-      <span v-if="tin" class="flex items-center gap-1.5">
-        <i class="pi pi-id-card text-[10px]"></i> {{ tin }}
-      </span>
-      <span v-if="accreditationNo" class="flex items-center gap-1.5">
-        <i class="pi pi-verified text-[10px]"></i> {{ accreditationNo }}
-      </span>
-      <span v-if="terminalId" class="flex items-center gap-1.5">
-        <i class="pi pi-desktop text-[10px]"></i> Terminal {{ terminalId }}
-      </span>
-    </div>
-
-    <div class="mx-5 border-t border-white/15"></div>
-
-    <div class="px-5 py-5 text-center">
+  <!-- Idle + no shift: start prompt -->
+  <div v-else-if="!hasTransaction" class="shrink-0 text-white" style="background-color: #78716c">
+    <div class="px-5 py-6 text-center">
       <div class="inline-flex items-center gap-2.5 text-white/80">
-        <i class="pi pi-barcode text-lg"></i>
-        <span class="text-base font-medium">Scan a product to begin</span>
+        <i class="pi pi-exclamation-triangle text-lg"></i>
+        <span class="text-base font-medium">Start a shift to begin</span>
       </div>
     </div>
   </div>
@@ -68,3 +62,10 @@ function fmt(n: number): string {
     <div v-else class="pb-4"></div>
   </div>
 </template>
+
+<style scoped>
+.header-idle {
+  background: linear-gradient(135deg, var(--p-primary-color) 0%, color-mix(in srgb, var(--p-primary-color) 80%, #000) 100%);
+}
+
+</style>

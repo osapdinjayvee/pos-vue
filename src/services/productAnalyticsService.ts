@@ -5,6 +5,7 @@
  */
 
 import { productDailyRepository } from '@/repositories/productDailyRepository'
+import { analyticsAggregationService } from '@/services/analyticsAggregationService'
 import type {
   TopProductItem,
   CategorySalesItem,
@@ -24,6 +25,7 @@ class ProductAnalyticsService {
     branchId?: string,
     sortBy: 'revenue' | 'quantity' = 'revenue'
   ): Promise<TopProductItem[]> {
+    await analyticsAggregationService.ensureAggregated(dateFrom, dateTo)
     const rows = await productDailyRepository.getTopProducts(dateFrom, dateTo, limit, branchId, sortBy)
 
     return rows.map((row, index) => {
@@ -53,6 +55,7 @@ class ProductAnalyticsService {
     dateTo: string,
     branchId?: string
   ): Promise<CategorySalesItem[]> {
+    await analyticsAggregationService.ensureAggregated(dateFrom, dateTo)
     const rows = await productDailyRepository.getCategorySales(dateFrom, dateTo, branchId)
 
     const totalRevenue = rows.reduce((sum, row) => sum + (row.total_revenue || 0), 0)
@@ -75,6 +78,7 @@ class ProductAnalyticsService {
     velocityThreshold: number = 5,
     branchId?: string
   ): Promise<SlowMoverItem[]> {
+    await analyticsAggregationService.ensureAggregated(dateFrom, dateTo)
     const rows = await productDailyRepository.getSlowMovers(dateFrom, dateTo, velocityThreshold, branchId)
 
     const today = new Date()

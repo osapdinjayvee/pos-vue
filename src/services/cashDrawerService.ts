@@ -69,10 +69,10 @@ class CashDrawerService {
 
     // Get cash sales for this shift (completed transactions with cash payments)
     const cashSalesResult = await db.getOne<{ total: number }>(
-      `SELECT COALESCE(SUM(p.amount), 0) as total
-       FROM payments p
-       INNER JOIN transactions t ON t.id = p.transaction_id
-       WHERE t.shift_id = ? AND t.status = 'completed' AND p.payment_method = 'cash'`,
+      `SELECT COALESCE(SUM(tp.amount), 0) as total
+       FROM transaction_payments tp
+       INNER JOIN transactions t ON t.id = tp.transaction_id
+       WHERE t.shift_id = ? AND t.status = 'completed' AND tp.payment_method = 'cash'`,
       [session.shift_id]
     )
     const cashSales = cashSalesResult?.total || 0
@@ -81,10 +81,10 @@ class CashDrawerService {
     // Voided transactions don't generate cash refunds in this system,
     // but we account for any future refund mechanism
     const cashRefundsResult = await db.getOne<{ total: number }>(
-      `SELECT COALESCE(SUM(p.amount), 0) as total
-       FROM payments p
-       INNER JOIN transactions t ON t.id = p.transaction_id
-       WHERE t.shift_id = ? AND t.status = 'refunded' AND p.payment_method = 'cash'`,
+      `SELECT COALESCE(SUM(tp.amount), 0) as total
+       FROM transaction_payments tp
+       INNER JOIN transactions t ON t.id = tp.transaction_id
+       WHERE t.shift_id = ? AND t.status = 'refunded' AND tp.payment_method = 'cash'`,
       [session.shift_id]
     )
     const cashRefunds = cashRefundsResult?.total || 0

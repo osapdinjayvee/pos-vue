@@ -14,9 +14,9 @@ export const migration006_sync = {
     db.run(`
       CREATE TABLE IF NOT EXISTS sync_queue (
         id TEXT PRIMARY KEY,
-        entity_type TEXT NOT NULL CHECK (entity_type IN ('transaction', 'void', 'refund', 'stock_movement')),
+        entity_type TEXT NOT NULL,
         entity_id TEXT NOT NULL,
-        operation TEXT NOT NULL CHECK (operation IN ('create', 'update')),
+        operation TEXT NOT NULL,
         payload TEXT NOT NULL,
         priority INTEGER DEFAULT 1,
         created_at TEXT NOT NULL,

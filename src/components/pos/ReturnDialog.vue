@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
 import Password from 'primevue/password'
 import Checkbox from 'primevue/checkbox'
@@ -16,6 +15,7 @@ import type { Transaction, TransactionItem } from '@/types/transaction'
 
 const props = defineProps<{
   visible: boolean
+  initialOrNumber?: string
 }>()
 
 const emit = defineEmits<{
@@ -72,6 +72,10 @@ const canProcessReturn = computed(() =>
 watch(() => props.visible, (visible) => {
   if (visible) {
     resetAll()
+    if (props.initialOrNumber) {
+      orNumber.value = props.initialOrNumber
+      handleSearch()
+    }
   }
 })
 
@@ -331,37 +335,48 @@ function close() {
               <div
                 v-for="ri in returnItems"
                 :key="ri.item.id"
-                class="flex items-center gap-4 p-4 rounded-xl border transition-colors"
+                class="rounded-xl border transition-colors p-4"
                 :class="ri.selected ? 'border-red-200 bg-red-50/50' : 'border-neutral-200 bg-white'"
               >
-                <Checkbox v-model="ri.selected" :binary="true" />
+                <!-- Top row: checkbox + product info + price -->
+                <div class="flex items-center gap-3">
+                  <Checkbox v-model="ri.selected" :binary="true" class="shrink-0" />
 
-                <div class="flex-1 min-w-0">
-                  <p class="font-semibold text-sm text-neutral-900 m-0">{{ ri.item.product_name }}</p>
-                  <p v-if="ri.item.variant_name" class="text-xs text-neutral-500 m-0 mt-0.5">{{ ri.item.variant_name }}</p>
-                  <p class="text-xs text-neutral-400 m-0 mt-0.5">
-                    {{ formatCurrency(ri.item.unit_price) }} each &middot; Purchased: {{ ri.item.quantity }}
-                  </p>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-neutral-900 m-0 truncate">{{ ri.item.product_name }}</p>
+                    <p v-if="ri.item.variant_name" class="text-xs text-neutral-500 m-0 mt-0.5 truncate">{{ ri.item.variant_name }}</p>
+                    <p class="text-xs text-neutral-400 m-0 mt-0.5">
+                      {{ formatCurrency(ri.item.unit_price) }} each &middot; Purchased: {{ ri.item.quantity }}
+                    </p>
+                  </div>
+
+                  <span class="font-bold text-sm shrink-0 text-right" :class="ri.selected ? 'text-red-600' : 'text-neutral-400'">
+                    {{ ri.selected ? formatCurrency(ri.item.unit_price * ri.returnQty) : '—' }}
+                  </span>
                 </div>
 
-                <div v-if="ri.selected" class="flex items-center gap-2">
-                  <label class="text-xs text-neutral-500">Qty:</label>
-                  <InputNumber
-                    v-model="ri.returnQty"
-                    :min="1"
-                    :max="ri.item.quantity"
-                    showButtons
-                    buttonLayout="horizontal"
-                    :style="{ width: '8rem' }"
-                    incrementButtonIcon="pi pi-plus"
-                    decrementButtonIcon="pi pi-minus"
-                    size="small"
-                  />
+                <!-- Bottom row: qty adjuster (only when selected) -->
+                <div v-if="ri.selected" class="flex items-center gap-3 mt-3 pt-3 border-t border-red-100 pl-9">
+                  <label class="text-xs font-medium text-neutral-500 shrink-0">Return Qty:</label>
+                  <div class="flex items-center gap-1">
+                    <button
+                      @click="ri.returnQty = Math.max(1, ri.returnQty - 1)"
+                      class="w-10 h-10 rounded-lg bg-neutral-100 text-neutral-700 flex items-center justify-center font-bold text-lg hover:bg-neutral-200 active:scale-95 transition-all cursor-pointer border-none"
+                    >
+                      &minus;
+                    </button>
+                    <span class="w-10 h-10 flex items-center justify-center text-base font-bold tabular-nums text-neutral-900">
+                      {{ ri.returnQty }}
+                    </span>
+                    <button
+                      @click="ri.returnQty = Math.min(ri.item.quantity, ri.returnQty + 1)"
+                      class="w-10 h-10 rounded-lg bg-neutral-100 text-neutral-700 flex items-center justify-center font-bold text-lg hover:bg-neutral-200 active:scale-95 transition-all cursor-pointer border-none"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span class="text-xs text-neutral-400">of {{ ri.item.quantity }}</span>
                 </div>
-
-                <span class="font-bold text-sm min-w-[5rem] text-right" :class="ri.selected ? 'text-red-600' : 'text-neutral-400'">
-                  {{ ri.selected ? formatCurrency(ri.item.unit_price * ri.returnQty) : '—' }}
-                </span>
               </div>
             </div>
           </div>

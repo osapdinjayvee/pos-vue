@@ -1,6 +1,6 @@
 /**
  * SqlJs Adapter - SQLite implementation for browsers using sql.js
- * Uses localStorage for persistence (fallback for when jeep-sqlite fails)
+ * Uses IndexedDB for persistence (supports much larger databases than localStorage)
  */
 
 import initSqlJs from 'sql.js'
@@ -13,7 +13,58 @@ import type {
 } from './DatabaseAdapter'
 import type { Platform } from '../platform'
 
-const DB_STORAGE_KEY = 'pos_database_data'
+const IDB_NAME = 'pos_sqljs'
+const IDB_STORE = 'database'
+const IDB_KEY = 'pos_database_data'
+const LEGACY_STORAGE_KEY = 'pos_database_data'
+
+/**
+ * Simple IndexedDB helpers for storing/loading the database binary
+ */
+function openIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, 1)
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(IDB_STORE)
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function idbGet(key: string): Promise<Uint8Array | null> {
+  const db = await openIDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly')
+    const store = tx.objectStore(IDB_STORE)
+    const request = store.get(key)
+    request.onsuccess = () => {
+      db.close()
+      resolve(request.result ?? null)
+    }
+    request.onerror = () => {
+      db.close()
+      reject(request.error)
+    }
+  })
+}
+
+async function idbPut(key: string, value: Uint8Array): Promise<void> {
+  const db = await openIDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    const store = tx.objectStore(IDB_STORE)
+    const request = store.put(value, key)
+    request.onsuccess = () => {
+      db.close()
+      resolve()
+    }
+    request.onerror = () => {
+      db.close()
+      reject(request.error)
+    }
+  })
+}
 
 /**
  * Transaction context for SqlJs adapter
@@ -54,13 +105,14 @@ class SqlJsTransactionContext implements TransactionContext {
 }
 
 /**
- * SqlJs adapter using sql.js for browser-based SQLite with localStorage persistence
+ * SqlJs adapter using sql.js for browser-based SQLite with IndexedDB persistence
  */
 export class SqlJsAdapter implements DatabaseAdapter {
   private db: SqlJsDatabase | null = null
   private SQL: any = null
   private initialized = false
   private config: DatabaseConfig | null = null
+  private saveTimer: ReturnType<typeof setTimeout> | null = null
 
   async initialize(config: DatabaseConfig): Promise<void> {
     if (this.initialized) return
@@ -73,24 +125,43 @@ export class SqlJsAdapter implements DatabaseAdapter {
         locateFile: (file: string) => `/${file}`
       })
 
-      // Try to load existing database from localStorage
-      const savedData = localStorage.getItem(DB_STORAGE_KEY)
-      if (savedData) {
-        try {
-          const uint8Array = new Uint8Array(JSON.parse(savedData))
-          this.db = new this.SQL.Database(uint8Array)
-          console.log('[SqlJsAdapter] Loaded existing database from storage')
-        } catch (e) {
-          console.warn('[SqlJsAdapter] Failed to load saved database, creating new one')
-          this.db = new this.SQL.Database()
+      // Try to load existing database from IndexedDB
+      let loaded = false
+      try {
+        const savedData = await idbGet(IDB_KEY)
+        if (savedData) {
+          this.db = new this.SQL.Database(new Uint8Array(savedData))
+          loaded = true
+          console.log('[SqlJsAdapter] Loaded existing database from IndexedDB')
         }
-      } else {
+      } catch (e) {
+        console.warn('[SqlJsAdapter] Failed to load from IndexedDB:', e)
+      }
+
+      // Migrate from localStorage if IndexedDB was empty
+      if (!loaded) {
+        try {
+          const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY)
+          if (legacyData) {
+            const uint8Array = new Uint8Array(JSON.parse(legacyData))
+            this.db = new this.SQL.Database(uint8Array)
+            loaded = true
+            console.log('[SqlJsAdapter] Migrated database from localStorage to IndexedDB')
+            // Clean up localStorage after successful migration
+            localStorage.removeItem(LEGACY_STORAGE_KEY)
+          }
+        } catch (e) {
+          console.warn('[SqlJsAdapter] Failed to migrate from localStorage:', e)
+        }
+      }
+
+      if (!loaded) {
         this.db = new this.SQL.Database()
         console.log('[SqlJsAdapter] Created new database')
       }
 
       this.initialized = true
-      this.saveToStorage()
+      await this.saveToStorage()
 
       console.log(`[SqlJsAdapter] Database "${config.name}" initialized successfully`)
     } catch (error) {
@@ -101,7 +172,12 @@ export class SqlJsAdapter implements DatabaseAdapter {
 
   async close(): Promise<void> {
     if (this.db) {
-      this.saveToStorage()
+      // Flush any pending save
+      if (this.saveTimer) {
+        clearTimeout(this.saveTimer)
+        this.saveTimer = null
+      }
+      await this.saveToStorage()
       this.db.close()
       this.db = null
       this.initialized = false
@@ -117,7 +193,7 @@ export class SqlJsAdapter implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized')
 
     this.db.run(sql, params)
-    this.saveToStorage()
+    this.scheduleSave()
 
     return {
       rowsAffected: this.db.getRowsModified(),
@@ -154,12 +230,12 @@ export class SqlJsAdapter implements DatabaseAdapter {
     this.db.run('BEGIN TRANSACTION')
 
     try {
-      const ctx = new SqlJsTransactionContext(this.db, () => this.saveToStorage())
+      const ctx = new SqlJsTransactionContext(this.db, () => this.scheduleSave())
       const result = await fn(ctx)
 
       // Commit transaction
       this.db.run('COMMIT')
-      this.saveToStorage()
+      this.scheduleSave()
 
       return result
     } catch (error) {
@@ -190,7 +266,7 @@ export class SqlJsAdapter implements DatabaseAdapter {
       }
 
       this.db.run('COMMIT')
-      this.saveToStorage()
+      this.scheduleSave()
 
       return results
     } catch (error) {
@@ -212,7 +288,7 @@ export class SqlJsAdapter implements DatabaseAdapter {
     }
 
     this.db = new this.SQL.Database(data)
-    this.saveToStorage()
+    await this.saveToStorage()
 
     console.log('[SqlJsAdapter] Database imported successfully')
   }
@@ -222,16 +298,29 @@ export class SqlJsAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Save database to localStorage
+   * Debounced save - batches rapid writes into a single IndexedDB write
+   * Saves within 100ms of the last write operation
    */
-  private saveToStorage(): void {
+  private scheduleSave(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer)
+    }
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null
+      this.saveToStorage()
+    }, 100)
+  }
+
+  /**
+   * Save database to IndexedDB
+   */
+  private async saveToStorage(): Promise<void> {
     if (!this.db) return
     try {
       const data = this.db.export()
-      const arr = Array.from(data)
-      localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(arr))
+      await idbPut(IDB_KEY, data)
     } catch (error) {
-      console.warn('[SqlJsAdapter] Failed to save database to storage:', error)
+      console.warn('[SqlJsAdapter] Failed to save database to IndexedDB:', error)
     }
   }
 }

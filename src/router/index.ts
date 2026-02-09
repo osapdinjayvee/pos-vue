@@ -6,6 +6,12 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/OnboardingView.vue'),
+      meta: { requiresAuth: false, isOnboarding: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
@@ -26,11 +32,6 @@ const router = createRouter({
           path: '',
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue')
-        },
-        {
-          path: 'orders',
-          name: 'orders',
-          component: () => import('@/views/OrdersView.vue')
         },
         {
           path: 'products',
@@ -217,6 +218,29 @@ const router = createRouter({
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue')
+        },
+        {
+          path: 'orders',
+          name: 'orders',
+          component: () => import('@/views/TransactionsView.vue')
+        },
+        {
+          path: 'discounts',
+          name: 'discounts',
+          component: () => import('@/views/DiscountsView.vue'),
+          meta: { requiresPermission: 'sales.discount' }
+        },
+        {
+          path: 'discounts/new',
+          name: 'discount-create',
+          component: () => import('@/views/DiscountFormView.vue'),
+          meta: { requiresPermission: 'sales.discount' }
+        },
+        {
+          path: 'discounts/:id/edit',
+          name: 'discount-edit',
+          component: () => import('@/views/DiscountFormView.vue'),
+          meta: { requiresPermission: 'sales.discount' }
         }
       ]
     }
@@ -225,6 +249,17 @@ const router = createRouter({
 
 // Navigation guard for authentication
 router.beforeEach((to, from, next) => {
+  // Onboarding gate — must complete before anything else
+  const onboardingComplete = localStorage.getItem('pos_onboarding_complete') === 'true'
+  if (!onboardingComplete && !to.meta.isOnboarding) {
+    next({ name: 'onboarding' })
+    return
+  }
+  if (onboardingComplete && to.meta.isOnboarding) {
+    next({ name: 'login' })
+    return
+  }
+
   const authStore = useAuthStore()
 
   // Initialize auth state if needed
@@ -250,9 +285,15 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // If logged in and trying to access login page, redirect to dashboard
+  // If logged in and trying to access login page, redirect based on role
   if (to.name === 'login' && authStore.isLoggedIn) {
-    next({ name: 'dashboard' })
+    next(authStore.isCashier ? { name: 'pos' } : { name: 'dashboard' })
+    return
+  }
+
+  // Cashiers can only access /pos
+  if (authStore.isLoggedIn && authStore.isCashier && to.name !== 'pos') {
+    next({ name: 'pos' })
     return
   }
 

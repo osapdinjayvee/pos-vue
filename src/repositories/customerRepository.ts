@@ -137,9 +137,9 @@ class CustomerRepository extends BaseRepository<Customer> {
    */
   async getOrderStats(customerId: string): Promise<{ totalOrders: number; totalSpent: number; avgTicket: number; lastVisit: string | null }> {
     const result = await db.getOne<{ total_orders: number; total_spent: number; avg_ticket: number; last_visit: string | null }>(
-      `SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_spent,
-              COALESCE(AVG(total), 0) as avg_ticket, MAX(created_at) as last_visit
-       FROM orders
+      `SELECT COUNT(*) as total_orders, COALESCE(SUM(total_amount), 0) as total_spent,
+              COALESCE(AVG(total_amount), 0) as avg_ticket, MAX(created_at) as last_visit
+       FROM transactions
        WHERE customer_id = ? AND status = 'completed'`,
       [customerId]
     )
@@ -158,12 +158,12 @@ class CustomerRepository extends BaseRepository<Customer> {
     const customer = await this.findById(customerId)
     if (!customer) return null
 
-    let sql = `SELECT o.*, COUNT(oi.id) as item_count
-               FROM orders o
-               LEFT JOIN order_items oi ON oi.order_id = o.id
-               WHERE o.customer_id = ?
-               GROUP BY o.id
-               ORDER BY o.created_at DESC`
+    let sql = `SELECT t.*, COUNT(ti.id) as item_count
+               FROM transactions t
+               LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
+               WHERE t.customer_id = ?
+               GROUP BY t.id
+               ORDER BY t.created_at DESC`
     const params: any[] = [customerId]
 
     if (options?.limit) {
@@ -195,10 +195,10 @@ class CustomerRepository extends BaseRepository<Customer> {
       last_visit: string | null
       first_visit: string | null
     }>(
-      `SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_spent,
-              COALESCE(AVG(total), 0) as avg_ticket, MAX(created_at) as last_visit,
+      `SELECT COUNT(*) as total_orders, COALESCE(SUM(total_amount), 0) as total_spent,
+              COALESCE(AVG(total_amount), 0) as avg_ticket, MAX(created_at) as last_visit,
               MIN(created_at) as first_visit
-       FROM orders
+       FROM transactions
        WHERE customer_id = ? AND status = 'completed'`,
       [customerId]
     )
@@ -232,15 +232,15 @@ class CustomerRepository extends BaseRepository<Customer> {
    */
   async getTopBySpend(limit = 10, dateRange?: { start: string; end: string }): Promise<any[]> {
     let sql = `
-      SELECT c.*, COUNT(o.id) as order_count, COALESCE(SUM(o.total), 0) as total_spent,
-             COALESCE(AVG(o.total), 0) as avg_ticket, MAX(o.created_at) as last_visit
+      SELECT c.*, COUNT(t.id) as order_count, COALESCE(SUM(t.total_amount), 0) as total_spent,
+             COALESCE(AVG(t.total_amount), 0) as avg_ticket, MAX(t.created_at) as last_visit
       FROM ${this.tableName} c
-      LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'completed'
+      LEFT JOIN transactions t ON t.customer_id = c.id AND t.status = 'completed'
     `
     const params: any[] = []
 
     if (dateRange) {
-      sql += ` AND o.created_at >= ? AND o.created_at <= ?`
+      sql += ` AND t.created_at >= ? AND t.created_at <= ?`
       params.push(dateRange.start, dateRange.end)
     }
 
@@ -259,15 +259,15 @@ class CustomerRepository extends BaseRepository<Customer> {
    */
   async getTopByFrequency(limit = 10, dateRange?: { start: string; end: string }): Promise<any[]> {
     let sql = `
-      SELECT c.*, COUNT(o.id) as order_count, COALESCE(SUM(o.total), 0) as total_spent,
-             MAX(o.created_at) as last_visit
+      SELECT c.*, COUNT(t.id) as order_count, COALESCE(SUM(t.total_amount), 0) as total_spent,
+             MAX(t.created_at) as last_visit
       FROM ${this.tableName} c
-      LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'completed'
+      LEFT JOIN transactions t ON t.customer_id = c.id AND t.status = 'completed'
     `
     const params: any[] = []
 
     if (dateRange) {
-      sql += ` AND o.created_at >= ? AND o.created_at <= ?`
+      sql += ` AND t.created_at >= ? AND t.created_at <= ?`
       params.push(dateRange.start, dateRange.end)
     }
 
@@ -290,10 +290,10 @@ class CustomerRepository extends BaseRepository<Customer> {
     const cutoffStr = cutoff.toISOString()
 
     const sql = `
-      SELECT c.*, MAX(o.created_at) as last_visit,
-             COALESCE(SUM(o.total), 0) as total_spent
+      SELECT c.*, MAX(t.created_at) as last_visit,
+             COALESCE(SUM(t.total_amount), 0) as total_spent
       FROM ${this.tableName} c
-      LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'completed'
+      LEFT JOIN transactions t ON t.customer_id = c.id AND t.status = 'completed'
       WHERE c.is_active = 1
       GROUP BY c.id
       HAVING last_visit IS NOT NULL AND last_visit < ?

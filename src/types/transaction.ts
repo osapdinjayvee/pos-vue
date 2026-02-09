@@ -67,6 +67,8 @@ export interface TransactionItem {
   quantity: number
   unit_price: number
   discount: number
+  discount_name: string | null
+  discount_id: string | null
   line_total: number
   tax_type: TaxType
   vatable_sales: number
@@ -88,6 +90,8 @@ export interface TransactionItemInput {
   quantity: number
   unit_price: number
   discount?: number
+  discount_name?: string | null
+  discount_id?: string | null
   line_total: number
   tax_type: TaxType
   vatable_sales?: number
@@ -171,6 +175,7 @@ export interface CartItem {
   variantId?: string
   productName: string
   variantName?: string
+  image?: string
   sku?: string
   barcode?: string
   quantity: number
@@ -178,6 +183,15 @@ export interface CartItem {
   lineTotal: number
   taxType: TaxType
   discount?: number         // Line item discount
+  discountId?: string       // ID of applied promotional discount
+  discountName?: string     // Name for receipt display
+  categoryId?: string       // Product's category for discount eligibility
+  // Wholesale pricing
+  originalPrice?: number    // Regular price (when wholesale is active, unitPrice = wholesale_price)
+  isWholesale?: boolean     // Whether wholesale pricing is currently applied
+  wholesalePrice?: number   // Stored wholesale price for threshold recalculation
+  wholesaleMinQty?: number  // Minimum qty to trigger wholesale
+  autoApplyWholesale?: boolean // Whether to auto-apply on qty change
 }
 
 // Cart totals

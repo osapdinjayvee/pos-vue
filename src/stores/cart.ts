@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { vatService } from '@/services/vatService'
 import type { CartItem, CartTotals, TaxType } from '@/types/transaction'
-import type { DiscountType } from '@/types/discount'
+import type { DiscountType, EligibleDiscount } from '@/types/discount'
 import type { Product, ProductVariant } from '@/types'
 
 // Cart-specific discount application (simpler than the full DiscountApplication)
@@ -22,6 +22,7 @@ export const useCartStore = defineStore('cart', () => {
   const discount = ref<CartDiscount | null>(null)
   const customerId = ref<string | null>(null)
   const notes = ref<string>('')
+  const pendingDiscountItemId = ref<string | null>(null)
 
   // Getters
   const itemCount = computed(() =>
@@ -47,7 +48,7 @@ export const useCartStore = defineStore('cart', () => {
 
     if (discount.value) {
       if (discount.value.type === 'senior_citizen' || discount.value.type === 'pwd') {
-        const discountResult = vatService.applySeniorPWDDiscount(cartItems, 0.20)
+        const discountResult = vatService.applySeniorPWDDiscount(cartItems, discount.value.type)
         discountAmount = discountResult.discountAmount
         vatBreakdown = discountResult.newVATBreakdown
       } else {
@@ -73,6 +74,36 @@ export const useCartStore = defineStore('cart', () => {
 
   const hasDiscount = computed(() => discount.value !== null)
 
+  // Wholesale pricing helpers
+  function shouldApplyWholesale(product: Product, qty: number): boolean {
+    return !!(
+      product.auto_apply_wholesale &&
+      product.wholesale_price != null &&
+      product.wholesale_price > 0 &&
+      product.wholesale_min_qty &&
+      qty >= product.wholesale_min_qty
+    )
+  }
+
+  function recalcWholesale(item: CartItem): void {
+    if (!item.autoApplyWholesale || !item.wholesalePrice || !item.wholesaleMinQty) return
+
+    const shouldBeWholesale = item.quantity >= item.wholesaleMinQty
+
+    if (shouldBeWholesale && !item.isWholesale) {
+      // Switch to wholesale price
+      item.originalPrice = item.originalPrice ?? item.unitPrice
+      item.unitPrice = item.wholesalePrice
+      item.isWholesale = true
+    } else if (!shouldBeWholesale && item.isWholesale && item.originalPrice != null) {
+      // Revert to regular price
+      item.unitPrice = item.originalPrice
+      item.isWholesale = false
+    }
+
+    item.lineTotal = vatService.round(item.unitPrice * item.quantity - (item.discount || 0))
+  }
+
   // Actions
   function addItem(
     product: Product,
@@ -86,12 +117,15 @@ export const useCartStore = defineStore('cart', () => {
       const item = items.value[existingIndex]
       if (item) {
         item.quantity += quantity
+        recalcWholesale(item)
         item.lineTotal = vatService.round(item.unitPrice * item.quantity - (item.discount || 0))
       }
     } else {
       // Add new item
-      const unitPrice = variant?.price_override ?? product.price
+      const basePrice = variant?.price_override ?? product.price
       const taxType = (product.tax_type || 'vatable') as TaxType
+      const isWholesale = shouldApplyWholesale(product, quantity)
+      const unitPrice = isWholesale ? product.wholesale_price! : basePrice
 
       const newItem: CartItem = {
         id: generateItemId(),
@@ -99,13 +133,21 @@ export const useCartStore = defineStore('cart', () => {
         variantId: variant?.id,
         productName: product.name,
         variantName: variant?.name ?? undefined,
+        image: product.image || undefined,
         sku: variant?.sku ?? product.sku ?? '',
         barcode: variant?.barcode ?? product.barcode ?? '',
         unitPrice,
         quantity,
         lineTotal: vatService.round(unitPrice * quantity),
         taxType,
-        discount: 0
+        discount: 0,
+        categoryId: product.category_id,
+        // Wholesale tracking
+        originalPrice: isWholesale ? basePrice : undefined,
+        isWholesale,
+        wholesalePrice: product.wholesale_price ?? undefined,
+        wholesaleMinQty: product.wholesale_min_qty ?? undefined,
+        autoApplyWholesale: !!(product.auto_apply_wholesale && product.wholesale_price)
       }
 
       items.value.push(newItem)
@@ -131,6 +173,17 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     item.quantity = quantity
+    // Recalculate wholesale pricing when quantity changes
+    recalcWholesale(item)
+    // Recalculate promo discount if applied
+    if (item.discountId) {
+      // For percentage-based, the amount changes with qty; for fixed it stays capped
+      // We just keep the existing discount amount, but cap it at the new subtotal
+      const newSubtotal = item.unitPrice * item.quantity
+      if (item.discount && item.discount > newSubtotal) {
+        item.discount = newSubtotal
+      }
+    }
     item.lineTotal = vatService.round(item.unitPrice * item.quantity - (item.discount || 0))
   }
 
@@ -149,6 +202,9 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function removeItem(itemId: string): void {
+    if (pendingDiscountItemId.value === itemId) {
+      pendingDiscountItemId.value = null
+    }
     const index = items.value.findIndex(i => i.id === itemId)
     if (index >= 0) {
       items.value.splice(index, 1)
@@ -161,6 +217,22 @@ export const useCartStore = defineStore('cart', () => {
 
     item.discount = discountAmount
     item.lineTotal = vatService.round(item.unitPrice * item.quantity - discountAmount)
+  }
+
+  function setItemPromoDiscount(itemId: string, eligible: EligibleDiscount | null): void {
+    const item = items.value.find(i => i.id === itemId)
+    if (!item) return
+
+    if (eligible) {
+      item.discountId = eligible.discount.id
+      item.discountName = eligible.discount.name
+      item.discount = eligible.computedAmount
+    } else {
+      item.discountId = undefined
+      item.discountName = undefined
+      item.discount = 0
+    }
+    item.lineTotal = vatService.round(item.unitPrice * item.quantity - (item.discount || 0))
   }
 
   function applyDiscount(discountApplication: CartDiscount): void {
@@ -220,6 +292,7 @@ export const useCartStore = defineStore('cart', () => {
     discount.value = null
     customerId.value = null
     notes.value = ''
+    pendingDiscountItemId.value = null
   }
 
   function getCartData() {
@@ -257,6 +330,7 @@ export const useCartStore = defineStore('cart', () => {
     discount,
     customerId,
     notes,
+    pendingDiscountItemId,
 
     // Getters
     itemCount,
@@ -274,6 +348,7 @@ export const useCartStore = defineStore('cart', () => {
     decrementItemQuantity,
     removeItem,
     setItemDiscount,
+    setItemPromoDiscount,
     applyDiscount,
     removeDiscount,
     applySeniorDiscount,

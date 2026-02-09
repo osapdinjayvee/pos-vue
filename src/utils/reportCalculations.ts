@@ -11,14 +11,14 @@ import type { VATBreakdown, HourlyBreakdown, PaymentBreakdown, CategoryBreakdown
 
 /**
  * Calculate VAT breakdown from sales amounts
- * VAT in Philippines is 12%
  */
 export function calculateVATBreakdown(
   vatableSales: number,
   vatExemptSales: number,
-  zeroRatedSales: number
+  zeroRatedSales: number,
+  vatRate: number = 0.12
 ): VATBreakdown {
-  const vatAmount = vatableSales * 0.12
+  const vatAmount = vatableSales * vatRate
   const totalSales = vatableSales + vatAmount + vatExemptSales + zeroRatedSales
 
   return {
@@ -32,10 +32,9 @@ export function calculateVATBreakdown(
 
 /**
  * Extract VAT from a VAT-inclusive amount
- * Formula: VAT = Amount / 1.12 * 0.12
  */
-export function extractVATFromInclusive(vatInclusiveAmount: number): { netAmount: number; vatAmount: number } {
-  const netAmount = vatInclusiveAmount / 1.12
+export function extractVATFromInclusive(vatInclusiveAmount: number, vatRate: number = 0.12): { netAmount: number; vatAmount: number } {
+  const netAmount = vatInclusiveAmount / (1 + vatRate)
   const vatAmount = vatInclusiveAmount - netAmount
 
   return {
@@ -47,8 +46,8 @@ export function extractVATFromInclusive(vatInclusiveAmount: number): { netAmount
 /**
  * Add VAT to a net amount
  */
-export function addVATToNet(netAmount: number): { grossAmount: number; vatAmount: number } {
-  const vatAmount = netAmount * 0.12
+export function addVATToNet(netAmount: number, vatRate: number = 0.12): { grossAmount: number; vatAmount: number } {
+  const vatAmount = netAmount * vatRate
   const grossAmount = netAmount + vatAmount
 
   return {

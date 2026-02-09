@@ -40,6 +40,14 @@ export const useShiftStore = defineStore('shift', () => {
     error.value = null
 
     try {
+      // Double-check DB for existing open shift (localStorage may be stale)
+      const existingShift = await shiftRepository.findOpenShift(authStore.currentUser.id)
+      if (existingShift) {
+        currentShift.value = toDisplayShift(existingShift)
+        saveState()
+        return { success: false, error: 'You already have an open shift' }
+      }
+
       const shift = await shiftRepository.startShift(
         authStore.currentUser.id,
         authStore.currentUser.branchId,
@@ -68,8 +76,9 @@ export const useShiftStore = defineStore('shift', () => {
     error.value = null
 
     try {
-      const closedShift = await shiftRepository.closeShift(currentShift.value.id, input)
-      const displayShift = toDisplayShift(closedShift)
+      const expectedCash = await shiftRepository.calculateExpectedCash(currentShift.value.id)
+      const closedShift = await shiftRepository.closeShift(currentShift.value.id, input, expectedCash)
+      const displayShift = toDisplayShift(closedShift!)
 
       currentShift.value = null
       clearState()

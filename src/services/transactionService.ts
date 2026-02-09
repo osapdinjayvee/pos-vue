@@ -4,7 +4,8 @@ import { transactionItemRepository } from '@/repositories/transactionItemReposit
 import { paymentRepository } from '@/repositories/paymentRepository'
 import { orSeriesRepository } from '@/repositories/orSeriesRepository'
 import { stockMovementRepository } from '@/repositories/stockMovementRepository'
-import { calculateCartVAT, applySeniorPWDDiscount } from '@/utils/vatCalculator'
+import { calculateCartVAT } from '@/utils/vatCalculator'
+import { vatService } from '@/services/vatService'
 import type {
   Transaction,
   TransactionInput,
@@ -88,8 +89,8 @@ class TransactionService {
         discountIdName = data.discount.idName
 
         if (data.discount.type === 'senior_citizen' || data.discount.type === 'pwd') {
-          // SC/PWD discount: 20% off VATable items, becomes VAT-exempt
-          const discountResult = applySeniorPWDDiscount(cartItems, 0.20)
+          // SC/PWD discount: rate from settings, becomes VAT-exempt
+          const discountResult = vatService.applySeniorPWDDiscount(cartItems, data.discount.type)
           discountTotal = discountResult.discountAmount
           totals = discountResult.newVATBreakdown
         } else {
@@ -154,6 +155,8 @@ class TransactionService {
           unit_price: item.unitPrice,
           line_total: item.lineTotal,
           discount: item.discount || 0,
+          discount_name: item.discountName || null,
+          discount_id: item.discountId || null,
           tax_type: item.taxType,
           vatable_sales: itemVAT.vatableSales,
           vat_amount: itemVAT.vatAmount,
@@ -420,7 +423,7 @@ class TransactionService {
 
     if (discount) {
       if (discount.type === 'senior_citizen' || discount.type === 'pwd') {
-        const discountResult = applySeniorPWDDiscount(cartItems, 0.20)
+        const discountResult = vatService.applySeniorPWDDiscount(cartItems, discount.type)
         discountAmount = discountResult.discountAmount
         vatBreakdown = discountResult.newVATBreakdown
       } else {

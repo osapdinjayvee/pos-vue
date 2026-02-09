@@ -13,6 +13,7 @@ import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import ZReadingDisplay from '@/components/reports/ZReadingDisplay.vue'
 import { useReports } from '@/composables/useReports'
+import { useAuthStore } from '@/stores/auth'
 import { formatCurrency, formatZCounter, getSyncStatusLabel, getSyncStatusSeverity } from '@/utils/reportFormatter'
 import type { DisplayZReading } from '@/types/zReading'
 
@@ -31,6 +32,8 @@ const {
   exportZReadingsCSV,
   printReport
 } = useReports()
+
+const authStore = useAuthStore()
 
 const showReadingDialog = ref(false)
 const selectedReading = ref<DisplayZReading | null>(null)
@@ -61,8 +64,16 @@ async function handleGenerate() {
 }
 
 async function doGenerate(forceDuplicate: boolean) {
-  // TODO: Get actual supervisor from auth context
-  const supervisorId = 'user-admin'
+  const supervisorId = authStore.currentUser?.id
+  if (!supervisorId) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No authenticated user found',
+      life: 4000
+    })
+    return
+  }
 
   const result = await generateZReading(supervisorId, forceDuplicate)
 

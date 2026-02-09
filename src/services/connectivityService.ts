@@ -1,13 +1,16 @@
 /**
  * Connectivity Service
- * Monitors network status using navigator.onLine and optional API ping
+ * Platform-aware network monitoring:
+ * - Web/Electron: navigator.onLine + API ping
+ * - Capacitor native: @capacitor/network plugin for reliable state detection
  */
 
 import { ref, readonly } from 'vue'
 import { DEFAULT_SYNC_CONFIG } from '@/config/sync'
+import { detectPlatform } from '@/db/platform'
 
-const isOnline = ref(navigator.onLine)
-const lastOnlineAt = ref<string | null>(navigator.onLine ? new Date().toISOString() : null)
+const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
+const lastOnlineAt = ref<string | null>(isOnline.value ? new Date().toISOString() : null)
 const lastCheckedAt = ref<string | null>(null)
 
 type ConnectivityCallback = () => void
@@ -15,22 +18,7 @@ type ConnectivityCallback = () => void
 const onOnlineCallbacks: ConnectivityCallback[] = []
 const onOfflineCallbacks: ConnectivityCallback[] = []
 
-/**
- * Initialize connectivity listeners
- * Should be called once on app startup
- */
-function initialize(): void {
-  window.addEventListener('online', handleOnline)
-  window.addEventListener('offline', handleOffline)
-}
-
-/**
- * Clean up connectivity listeners
- */
-function destroy(): void {
-  window.removeEventListener('online', handleOnline)
-  window.removeEventListener('offline', handleOffline)
-}
+let networkListenerHandle: any = null
 
 function handleOnline(): void {
   isOnline.value = true
@@ -48,30 +36,122 @@ function handleOffline(): void {
 }
 
 /**
- * Perform an active connectivity check by pinging the API
- * Falls back to navigator.onLine if ping fails
+ * Initialize connectivity listeners
+ * Uses @capacitor/network on native, navigator events on web
  */
-async function checkConnectivity(): Promise<boolean> {
-  // If browser reports offline, trust it
-  if (!navigator.onLine) {
-    isOnline.value = false
-    lastCheckedAt.value = new Date().toISOString()
-    return false
+async function initialize(): Promise<void> {
+  const platform = detectPlatform()
+
+  if (platform === 'capacitor') {
+    try {
+      const { Network } = await import('@capacitor/network')
+
+      // Get initial status
+      const status = await Network.getStatus()
+      isOnline.value = status.connected
+      if (status.connected) {
+        lastOnlineAt.value = new Date().toISOString()
+      }
+
+      // Listen for changes
+      networkListenerHandle = await Network.addListener('networkStatusChange', (status) => {
+        const wasOnline = isOnline.value
+        if (status.connected && !wasOnline) {
+          handleOnline()
+        } else if (!status.connected && wasOnline) {
+          handleOffline()
+        }
+      })
+
+      console.log(`[ConnectivityService] Capacitor Network plugin initialized (connected: ${status.connected}, type: ${status.connectionType})`)
+    } catch (e) {
+      console.warn('[ConnectivityService] Capacitor Network plugin failed, falling back to navigator:', e)
+      initWebListeners()
+    }
+  } else {
+    initWebListeners()
+  }
+}
+
+function initWebListeners(): void {
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
+  console.log('[ConnectivityService] Web navigator listeners initialized')
+}
+
+/**
+ * Clean up connectivity listeners
+ */
+async function destroy(): Promise<void> {
+  if (networkListenerHandle) {
+    await networkListenerHandle.remove()
+    networkListenerHandle = null
   }
 
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
+}
+
+/**
+ * Perform an active connectivity check by pinging the API.
+ * On Capacitor, also checks native network status first.
+ */
+async function checkConnectivity(): Promise<boolean> {
+  const platform = detectPlatform()
+
+  // On Capacitor, check native network status first
+  if (platform === 'capacitor') {
+    try {
+      const { Network } = await import('@capacitor/network')
+      const status = await Network.getStatus()
+      if (!status.connected) {
+        isOnline.value = false
+        lastCheckedAt.value = new Date().toISOString()
+        return false
+      }
+    } catch {
+      // Fall through to ping check
+    }
+  } else {
+    // If browser reports offline, trust it
+    if (!navigator.onLine) {
+      isOnline.value = false
+      lastCheckedAt.value = new Date().toISOString()
+      return false
+    }
+  }
+
+  // Active ping check
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)
 
-    const response = await fetch(`${DEFAULT_SYNC_CONFIG.apiBaseUrl}/ping`, {
-      method: 'GET',
-      signal: controller.signal
-    })
+    // On Capacitor, use CapacitorHttp for the ping to avoid CORS
+    let online = false
+    if (platform === 'capacitor') {
+      try {
+        const { CapacitorHttp } = await import('@capacitor/core')
+        const response = await CapacitorHttp.request({
+          method: 'GET',
+          url: `${DEFAULT_SYNC_CONFIG.apiBaseUrl}/ping`,
+          connectTimeout: 5000,
+          readTimeout: 5000
+        })
+        online = response.status >= 200 && response.status < 400
+      } catch {
+        online = false
+      }
+    } else {
+      const response = await fetch(`${DEFAULT_SYNC_CONFIG.apiBaseUrl}/ping`, {
+        method: 'GET',
+        signal: controller.signal
+      })
+      clearTimeout(timeout)
+      online = response.ok
+    }
 
-    clearTimeout(timeout)
     lastCheckedAt.value = new Date().toISOString()
 
-    const online = response.ok
     if (online && !isOnline.value) {
       handleOnline()
     } else if (!online && isOnline.value) {
@@ -82,7 +162,10 @@ async function checkConnectivity(): Promise<boolean> {
   } catch {
     lastCheckedAt.value = new Date().toISOString()
     // Network error - might be offline or server down
-    // Keep current navigator.onLine state
+    if (platform === 'capacitor') {
+      // On Capacitor, native status is more reliable than assuming online
+      return isOnline.value
+    }
     isOnline.value = navigator.onLine
     return navigator.onLine
   }

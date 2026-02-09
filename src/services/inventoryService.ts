@@ -418,7 +418,12 @@ class InventoryService {
     const currentStock = await this.getStock(variantId)
     // Get threshold from product - need to fetch it separately
     const product = await import('@/repositories/productRepository').then(m => m.default.findById(variant.product_id))
-    const threshold = product?.low_stock_threshold || 10
+    let fallbackThreshold = 10
+    try {
+      const { useSettingsStore } = await import('@/stores/settings')
+      fallbackThreshold = useSettingsStore().lowStockThreshold
+    } catch { /* use default */ }
+    const threshold = product?.low_stock_threshold || fallbackThreshold
 
     await stockAlertRepository.updateStockLevel(variantId, currentStock, threshold)
 

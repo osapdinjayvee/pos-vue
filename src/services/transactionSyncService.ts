@@ -28,19 +28,19 @@ interface SyncEntityResult {
  */
 async function serializeTransaction(orderId: string): Promise<TransactionPayload | null> {
   const order = await db.getOne<Order>(
-    'SELECT * FROM orders WHERE id = ?',
+    'SELECT * FROM transactions WHERE id = ?',
     [orderId]
   )
 
   if (!order) return null
 
   const items = await db.query(
-    'SELECT * FROM order_items WHERE order_id = ?',
+    'SELECT * FROM transaction_items WHERE transaction_id = ?',
     [orderId]
   )
 
   const payments = await db.query(
-    'SELECT * FROM payments WHERE order_id = ?',
+    'SELECT * FROM transaction_payments WHERE transaction_id = ?',
     [orderId]
   )
 
@@ -72,7 +72,7 @@ async function enqueueTransaction(orderId: string, operation: 'create' | 'update
  */
 async function enqueueVoid(orderId: string): Promise<void> {
   const order = await db.getOne<Order>(
-    'SELECT * FROM orders WHERE id = ?',
+    'SELECT * FROM transactions WHERE id = ?',
     [orderId]
   )
 
@@ -172,7 +172,7 @@ async function uploadBatch(items: SyncQueue[]): Promise<SyncEntityResult[]> {
 async function markTransactionSynced(orderId: string): Promise<void> {
   const now = new Date().toISOString()
   await db.execute(
-    'UPDATE orders SET synced_at = ? WHERE id = ?',
+    'UPDATE transactions SET synced_at = ? WHERE id = ?',
     [now, orderId]
   )
 }

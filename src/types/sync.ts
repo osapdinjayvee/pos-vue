@@ -7,7 +7,7 @@
 // Sync Queue
 // =====================
 
-export type SyncEntityType = 'transaction' | 'void' | 'refund' | 'stock_movement'
+export type SyncEntityType = 'transaction' | 'void' | 'refund' | 'stock_movement' | 'terms_acceptance' | 'activation'
 export type SyncOperation = 'create' | 'update'
 export type SyncQueueStatus = 'pending' | 'syncing' | 'failed' | 'completed'
 export type SyncDirection = 'upload' | 'download'

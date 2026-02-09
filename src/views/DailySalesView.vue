@@ -119,7 +119,7 @@ async function loadDailyReport() {
         otherSales: aggregate.other_sales
       }
     } else {
-      // Calculate from orders directly
+      // Calculate from transactions directly
       const orders = await db.getOne<{
         gross_sales: number
         discount_total: number
@@ -128,10 +128,10 @@ async function loadDailyReport() {
       }>(
         `SELECT
           COALESCE(SUM(subtotal), 0) as gross_sales,
-          COALESCE(SUM(discount_amount), 0) as discount_total,
-          COALESCE(SUM(total), 0) as net_sales,
+          COALESCE(SUM(discount_total), 0) as discount_total,
+          COALESCE(SUM(total_amount), 0) as net_sales,
           COUNT(*) as transaction_count
-         FROM orders
+         FROM transactions
          WHERE date(created_at) = ? AND status = 'completed'`,
         [dateStr]
       )
@@ -163,9 +163,9 @@ async function loadDailyReport() {
     const hourlyRows = await db.query<{ hour: number; sales: number; count: number }>(
       `SELECT
         CAST(strftime('%H', created_at) AS INTEGER) as hour,
-        COALESCE(SUM(total), 0) as sales,
+        COALESCE(SUM(total_amount), 0) as sales,
         COUNT(*) as count
-       FROM orders
+       FROM transactions
        WHERE date(created_at) = ? AND status = 'completed'
        GROUP BY hour
        ORDER BY hour`,
@@ -182,13 +182,13 @@ async function loadDailyReport() {
     const totalSales = salesData.value.netSales || 1
     const paymentRows = await db.query<{ method: string; amount: number; count: number }>(
       `SELECT
-        p.payment_method as method,
-        COALESCE(SUM(p.amount), 0) as amount,
+        tp.payment_method as method,
+        COALESCE(SUM(tp.amount), 0) as amount,
         COUNT(*) as count
-       FROM payments p
-       JOIN orders o ON p.order_id = o.id
-       WHERE date(o.created_at) = ? AND o.status = 'completed' AND p.status = 'completed'
-       GROUP BY p.payment_method
+       FROM transaction_payments tp
+       JOIN transactions t ON tp.transaction_id = t.id
+       WHERE date(t.created_at) = ? AND t.status = 'completed'
+       GROUP BY tp.payment_method
        ORDER BY amount DESC`,
       [dateStr]
     )
@@ -204,13 +204,13 @@ async function loadDailyReport() {
     const categoryRows = await db.query<{ name: string; sales: number; quantity: number }>(
       `SELECT
         COALESCE(c.name, 'Uncategorized') as name,
-        COALESCE(SUM(oi.total), 0) as sales,
-        COALESCE(SUM(oi.quantity), 0) as quantity
-       FROM order_items oi
-       JOIN orders o ON oi.order_id = o.id
-       LEFT JOIN products p ON oi.product_id = p.id
+        COALESCE(SUM(ti.line_total), 0) as sales,
+        COALESCE(SUM(ti.quantity), 0) as quantity
+       FROM transaction_items ti
+       JOIN transactions t ON ti.transaction_id = t.id
+       LEFT JOIN products p ON ti.product_id = p.id
        LEFT JOIN categories c ON p.category_id = c.id
-       WHERE date(o.created_at) = ? AND o.status = 'completed'
+       WHERE date(t.created_at) = ? AND t.status = 'completed'
        GROUP BY c.id
        ORDER BY sales DESC`,
       [dateStr]

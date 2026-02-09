@@ -17,6 +17,7 @@ const DEFAULT_THRESHOLDS: SyncHealthThresholds = {
 }
 
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+let serverReachable = true
 
 /**
  * Update sync health for a terminal
@@ -50,14 +51,15 @@ async function updateHealth(terminalId: string, branchId: string): Promise<void>
 async function sendHeartbeat(terminalId: string): Promise<void> {
   await syncHealthRepository.updateHeartbeat(terminalId)
 
-  if (connectivityService.isOnline.value) {
+  if (connectivityService.isOnline.value && serverReachable) {
     try {
       await httpClient.post('/sync/health/heartbeat', {
         terminal_id: terminalId,
         timestamp: new Date().toISOString()
       })
-    } catch (e) {
-      console.warn('[SyncHealth] Failed to send heartbeat to server:', e)
+    } catch {
+      serverReachable = false
+      console.warn('[SyncHealth] Server unreachable — heartbeat paused until connectivity changes')
     }
   }
 }
@@ -102,16 +104,22 @@ function evaluateStatus(
  */
 function startHeartbeatLoop(terminalId: string, intervalMs: number = 300000): void {
   stopHeartbeatLoop()
+  serverReachable = true
+
+  // Re-enable server calls when connectivity is restored
+  connectivityService.onOnline(() => {
+    serverReachable = true
+  })
 
   // Send initial heartbeat
-  sendHeartbeat(terminalId).catch((e) =>
-    console.error('[SyncHealth] Initial heartbeat failed:', e)
-  )
+  sendHeartbeat(terminalId).catch(() => {
+    // Already handled inside sendHeartbeat
+  })
 
   heartbeatTimer = setInterval(() => {
-    sendHeartbeat(terminalId).catch((e) =>
-      console.error('[SyncHealth] Heartbeat failed:', e)
-    )
+    sendHeartbeat(terminalId).catch(() => {
+      // Already handled inside sendHeartbeat
+    })
   }, intervalMs)
 
   console.log(`[SyncHealth] Heartbeat loop started (interval: ${intervalMs}ms)`)

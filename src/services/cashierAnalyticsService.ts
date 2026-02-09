@@ -27,10 +27,10 @@ class CashierAnalyticsService {
         o.user_id,
         u.first_name || ' ' || u.last_name AS name,
         COUNT(o.id) AS total_transactions,
-        SUM(CASE WHEN o.status = 'completed' THEN o.total ELSE 0 END) AS total_sales,
-        SUM(CASE WHEN o.status = 'void' THEN 1 ELSE 0 END) AS void_count,
-        SUM(CASE WHEN o.status = 'void' THEN o.total ELSE 0 END) AS void_amount
-      FROM orders o
+        SUM(CASE WHEN o.status = 'completed' THEN o.total_amount ELSE 0 END) AS total_sales,
+        SUM(CASE WHEN o.status = 'voided' THEN 1 ELSE 0 END) AS void_count,
+        SUM(CASE WHEN o.status = 'voided' THEN o.total_amount ELSE 0 END) AS void_amount
+      FROM transactions o
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.created_at >= ? AND o.created_at <= ?
         ${branchFilter}
@@ -55,14 +55,14 @@ class CashierAnalyticsService {
 
       const itemSql = `
         SELECT
-          COALESCE(SUM(oi_count.item_count), 0) AS total_items,
+          COALESCE(SUM(ti_count.item_count), 0) AS total_items,
           COUNT(o.id) AS completed_count
-        FROM orders o
+        FROM transactions o
         LEFT JOIN (
-          SELECT order_id, COUNT(*) AS item_count
-          FROM order_items
-          GROUP BY order_id
-        ) oi_count ON o.id = oi_count.order_id
+          SELECT transaction_id, COUNT(*) AS item_count
+          FROM transaction_items
+          GROUP BY transaction_id
+        ) ti_count ON o.id = ti_count.transaction_id
         WHERE o.user_id = ?
           AND o.created_at >= ? AND o.created_at <= ?
           AND o.status = 'completed'
@@ -113,13 +113,13 @@ class CashierAnalyticsService {
       SELECT
         o.id AS transaction_id,
         o.created_at AS date,
-        o.order_number AS or_number,
-        o.total AS amount,
+        o.or_number AS or_number,
+        o.total_amount AS amount,
         o.notes AS reason,
-        (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS item_count
-      FROM orders o
+        (SELECT COUNT(*) FROM transaction_items ti WHERE ti.transaction_id = o.id) AS item_count
+      FROM transactions o
       WHERE o.user_id = ?
-        AND o.status = 'void'
+        AND o.status = 'voided'
         AND o.created_at >= ?
         AND o.created_at <= ?
       ORDER BY o.created_at DESC

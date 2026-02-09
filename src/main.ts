@@ -1,7 +1,26 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
-import Aura from '@primeuix/themes/lara'
+import { definePreset } from '@primeuix/themes'
+import Lara from '@primeuix/themes/lara'
+
+const MyPreset = definePreset(Lara, {
+  semantic: {
+    primary: {
+      50: '#f0f7ff',
+      100: '#e0effe',
+      200: '#b8dafd',
+      300: '#7abffd',
+      400: '#18a0fd',
+      500: '#188afd',
+      600: '#1470d4',
+      700: '#1059ab',
+      800: '#0c4382',
+      900: '#092f5c',
+      950: '#061d3a'
+    }
+  }
+})
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
 import Tooltip from 'primevue/tooltip'
@@ -18,7 +37,7 @@ app.use(createPinia())
 app.use(router)
 app.use(PrimeVue, {
   theme: {
-    preset: Aura,
+    preset: MyPreset,
     options: {
       darkModeSelector: '.app-dark'
     }

@@ -254,3 +254,63 @@ export function requiresIdCapture(discount: Discount | DisplayDiscount): boolean
   const type = discount.type
   return requiresId || type === 'senior_citizen' || type === 'pwd'
 }
+
+// ============================================================
+// Promotional Discount Types (Discount Management Feature)
+// ============================================================
+
+export type PromoDiscountType = 'percentage' | 'fixed_amount'
+
+// Extended discount entity with schedule fields
+export interface PromoDiscount {
+  id: string
+  name: string
+  code: string | null
+  type: PromoDiscountType
+  value: number
+  auto_apply: number            // 0 or 1
+  is_active: number
+  start_date: string | null
+  end_date: string | null
+  start_time: string | null     // HH:MM
+  end_time: string | null       // HH:MM
+  weekdays: string | null       // JSON array [0,1,2...6] (0=Sun)
+  min_purchase: number
+  max_discount: number | null
+  deleted_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PromoDiscountInput {
+  name: string
+  code?: string
+  type: PromoDiscountType
+  value: number
+  auto_apply?: boolean
+  is_active?: boolean
+  start_date?: string | null
+  end_date?: string | null
+  start_time?: string | null
+  end_time?: string | null
+  weekdays?: number[] | null   // [0-6]
+  min_purchase?: number
+  max_discount?: number | null
+  productIds?: string[]
+  categoryIds?: string[]
+}
+
+export interface DiscountScope {
+  id: string
+  discount_id: string
+  product_id: string | null
+  category_id: string | null
+  created_at: string
+}
+
+// Eligibility result for POS
+export interface EligibleDiscount {
+  discount: PromoDiscount
+  computedAmount: number      // Actual amount off for this line item
+  isAutoApply: boolean
+}

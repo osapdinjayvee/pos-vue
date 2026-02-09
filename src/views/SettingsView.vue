@@ -22,11 +22,28 @@ import Column from 'primevue/column'
 import DatePicker from 'primevue/datepicker'
 import EISConfigForm from '@/components/eis/EISConfigForm.vue'
 import { useEIS } from '@/composables/useEIS'
+import { useSettings } from '@/composables/useSettings'
 import { testConnection } from '@/services/eisConnectionTestService'
 import type { EISConfig } from '@/types/eis'
 
 const toast = useToast()
 const activeTab = ref('business')
+
+// Settings composable
+const {
+  loading: settingsLoading,
+  businessConfig,
+  taxConfig,
+  receiptConfig,
+  paymentConfig,
+  systemConfig,
+  loadAll: loadAllSettings,
+  saveBusiness,
+  saveTax,
+  saveReceipt,
+  savePayment,
+  saveSystem
+} = useSettings()
 
 // EIS Configuration
 const { config: eisConfigRef, loadDashboard: loadEISConfig, saveConfig: saveEISConfig } = useEIS()
@@ -71,28 +88,57 @@ async function handleEISTest() {
 
 // Business Information
 const businessInfo = ref({
-  businessName: 'Sample Business Corp.',
-  tradeName: 'Sample Store',
-  tin: '123-456-789-000',
+  businessName: '',
+  tradeName: '',
+  tin: '',
   branchCode: '0001',
-  address: '123 Main Street, Makati City, Metro Manila',
-  city: 'Makati City',
-  province: 'Metro Manila',
-  zipCode: '1200',
-  phone: '+63 2 8888 8888',
-  email: 'info@samplebusiness.com',
-  website: 'www.samplebusiness.com'
+  address: '',
+  city: '',
+  province: '',
+  zipCode: '',
+  phone: '',
+  email: '',
+  website: '',
+  logoUrl: ''
 })
+
+const logoFileInput = ref<HTMLInputElement | null>(null)
+
+function handleLogoUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    toast.add({ severity: 'error', summary: 'Invalid File', detail: 'Please select an image file (PNG, JPG, SVG).', life: 3000 })
+    return
+  }
+
+  if (file.size > 500 * 1024) {
+    toast.add({ severity: 'warn', summary: 'File Too Large', detail: 'Logo should be under 500KB for best performance.', life: 3000 })
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    businessInfo.value.logoUrl = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+}
+
+function removeLogo() {
+  businessInfo.value.logoUrl = ''
+  if (logoFileInput.value) logoFileInput.value.value = ''
+}
 
 // BIR Compliance
 const birCompliance = ref({
-  ptuNumber: 'FP012024-123-456789-00001',
-  ptuValidFrom: new Date('2024-01-15'),
-  ptuValidUntil: new Date('2029-01-14'),
-  machineSerial: 'POS-2024-001',
-  minNumber: 'MIN-123456789',
-  accreditationNumber: 'ACC-2024-12345',
-  dateAccredited: new Date('2024-01-01')
+  ptuNumber: '',
+  ptuValidFrom: null as Date | null,
+  ptuValidUntil: null as Date | null,
+  machineSerial: '',
+  minNumber: '',
+  accreditationNumber: '',
+  dateAccredited: null as Date | null
 })
 
 // OR Series
@@ -125,9 +171,9 @@ const taxTypes = [
 
 // Receipt Settings
 const receiptSettings = ref({
-  headerLine1: 'Sample Business Corp.',
-  headerLine2: '123 Main Street, Makati City',
-  headerLine3: 'TIN: 123-456-789-000',
+  headerLine1: '',
+  headerLine2: '',
+  headerLine3: '',
   footerLine1: 'Thank you for your purchase!',
   footerLine2: 'Please come again.',
   showLogo: true,
@@ -150,7 +196,7 @@ const fontSizeOptions = [
 // Printer Settings
 const printerSettings = ref({
   connectionType: 'usb',
-  printerName: 'EPSON TM-T82',
+  printerName: '',
   ipAddress: '192.168.1.100',
   port: 9100,
   usbDevice: '',
@@ -191,18 +237,15 @@ const cashDrawerPinOptions = [
 ]
 
 const testPrinterConnection = () => {
-  // TODO: Implement printer connection test
   console.log('Testing printer connection...')
   printerSettings.value.isConnected = true
 }
 
 const printTestReceipt = () => {
-  // TODO: Implement test receipt printing
   console.log('Printing test receipt...')
 }
 
 const openCashDrawerTest = () => {
-  // TODO: Implement cash drawer open
   console.log('Opening cash drawer...')
 }
 
@@ -243,7 +286,7 @@ const backupSettings = ref({
   backupTime: new Date(2024, 0, 1, 2, 0), // 02:00 AM
   cloudBackupEnabled: true,
   localBackupEnabled: true,
-  localBackupPath: 'C:\\POS_Backups',
+  localBackupPath: '',
   keepBackupDays: 30,
   lastBackup: '2024-01-15 02:00:00',
   lastBackupSize: '125 MB',
@@ -353,17 +396,281 @@ const saveLoyaltyConfig = async () => {
       min_redemption: loyaltySettings.value.min_redemption,
       is_active: loyaltySettings.value.is_active
     })
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Loyalty settings saved.', life: 3000 })
   } catch (e) {
     console.error('Failed to save loyalty config:', e)
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save loyalty settings.', life: 3000 })
   } finally {
     loyaltyLoading.value = false
   }
 }
 
-const saveSettings = () => {
-  // TODO: Implement save functionality
-  console.log('Saving settings...')
+// Hydrate UI refs from DB config objects
+function hydrateFromDB() {
+  const biz = businessConfig.value
+  if (biz) {
+    businessInfo.value = {
+      businessName: biz.business_name,
+      tradeName: biz.trade_name,
+      tin: biz.tin,
+      branchCode: biz.branch_code,
+      address: biz.address,
+      city: biz.city,
+      province: biz.province,
+      zipCode: biz.zip_code,
+      phone: biz.phone,
+      email: biz.email,
+      website: biz.website,
+      logoUrl: biz.logo_url || ''
+    }
+    birCompliance.value = {
+      ptuNumber: biz.ptu_number,
+      ptuValidFrom: biz.ptu_valid_from ? new Date(biz.ptu_valid_from) : null,
+      ptuValidUntil: biz.ptu_valid_until ? new Date(biz.ptu_valid_until) : null,
+      machineSerial: biz.machine_serial,
+      minNumber: biz.min_number,
+      accreditationNumber: biz.accreditation_number,
+      dateAccredited: biz.date_accredited ? new Date(biz.date_accredited) : null
+    }
+  }
+
+  const tax = taxConfig.value
+  if (tax) {
+    taxSettings.value = {
+      vatRate: tax.vat_rate,
+      defaultTaxType: tax.default_tax_type,
+      seniorCitizenDiscount: tax.senior_citizen_discount,
+      pwdDiscount: tax.pwd_discount,
+      showVatBreakdown: tax.show_vat_breakdown === 1,
+      includeVatInPrice: tax.include_vat_in_price === 1
+    }
+  }
+
+  const rcpt = receiptConfig.value
+  if (rcpt) {
+    receiptSettings.value = {
+      headerLine1: rcpt.header_line1,
+      headerLine2: rcpt.header_line2,
+      headerLine3: rcpt.header_line3,
+      footerLine1: rcpt.footer_line1,
+      footerLine2: rcpt.footer_line2,
+      showLogo: rcpt.show_logo === 1,
+      paperWidth: rcpt.paper_width,
+      fontSize: rcpt.font_size,
+      printDuplicate: rcpt.print_duplicate === 1
+    }
+    printerSettings.value = {
+      connectionType: rcpt.connection_type,
+      printerName: rcpt.printer_name,
+      ipAddress: rcpt.ip_address,
+      port: rcpt.port,
+      usbDevice: rcpt.usb_device,
+      bluetoothDevice: rcpt.bluetooth_device,
+      serialPort: rcpt.serial_port,
+      baudRate: rcpt.baud_rate,
+      isConnected: false,
+      autoCut: rcpt.auto_cut === 1,
+      openCashDrawer: rcpt.open_cash_drawer === 1,
+      cashDrawerPin: rcpt.cash_drawer_pin
+    }
+  }
+
+  const pay = paymentConfig.value
+  if (pay) {
+    paymentMethods.value = {
+      cashEnabled: pay.cash_enabled === 1,
+      cardEnabled: pay.card_enabled === 1,
+      gcashEnabled: pay.gcash_enabled === 1,
+      mayaEnabled: pay.maya_enabled === 1,
+      grabPayEnabled: pay.grab_pay_enabled === 1,
+      bankTransferEnabled: pay.bank_transfer_enabled === 1,
+      checkEnabled: pay.check_enabled === 1
+    }
+  }
+
+  const sys = systemConfig.value
+  if (sys) {
+    systemSettings.value = {
+      offlineModeEnabled: sys.offline_mode_enabled === 1,
+      autoSyncEnabled: sys.auto_sync_enabled === 1,
+      syncInterval: sys.sync_interval,
+      dataRetentionYears: sys.data_retention_years,
+      lowStockThreshold: sys.low_stock_threshold,
+      enableNotifications: sys.enable_notifications === 1,
+      enableSoundAlerts: sys.enable_sound_alerts === 1
+    }
+    backupSettings.value = {
+      ...backupSettings.value,
+      autoBackupEnabled: sys.auto_backup_enabled === 1,
+      backupFrequency: sys.backup_frequency,
+      backupTime: parseBackupTime(sys.backup_time),
+      cloudBackupEnabled: sys.cloud_backup_enabled === 1,
+      localBackupEnabled: sys.local_backup_enabled === 1,
+      localBackupPath: sys.local_backup_path,
+      keepBackupDays: sys.keep_backup_days,
+      encryptBackup: sys.encrypt_backup === 1
+    }
+    syncSettings.value = {
+      ...syncSettings.value,
+      syncStrategy: sys.sync_strategy,
+      conflictResolution: sys.conflict_resolution,
+      syncProducts: sys.sync_products === 1,
+      syncOrders: sys.sync_orders === 1,
+      syncCustomers: sys.sync_customers === 1,
+      syncInventory: sys.sync_inventory === 1
+    }
+  }
 }
+
+function parseBackupTime(timeStr: string): Date {
+  const [hours, minutes] = (timeStr || '02:00').split(':').map(Number)
+  const d = new Date(2024, 0, 1, hours || 2, minutes || 0)
+  return d
+}
+
+function formatBackupTime(date: Date | null): string {
+  if (!date) return '02:00'
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function formatDateForDB(date: Date | null): string {
+  if (!date) return ''
+  return date.toISOString().split('T')[0]
+}
+
+// Per-tab save handlers
+const saveBusinessSettings = async () => {
+  try {
+    await saveBusiness({
+      business_name: businessInfo.value.businessName,
+      trade_name: businessInfo.value.tradeName,
+      tin: businessInfo.value.tin,
+      branch_code: businessInfo.value.branchCode,
+      address: businessInfo.value.address,
+      city: businessInfo.value.city,
+      province: businessInfo.value.province,
+      zip_code: businessInfo.value.zipCode,
+      phone: businessInfo.value.phone,
+      email: businessInfo.value.email,
+      website: businessInfo.value.website,
+      logo_url: businessInfo.value.logoUrl,
+      ptu_number: birCompliance.value.ptuNumber,
+      ptu_valid_from: formatDateForDB(birCompliance.value.ptuValidFrom),
+      ptu_valid_until: formatDateForDB(birCompliance.value.ptuValidUntil),
+      machine_serial: birCompliance.value.machineSerial,
+      min_number: birCompliance.value.minNumber,
+      accreditation_number: birCompliance.value.accreditationNumber,
+      date_accredited: formatDateForDB(birCompliance.value.dateAccredited)
+    })
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Business settings saved.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save business settings.', life: 3000 })
+  }
+}
+
+const saveTaxSettings = async () => {
+  try {
+    await saveTax({
+      vat_rate: taxSettings.value.vatRate,
+      default_tax_type: taxSettings.value.defaultTaxType,
+      senior_citizen_discount: taxSettings.value.seniorCitizenDiscount,
+      pwd_discount: taxSettings.value.pwdDiscount,
+      show_vat_breakdown: taxSettings.value.showVatBreakdown,
+      include_vat_in_price: taxSettings.value.includeVatInPrice
+    })
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Tax settings saved.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save tax settings.', life: 3000 })
+  }
+}
+
+const saveReceiptSettings = async () => {
+  try {
+    await saveReceipt({
+      header_line1: receiptSettings.value.headerLine1,
+      header_line2: receiptSettings.value.headerLine2,
+      header_line3: receiptSettings.value.headerLine3,
+      footer_line1: receiptSettings.value.footerLine1,
+      footer_line2: receiptSettings.value.footerLine2,
+      show_logo: receiptSettings.value.showLogo,
+      paper_width: receiptSettings.value.paperWidth,
+      font_size: receiptSettings.value.fontSize,
+      print_duplicate: receiptSettings.value.printDuplicate,
+      printer_name: printerSettings.value.printerName,
+      connection_type: printerSettings.value.connectionType,
+      ip_address: printerSettings.value.ipAddress,
+      port: printerSettings.value.port,
+      usb_device: printerSettings.value.usbDevice,
+      bluetooth_device: printerSettings.value.bluetoothDevice,
+      serial_port: printerSettings.value.serialPort,
+      baud_rate: printerSettings.value.baudRate,
+      auto_cut: printerSettings.value.autoCut,
+      open_cash_drawer: printerSettings.value.openCashDrawer,
+      cash_drawer_pin: printerSettings.value.cashDrawerPin
+    })
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Receipt & printer settings saved.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save receipt settings.', life: 3000 })
+  }
+}
+
+const savePaymentSettings = async () => {
+  try {
+    await savePayment({
+      cash_enabled: paymentMethods.value.cashEnabled,
+      card_enabled: paymentMethods.value.cardEnabled,
+      gcash_enabled: paymentMethods.value.gcashEnabled,
+      maya_enabled: paymentMethods.value.mayaEnabled,
+      grab_pay_enabled: paymentMethods.value.grabPayEnabled,
+      bank_transfer_enabled: paymentMethods.value.bankTransferEnabled,
+      check_enabled: paymentMethods.value.checkEnabled
+    })
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Payment settings saved.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save payment settings.', life: 3000 })
+  }
+}
+
+const saveSystemSettings = async () => {
+  try {
+    await saveSystem({
+      offline_mode_enabled: systemSettings.value.offlineModeEnabled,
+      auto_sync_enabled: systemSettings.value.autoSyncEnabled,
+      sync_interval: systemSettings.value.syncInterval,
+      data_retention_years: systemSettings.value.dataRetentionYears,
+      low_stock_threshold: systemSettings.value.lowStockThreshold,
+      enable_notifications: systemSettings.value.enableNotifications,
+      enable_sound_alerts: systemSettings.value.enableSoundAlerts,
+      auto_backup_enabled: backupSettings.value.autoBackupEnabled,
+      backup_frequency: backupSettings.value.backupFrequency,
+      backup_time: formatBackupTime(backupSettings.value.backupTime),
+      cloud_backup_enabled: backupSettings.value.cloudBackupEnabled,
+      local_backup_enabled: backupSettings.value.localBackupEnabled,
+      local_backup_path: backupSettings.value.localBackupPath,
+      keep_backup_days: backupSettings.value.keepBackupDays,
+      encrypt_backup: backupSettings.value.encryptBackup,
+      sync_strategy: syncSettings.value.syncStrategy,
+      conflict_resolution: syncSettings.value.conflictResolution,
+      sync_products: syncSettings.value.syncProducts,
+      sync_orders: syncSettings.value.syncOrders,
+      sync_customers: syncSettings.value.syncCustomers,
+      sync_inventory: syncSettings.value.syncInventory
+    })
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'System settings saved.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save system settings.', life: 3000 })
+  }
+}
+
+// Load all settings on mount
+onMounted(async () => {
+  try {
+    await loadAllSettings()
+    hydrateFromDB()
+  } catch (e) {
+    console.error('Failed to load settings:', e)
+  }
+})
 </script>
 
 <template>
@@ -422,6 +729,34 @@ const saveSettings = () => {
                 <h2>Business Information</h2>
                 <p>Your registered business details for BIR compliance</p>
               </div>
+
+              <!-- Store Logo -->
+              <div class="logo-upload-section">
+                <label class="form-label">Store Logo</label>
+                <div class="logo-upload-area">
+                  <div v-if="businessInfo.logoUrl" class="logo-preview">
+                    <img :src="businessInfo.logoUrl" alt="Store logo" class="logo-preview-img" />
+                    <div class="logo-actions">
+                      <Button label="Change" icon="pi pi-image" size="small" severity="secondary" outlined @click="logoFileInput?.click()" />
+                      <Button label="Remove" icon="pi pi-trash" size="small" severity="danger" outlined @click="removeLogo" />
+                    </div>
+                  </div>
+                  <div v-else class="logo-placeholder" @click="logoFileInput?.click()">
+                    <i class="pi pi-image" style="font-size: 2rem; color: var(--p-text-muted-color)"></i>
+                    <span>Click to upload logo</span>
+                    <small>PNG, JPG, or SVG (max 500KB)</small>
+                  </div>
+                  <input
+                    ref="logoFileInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml"
+                    class="hidden"
+                    @change="handleLogoUpload"
+                  />
+                </div>
+              </div>
+
+              <Divider />
 
               <div class="form-grid">
                 <div class="form-group full-width">
@@ -513,7 +848,7 @@ const saveSettings = () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Save Changes" icon="pi pi-save" @click="saveSettings" />
+                <Button label="Save Changes" icon="pi pi-save" @click="saveBusinessSettings" :loading="settingsLoading" />
               </div>
             </div>
           </TabPanel>
@@ -611,7 +946,7 @@ const saveSettings = () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Save Changes" icon="pi pi-save" @click="saveSettings" />
+                <Button label="Save Changes" icon="pi pi-save" @click="saveBusinessSettings" :loading="settingsLoading" />
               </div>
             </div>
           </TabPanel>
@@ -679,7 +1014,7 @@ const saveSettings = () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Save Changes" icon="pi pi-save" @click="saveSettings" />
+                <Button label="Save Changes" icon="pi pi-save" @click="saveTaxSettings" :loading="settingsLoading" />
               </div>
             </div>
           </TabPanel>
@@ -929,7 +1264,7 @@ const saveSettings = () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Save Changes" icon="pi pi-save" @click="saveSettings" />
+                <Button label="Save Changes" icon="pi pi-save" @click="saveReceiptSettings" :loading="settingsLoading" />
                 <Button label="Test Print" icon="pi pi-print" outlined @click="printTestReceipt" />
                 <Button label="Open Drawer" icon="pi pi-inbox" outlined @click="openCashDrawerTest" :disabled="!printerSettings.openCashDrawer" />
               </div>
@@ -1034,10 +1369,25 @@ const saveSettings = () => {
                     </div>
                   </template>
                 </Card>
+
+                <Card class="payment-card">
+                  <template #content>
+                    <div class="payment-item">
+                      <div class="payment-info">
+                        <i class="pi pi-file payment-icon check"></i>
+                        <div>
+                          <h4>Check</h4>
+                          <small>Accept check payments</small>
+                        </div>
+                      </div>
+                      <ToggleSwitch v-model="paymentMethods.checkEnabled" />
+                    </div>
+                  </template>
+                </Card>
               </div>
 
               <div class="action-buttons">
-                <Button label="Save Changes" icon="pi pi-save" @click="saveSettings" />
+                <Button label="Save Changes" icon="pi pi-save" @click="savePaymentSettings" :loading="settingsLoading" />
               </div>
             </div>
           </TabPanel>
@@ -1476,7 +1826,7 @@ const saveSettings = () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Save Changes" icon="pi pi-save" @click="saveSettings" />
+                <Button label="Save Changes" icon="pi pi-save" @click="saveSystemSettings" :loading="settingsLoading" />
                 <Button label="Manage Users" icon="pi pi-users" outlined />
               </div>
             </div>
@@ -1488,6 +1838,67 @@ const saveSettings = () => {
 </template>
 
 <style scoped>
+.logo-upload-section {
+  margin-bottom: 0.5rem;
+}
+
+.logo-upload-section .form-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--p-text-color);
+}
+
+.logo-preview {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.logo-preview-img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--p-surface-200);
+  background: var(--p-surface-50);
+  padding: 0.5rem;
+}
+
+.logo-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.logo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 200px;
+  height: 120px;
+  border: 2px dashed var(--p-surface-300);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--p-text-muted-color);
+}
+
+.logo-placeholder:hover {
+  border-color: var(--p-primary-color);
+  background: var(--p-primary-50);
+}
+
+.logo-placeholder small {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.hidden {
+  display: none;
+}
+
 .settings-page {
   display: flex;
   flex-direction: column;

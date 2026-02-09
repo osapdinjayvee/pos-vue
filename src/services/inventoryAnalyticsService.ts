@@ -5,6 +5,7 @@
  */
 
 import db from '@/db/database'
+import { analyticsAggregationService } from '@/services/analyticsAggregationService'
 import type {
   InventoryOverview,
   ExpiryItem,
@@ -20,6 +21,15 @@ class InventoryAnalyticsService {
    * - Average days of supply (current_stock / avg_daily_sales)
    */
   async getInventoryOverview(branchId?: string): Promise<InventoryOverview> {
+    // Ensure recent data is aggregated (last 30 days)
+    const today = new Date()
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    await analyticsAggregationService.ensureAggregated(
+      thirtyDaysAgo.toISOString().split('T')[0],
+      today.toISOString().split('T')[0]
+    )
+
     // Total inventory value from products table
     let valueSql = `
       SELECT COALESCE(SUM(stock * cost), 0) as total_value
@@ -205,6 +215,7 @@ class InventoryAnalyticsService {
     dateTo: string,
     branchId?: string
   ): Promise<ABCClassification[]> {
+    await analyticsAggregationService.ensureAggregated(dateFrom, dateTo)
     let sql = `
       SELECT
         pd.product_id,

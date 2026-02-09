@@ -5,6 +5,7 @@
 
 import { ref, computed } from 'vue'
 import { useReportStore } from '@/stores/report'
+import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
 import { salesAggregateRepository } from '@/repositories/salesAggregateRepository'
 import { formatCurrency, formatDateMedium, formatZCounter, formatXCounter } from '@/utils/reportFormatter'
@@ -14,6 +15,7 @@ import type { DisplayZReading } from '@/types/zReading'
 
 export function useReports() {
   const store = useReportStore()
+  const authStore = useAuthStore()
   const {
     xReadings,
     zReadings,
@@ -27,8 +29,8 @@ export function useReports() {
     latestZReading
   } = storeToRefs(store)
 
-  // Terminal/Branch context (default values for single-terminal setup)
-  const terminalId = ref('POS-001')
+  // Terminal/Branch context — use auth store's terminal ID for consistency
+  const terminalId = computed(() => authStore.terminalId || 'POS-001')
   const branchId = ref('branch-main')
 
   // Dashboard summary

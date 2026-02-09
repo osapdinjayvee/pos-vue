@@ -4,6 +4,7 @@ import { variantRepository } from '@/repositories/variantRepository'
 import { supplierRepository } from '@/repositories/supplierRepository'
 import { stockMovementRepository } from '@/repositories/stockMovementRepository'
 import { inventoryService } from './inventoryService'
+import { useSettingsStore } from '@/stores/settings'
 import type { Product } from '@/repositories/productRepository'
 import type {
   ProductVariant,
@@ -78,6 +79,14 @@ class ProductService {
   private defaultTerminalId = 'WEB'
   private defaultBranchId = 'main'
 
+  private getDefaultLowStockThreshold(): number {
+    try {
+      return useSettingsStore().lowStockThreshold
+    } catch {
+      return 10
+    }
+  }
+
   /**
    * Create a new product with default variant
    */
@@ -109,7 +118,7 @@ class ProductService {
         category_id: input.category_id,
         price: input.price,
         cost: input.cost || 0,
-        low_stock_threshold: input.low_stock_threshold || 10,
+        low_stock_threshold: input.low_stock_threshold || this.getDefaultLowStockThreshold(),
         status: (input.status as any) || 'active',
         tax_type: (input.tax_type as any) || 'vatable',
         image: input.image || '',

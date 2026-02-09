@@ -152,6 +152,11 @@ export interface ReceiptData {
   customerName?: string
   customerTin?: string
   remarks?: string
+  footerLine1?: string
+  footerLine2?: string
+
+  // VAT display
+  vatRatePercent?: number
 
   // For void/refund
   originalOrNumber?: string

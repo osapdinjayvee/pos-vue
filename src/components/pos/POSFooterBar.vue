@@ -31,6 +31,7 @@ function statusClasses(status: string): string {
     case 'PAYMENT': return 'text-violet-400 bg-violet-400/15'
     case 'VOIDING': return 'text-yellow-400 bg-yellow-400/15'
     case 'OFFLINE': return 'text-red-400 bg-red-400/15'
+    case 'NO SHIFT': return 'text-amber-400 bg-amber-400/15'
     default: return 'text-green-400 bg-green-400/15'
   }
 }

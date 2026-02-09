@@ -41,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
   )
   const userRoles = computed(() => user.value?.roles || [])
   const primaryRole = computed(() => userRoles.value[0]?.name || 'Unknown')
+  const isCashier = computed(() => userRoles.value.some(r => r.code === 'cashier') && !permissions.value.includes('*'))
 
   // Permission checking
   function hasPermission(permission: string): boolean {
@@ -272,6 +273,7 @@ export const useAuthStore = defineStore('auth', () => {
     fullName,
     userRoles,
     primaryRole,
+    isCashier,
 
     // Permission methods
     hasPermission,

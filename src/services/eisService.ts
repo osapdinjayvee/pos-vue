@@ -39,7 +39,7 @@ async function buildPayload(
 
   // Determine payment method from transaction payments
   const payment = await db.getOne<{ method: string }>(
-    `SELECT method FROM payments WHERE transaction_id = ? LIMIT 1`,
+    `SELECT payment_method as method FROM transaction_payments WHERE transaction_id = ? LIMIT 1`,
     [transaction.id]
   )
 
@@ -68,7 +68,7 @@ async function buildPayload(
 /**
  * Enqueue a transaction for EIS submission
  */
-async function enqueueTransaction(transactionId: string): Promise<EISSubmission | null> {
+async function enqueueTransaction(transactionId: string, skipDateCheck: boolean = false): Promise<EISSubmission | null> {
   const enabled = await eisConfigRepository.isEnabled()
   if (!enabled) return null
 
@@ -86,10 +86,12 @@ async function enqueueTransaction(transactionId: string): Promise<EISSubmission 
     return null
   }
 
-  // Check EIS enable date boundary — don't submit historical transactions
-  const config = await eisConfigRepository.getConfig()
-  if (config && transaction.created_at < config.created_at) {
-    return null
+  // Check EIS enable date boundary — don't submit historical transactions (unless backfilling)
+  if (!skipDateCheck) {
+    const config = await eisConfigRepository.getConfig()
+    if (config && transaction.created_at < config.created_at) {
+      return null
+    }
   }
 
   const items = await db.query<TransactionItem>(
@@ -177,13 +179,53 @@ async function getSubmissionForTransaction(transactionId: string): Promise<EISSu
   return await eisSubmissionRepository.findByTransactionId(transactionId)
 }
 
+/**
+ * Backfill historical transactions that have no EIS submission record.
+ * Useful when EIS is enabled after transactions already exist.
+ */
+async function backfillHistorical(
+  dateFrom?: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<number> {
+  const enabled = await eisConfigRepository.isEnabled()
+  if (!enabled) return 0
+
+  let sql = `
+    SELECT t.id
+    FROM transactions t
+    LEFT JOIN eis_submissions es ON es.transaction_id = t.id
+    WHERE t.status = 'completed'
+      AND es.id IS NULL
+  `
+  const params: string[] = []
+
+  if (dateFrom) {
+    sql += ` AND date(t.created_at) >= ?`
+    params.push(dateFrom)
+  }
+
+  sql += ` ORDER BY t.created_at ASC`
+
+  const rows = await db.query<{ id: string }>(sql, params)
+  let enqueued = 0
+
+  for (let i = 0; i < rows.length; i++) {
+    const result = await enqueueTransaction(rows[i].id, true)
+    if (result) enqueued++
+    if (onProgress) onProgress(i + 1, rows.length)
+  }
+
+  return enqueued
+}
+
 export const eisService = {
   buildPayload,
   enqueueTransaction,
   enqueueVoid,
   enqueueRefund,
   isEnabled,
-  getSubmissionForTransaction
+  getSubmissionForTransaction,
+  backfillHistorical
 }
 
 export default eisService

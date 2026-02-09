@@ -1,7 +1,7 @@
 // Payment-related TypeScript type definitions
 
 // Payment methods
-export type PaymentMethod = 'cash' | 'card' | 'gcash' | 'maya' | 'other_ewallet' | 'points'
+export type PaymentMethod = 'cash' | 'card' | 'gcash' | 'maya' | 'other_ewallet' | 'points' | 'grab_pay' | 'bank_transfer' | 'check'
 
 // Refund methods (includes store_credit)
 export type RefundMethod = 'cash' | 'card' | 'gcash' | 'maya' | 'store_credit'
@@ -99,7 +99,10 @@ export const PaymentMethodLabels: Record<PaymentMethod, string> = {
   gcash: 'GCash',
   maya: 'Maya',
   other_ewallet: 'E-Wallet',
-  points: 'Loyalty Points'
+  points: 'Loyalty Points',
+  grab_pay: 'GrabPay',
+  bank_transfer: 'Bank Transfer',
+  check: 'Check'
 }
 
 // Refund method labels

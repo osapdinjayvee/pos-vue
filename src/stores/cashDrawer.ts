@@ -84,8 +84,10 @@ export const useCashDrawerStore = defineStore('cashDrawer', () => {
     denominations: DenominationCountInput[],
     varianceReason?: string
   ): Promise<{ success: boolean; variance?: number; breakdown?: ExpectedCashBreakdown; error?: string }> {
-    if (!currentSession.value) {
-      return { success: false, error: 'No open drawer session' }
+    // If no session or already closed, treat as success (idempotent close)
+    if (!currentSession.value || currentSession.value.status === 'closed') {
+      clearState()
+      return { success: true }
     }
 
     isLoading.value = true
@@ -114,6 +116,11 @@ export const useCashDrawerStore = defineStore('cashDrawer', () => {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to close drawer'
+      // If already closed, treat as success
+      if (message.includes('already closed')) {
+        clearState()
+        return { success: true }
+      }
       error.value = message
       return { success: false, error: message }
     } finally {

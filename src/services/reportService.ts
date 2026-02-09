@@ -24,7 +24,8 @@ class ReportService {
     terminalId: string,
     shiftId: string
   ): Promise<XReadingCalculation> {
-    // Get all completed orders for this shift
+    // Get all completed transactions for this shift
+    // Filter by shift_id only — it uniquely identifies the shift regardless of terminal_id stored
     const salesData = await db.getOne<{
       gross_sales: number
       discount_total: number
@@ -33,16 +34,16 @@ class ReportService {
     }>(
       `SELECT
         COALESCE(SUM(subtotal), 0) as gross_sales,
-        COALESCE(SUM(discount_amount), 0) as discount_total,
-        COALESCE(SUM(total), 0) as net_sales,
+        COALESCE(SUM(discount_total), 0) as discount_total,
+        COALESCE(SUM(total_amount), 0) as net_sales,
         COUNT(*) as transaction_count
-       FROM orders
-       WHERE terminal_id = ? AND shift_id = ?
+       FROM transactions
+       WHERE shift_id = ?
          AND status IN ('completed')`,
-      [terminalId, shiftId]
+      [shiftId]
     )
 
-    // Get VAT breakdown
+    // Get VAT breakdown from transaction-level VAT columns
     const vatData = await db.getOne<{
       vatable_sales: number
       vat_amount: number
@@ -50,16 +51,14 @@ class ReportService {
       zero_rated_sales: number
     }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) / 1.12 as vatable_sales,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) - (COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) / 1.12) as vat_amount,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vat_exempt' THEN oi.total ELSE 0 END), 0) as vat_exempt_sales,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'zero_rated' THEN oi.total ELSE 0 END), 0) as zero_rated_sales
-       FROM order_items oi
-       JOIN orders o ON oi.order_id = o.id
-       JOIN products p ON oi.product_id = p.id
-       WHERE o.terminal_id = ? AND o.shift_id = ?
-         AND o.status IN ('completed')`,
-      [terminalId, shiftId]
+        COALESCE(SUM(vatable_sales), 0) as vatable_sales,
+        COALESCE(SUM(vat_amount), 0) as vat_amount,
+        COALESCE(SUM(vat_exempt_sales), 0) as vat_exempt_sales,
+        COALESCE(SUM(zero_rated_sales), 0) as zero_rated_sales
+       FROM transactions
+       WHERE shift_id = ?
+         AND status IN ('completed')`,
+      [shiftId]
     )
 
     // Get void information
@@ -69,11 +68,11 @@ class ReportService {
     }>(
       `SELECT
         COUNT(*) as void_count,
-        COALESCE(SUM(total), 0) as void_amount
-       FROM orders
-       WHERE terminal_id = ? AND shift_id = ?
-         AND status = 'void'`,
-      [terminalId, shiftId]
+        COALESCE(SUM(total_amount), 0) as void_amount
+       FROM transactions
+       WHERE shift_id = ?
+         AND status = 'voided'`,
+      [shiftId]
     )
 
     // Get OR number range for this shift
@@ -82,12 +81,12 @@ class ReportService {
       ending_or: string
     }>(
       `SELECT
-        MIN(order_number) as beginning_or,
-        MAX(order_number) as ending_or
-       FROM orders
-       WHERE terminal_id = ? AND shift_id = ?
-         AND status IN ('completed', 'void', 'refunded')`,
-      [terminalId, shiftId]
+        MIN(or_number) as beginning_or,
+        MAX(or_number) as ending_or
+       FROM transactions
+       WHERE shift_id = ?
+         AND status IN ('completed', 'voided')`,
+      [shiftId]
     )
 
     return {
@@ -140,8 +139,10 @@ class ReportService {
    */
   async calculateZReading(terminalId: string): Promise<ZReadingCalculation> {
     const today = new Date().toISOString().split('T')[0]
+    const startOfDay = `${today}T00:00:00`
+    const endOfDay = `${today}T23:59:59`
 
-    // Get all completed orders for today
+    // Get all completed transactions for today (range-based for sql.js compatibility)
     const salesData = await db.getOne<{
       gross_sales: number
       discount_total: number
@@ -150,16 +151,16 @@ class ReportService {
     }>(
       `SELECT
         COALESCE(SUM(subtotal), 0) as gross_sales,
-        COALESCE(SUM(discount_amount), 0) as discount_total,
-        COALESCE(SUM(total), 0) as net_sales,
+        COALESCE(SUM(discount_total), 0) as discount_total,
+        COALESCE(SUM(total_amount), 0) as net_sales,
         COUNT(*) as transaction_count
-       FROM orders
-       WHERE terminal_id = ? AND date(created_at) = ?
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
          AND status IN ('completed')`,
-      [terminalId, today]
+      [startOfDay, endOfDay]
     )
 
-    // Get VAT breakdown
+    // Get VAT breakdown from transaction-level columns
     const vatData = await db.getOne<{
       vatable_sales: number
       vat_amount: number
@@ -167,16 +168,14 @@ class ReportService {
       zero_rated_sales: number
     }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) / 1.12 as vatable_sales,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) - (COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) / 1.12) as vat_amount,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vat_exempt' THEN oi.total ELSE 0 END), 0) as vat_exempt_sales,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'zero_rated' THEN oi.total ELSE 0 END), 0) as zero_rated_sales
-       FROM order_items oi
-       JOIN orders o ON oi.order_id = o.id
-       JOIN products p ON oi.product_id = p.id
-       WHERE o.terminal_id = ? AND date(o.created_at) = ?
-         AND o.status IN ('completed')`,
-      [terminalId, today]
+        COALESCE(SUM(vatable_sales), 0) as vatable_sales,
+        COALESCE(SUM(vat_amount), 0) as vat_amount,
+        COALESCE(SUM(vat_exempt_sales), 0) as vat_exempt_sales,
+        COALESCE(SUM(zero_rated_sales), 0) as zero_rated_sales
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
+         AND status IN ('completed')`,
+      [startOfDay, endOfDay]
     )
 
     // Get void information
@@ -186,26 +185,15 @@ class ReportService {
     }>(
       `SELECT
         COUNT(*) as void_count,
-        COALESCE(SUM(total), 0) as void_amount
-       FROM orders
-       WHERE terminal_id = ? AND date(created_at) = ?
-         AND status = 'void'`,
-      [terminalId, today]
+        COALESCE(SUM(total_amount), 0) as void_amount
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
+         AND status = 'voided'`,
+      [startOfDay, endOfDay]
     )
 
-    // Get refund information
-    const refundData = await db.getOne<{
-      refund_count: number
-      refund_amount: number
-    }>(
-      `SELECT
-        COUNT(*) as refund_count,
-        COALESCE(SUM(total), 0) as refund_amount
-       FROM orders
-       WHERE terminal_id = ? AND date(created_at) = ?
-         AND status = 'refunded'`,
-      [terminalId, today]
-    )
+    // Refund not applicable in transactions table (no 'refunded' status)
+    const refundData = { refund_count: 0, refund_amount: 0 }
 
     // Get SC/PWD discount counts
     const discountCounts = await db.getOne<{
@@ -213,12 +201,12 @@ class ReportService {
       pwd_count: number
     }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN discount_reason = 'senior_citizen' THEN 1 ELSE 0 END), 0) as sc_count,
-        COALESCE(SUM(CASE WHEN discount_reason = 'pwd' THEN 1 ELSE 0 END), 0) as pwd_count
-       FROM orders
-       WHERE terminal_id = ? AND date(created_at) = ?
+        COALESCE(SUM(CASE WHEN discount_type = 'senior_citizen' THEN 1 ELSE 0 END), 0) as sc_count,
+        COALESCE(SUM(CASE WHEN discount_type = 'pwd' THEN 1 ELSE 0 END), 0) as pwd_count
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
          AND status IN ('completed')`,
-      [terminalId, today]
+      [startOfDay, endOfDay]
     )
 
     // Get OR number range
@@ -227,12 +215,12 @@ class ReportService {
       ending_or: string
     }>(
       `SELECT
-        MIN(order_number) as beginning_or,
-        MAX(order_number) as ending_or
-       FROM orders
-       WHERE terminal_id = ? AND date(created_at) = ?
-         AND status IN ('completed', 'void', 'refunded')`,
-      [terminalId, today]
+        MIN(or_number) as beginning_or,
+        MAX(or_number) as ending_or
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
+         AND status IN ('completed', 'voided')`,
+      [startOfDay, endOfDay]
     )
 
     // Get beginning balance from previous Z-Reading
@@ -325,8 +313,10 @@ class ReportService {
    */
   async updateDailySalesAggregate(terminalId: string, branchId: string): Promise<void> {
     const today = new Date().toISOString().split('T')[0]
+    const startOfDay = `${today}T00:00:00`
+    const endOfDay = `${today}T23:59:59`
 
-    // Get sales data
+    // Get sales data (no terminal_id filter — single-terminal offline POS)
     const salesData = await db.getOne<{
       gross_sales: number
       discount_total: number
@@ -335,16 +325,16 @@ class ReportService {
     }>(
       `SELECT
         COALESCE(SUM(subtotal), 0) as gross_sales,
-        COALESCE(SUM(discount_amount), 0) as discount_total,
-        COALESCE(SUM(total), 0) as net_sales,
+        COALESCE(SUM(discount_total), 0) as discount_total,
+        COALESCE(SUM(total_amount), 0) as net_sales,
         COUNT(*) as transaction_count
-       FROM orders
-       WHERE terminal_id = ? AND date(created_at) = ?
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
          AND status = 'completed'`,
-      [terminalId, today]
+      [startOfDay, endOfDay]
     )
 
-    // Get VAT breakdown
+    // Get VAT breakdown from transaction-level columns
     const vatData = await db.getOne<{
       vatable_sales: number
       vat_amount: number
@@ -352,30 +342,25 @@ class ReportService {
       zero_rated_sales: number
     }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) / 1.12 as vatable_sales,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) - (COALESCE(SUM(CASE WHEN p.tax_type = 'vatable' THEN oi.total ELSE 0 END), 0) / 1.12) as vat_amount,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'vat_exempt' THEN oi.total ELSE 0 END), 0) as vat_exempt_sales,
-        COALESCE(SUM(CASE WHEN p.tax_type = 'zero_rated' THEN oi.total ELSE 0 END), 0) as zero_rated_sales
-       FROM order_items oi
-       JOIN orders o ON oi.order_id = o.id
-       JOIN products p ON oi.product_id = p.id
-       WHERE o.terminal_id = ? AND date(o.created_at) = ?
-         AND o.status = 'completed'`,
-      [terminalId, today]
+        COALESCE(SUM(vatable_sales), 0) as vatable_sales,
+        COALESCE(SUM(vat_amount), 0) as vat_amount,
+        COALESCE(SUM(vat_exempt_sales), 0) as vat_exempt_sales,
+        COALESCE(SUM(zero_rated_sales), 0) as zero_rated_sales
+       FROM transactions
+       WHERE created_at >= ? AND created_at <= ?
+         AND status = 'completed'`,
+      [startOfDay, endOfDay]
     )
 
-    // Get void/refund data
+    // Get void data
     const voidData = await db.getOne<{ void_count: number; void_amount: number }>(
-      `SELECT COUNT(*) as void_count, COALESCE(SUM(total), 0) as void_amount
-       FROM orders WHERE terminal_id = ? AND date(created_at) = ? AND status = 'void'`,
-      [terminalId, today]
+      `SELECT COUNT(*) as void_count, COALESCE(SUM(total_amount), 0) as void_amount
+       FROM transactions WHERE created_at >= ? AND created_at <= ? AND status = 'voided'`,
+      [startOfDay, endOfDay]
     )
 
-    const refundData = await db.getOne<{ refund_count: number; refund_amount: number }>(
-      `SELECT COUNT(*) as refund_count, COALESCE(SUM(total), 0) as refund_amount
-       FROM orders WHERE terminal_id = ? AND date(created_at) = ? AND status = 'refunded'`,
-      [terminalId, today]
-    )
+    // Refund not applicable in transactions table
+    const refundData = { refund_count: 0, refund_amount: 0 }
 
     // Get payment method breakdown
     const paymentData = await db.getOne<{
@@ -384,14 +369,14 @@ class ReportService {
       other_sales: number
     }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales,
-        COALESCE(SUM(CASE WHEN p.payment_method = 'card' THEN p.amount ELSE 0 END), 0) as card_sales,
-        COALESCE(SUM(CASE WHEN p.payment_method NOT IN ('cash', 'card') THEN p.amount ELSE 0 END), 0) as other_sales
-       FROM payments p
-       JOIN orders o ON p.order_id = o.id
-       WHERE o.terminal_id = ? AND date(o.created_at) = ?
-         AND o.status = 'completed' AND p.status = 'completed'`,
-      [terminalId, today]
+        COALESCE(SUM(CASE WHEN tp.payment_method = 'cash' THEN tp.amount ELSE 0 END), 0) as cash_sales,
+        COALESCE(SUM(CASE WHEN tp.payment_method = 'card' THEN tp.amount ELSE 0 END), 0) as card_sales,
+        COALESCE(SUM(CASE WHEN tp.payment_method NOT IN ('cash', 'card') THEN tp.amount ELSE 0 END), 0) as other_sales
+       FROM transaction_payments tp
+       JOIN transactions t ON tp.transaction_id = t.id
+       WHERE t.created_at >= ? AND t.created_at <= ?
+         AND t.status = 'completed'`,
+      [startOfDay, endOfDay]
     )
 
     const transactionCount = salesData?.transaction_count || 0

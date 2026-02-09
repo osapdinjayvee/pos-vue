@@ -3,16 +3,33 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useDatabase } from '@/composables/useDatabase'
 import { useSync } from '@/composables/useSync'
+import { useSettingsStore } from '@/stores/settings'
 import ProgressSpinner from 'primevue/progressspinner'
 import Toast from 'primevue/toast'
 
 const {  isInitializing, initError, initialize } = useDatabase()
 const { initializeSync, destroySync } = useSync()
+const settingsStore = useSettingsStore()
 const showApp = ref(false)
 
 onMounted(async () => {
   try {
     await initialize()
+    await settingsStore.initialize()
+
+    // Sync onboarding flag from DB to localStorage (non-blocking)
+    try {
+      const { onboardingRepository } = await import('@/repositories/onboardingRepository')
+      const progress = await onboardingRepository.getProgress()
+      if (progress?.is_completed === 1) {
+        localStorage.setItem('pos_onboarding_complete', 'true')
+      } else {
+        localStorage.removeItem('pos_onboarding_complete')
+      }
+    } catch (err) {
+      console.warn('Onboarding check failed, deferring to router guard:', err)
+    }
+
     showApp.value = true
     // Start sync system after database is ready
     initializeSync()

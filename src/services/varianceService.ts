@@ -40,7 +40,7 @@ class VarianceService {
       SELECT
         ds.id as sessionId,
         ds.opened_at as date,
-        u.first_name || ' ' || u.last_name as cashierName,
+        COALESCE(u.first_name || ' ' || u.last_name, 'Unknown') as cashierName,
         ds.user_id as cashierId,
         ds.opening_amount as openingAmount,
         ds.expected_amount as expectedAmount,
@@ -49,7 +49,7 @@ class VarianceService {
         ds.variance_reason as varianceReason,
         ds.shift_id as shiftId
       FROM drawer_sessions ds
-      INNER JOIN users u ON ds.user_id = u.id
+      LEFT JOIN users u ON ds.user_id = u.id
       WHERE ds.status = 'closed'
         AND DATE(ds.opened_at) >= DATE(?)
         AND DATE(ds.opened_at) <= DATE(?)
@@ -70,14 +70,14 @@ class VarianceService {
     const query = `
       SELECT
         ds.user_id as cashierId,
-        u.first_name || ' ' || u.last_name as cashierName,
+        COALESCE(u.first_name || ' ' || u.last_name, 'Unknown') as cashierName,
         COUNT(ds.id) as shiftCount,
         COALESCE(SUM(CASE WHEN ds.variance > 0 THEN ds.variance ELSE 0 END), 0) as totalOver,
         COALESCE(SUM(CASE WHEN ds.variance < 0 THEN ABS(ds.variance) ELSE 0 END), 0) as totalShort,
         COALESCE(SUM(ds.variance), 0) as netVariance,
         COALESCE(AVG(ds.variance), 0) as avgVariancePerShift
       FROM drawer_sessions ds
-      INNER JOIN users u ON ds.user_id = u.id
+      LEFT JOIN users u ON ds.user_id = u.id
       WHERE ds.status = 'closed'
         AND DATE(ds.opened_at) >= DATE(?)
         AND DATE(ds.opened_at) <= DATE(?)
@@ -101,7 +101,7 @@ class VarianceService {
       SELECT
         ds.id as sessionId,
         ds.opened_at as date,
-        u.first_name || ' ' || u.last_name as cashierName,
+        COALESCE(u.first_name || ' ' || u.last_name, 'Unknown') as cashierName,
         ds.user_id as cashierId,
         ds.opening_amount as openingAmount,
         ds.expected_amount as expectedAmount,
@@ -110,7 +110,7 @@ class VarianceService {
         ds.variance_reason as varianceReason,
         ds.shift_id as shiftId
       FROM drawer_sessions ds
-      INNER JOIN users u ON ds.user_id = u.id
+      LEFT JOIN users u ON ds.user_id = u.id
       WHERE ds.status = 'closed'
         AND DATE(ds.opened_at) >= DATE(?)
         AND DATE(ds.opened_at) <= DATE(?)

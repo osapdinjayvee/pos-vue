@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 const props = defineProps<{
   hasTransaction: boolean
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -15,6 +16,7 @@ const inputValue = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 
 function handleKeydown(event: KeyboardEvent) {
+  if (props.disabled) return
   if (event.key === 'Enter') {
     event.preventDefault()
     const val = inputValue.value.trim()
@@ -28,7 +30,9 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 function focus() {
-  inputRef.value?.focus()
+  if (!props.disabled) {
+    inputRef.value?.focus()
+  }
 }
 
 defineExpose({ focus })
@@ -37,14 +41,18 @@ defineExpose({ focus })
 <template>
   <div class="mt-auto shrink-0 border-t border-neutral-200">
     <!-- Barcode input -->
-    <div class="p-3 sm:p-4 bg-neutral-100">
+    <div class="p-4 bg-neutral-100">
       <div class="relative">
-        <i class="pi pi-barcode absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-lg"></i>
+        <i class="pi pi-barcode absolute left-3 top-1/2 -translate-y-1/2 text-lg" :class="disabled ? 'text-neutral-300' : 'text-neutral-400'"></i>
         <input
           ref="inputRef"
           v-model="inputValue"
-          class="w-full h-12 sm:h-14 pl-10 pr-4 text-base sm:text-lg font-medium rounded-xl border border-neutral-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
-          placeholder="Scan barcode or type SKU..."
+          class="w-full h-14 pl-10 pr-4 text-base sm:text-lg font-medium rounded-xl border outline-none transition-colors"
+          :class="disabled
+            ? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed'
+            : 'border-neutral-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'"
+          :placeholder="disabled ? 'Start a shift to scan...' : 'Scan barcode or type SKU...'"
+          :disabled="disabled"
           @keydown="handleKeydown"
         />
       </div>
@@ -53,25 +61,25 @@ defineExpose({ focus })
     <!-- Void (1/4) | Hold (1/4) | Tender (2/4) -->
     <div class="flex">
       <button
-        class="w-1/4 h-12 sm:h-14 flex items-center justify-center gap-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all cursor-pointer"
-        :class="{ '!opacity-35 !cursor-not-allowed': !hasTransaction }"
-        :disabled="!hasTransaction"
+        class="w-1/4 h-14 flex items-center justify-center gap-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all cursor-pointer"
+        :class="{ '!opacity-35 !cursor-not-allowed': !hasTransaction || disabled }"
+        :disabled="!hasTransaction || disabled"
         @click="emit('action', 'void')"
       >
         <i class="pi pi-ban"></i> Void
       </button>
       <button
-        class="w-1/4 h-12 sm:h-14 flex items-center justify-center gap-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-95 transition-all cursor-pointer"
-        :class="{ '!opacity-35 !cursor-not-allowed': !hasTransaction }"
-        :disabled="!hasTransaction"
+        class="w-1/4 h-14 flex items-center justify-center gap-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-95 transition-all cursor-pointer"
+        :class="{ '!opacity-35 !cursor-not-allowed': !hasTransaction || disabled }"
+        :disabled="!hasTransaction || disabled"
         @click="emit('action', 'hold')"
       >
         <i class="pi pi-pause"></i> Hold
       </button>
       <button
-        class="w-2/4 h-12 sm:h-14 flex items-center justify-center gap-2 text-base font-bold text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-all cursor-pointer"
-        :class="{ '!opacity-35 !cursor-not-allowed': !hasTransaction }"
-        :disabled="!hasTransaction"
+        class="w-2/4 h-14 flex items-center justify-center gap-2 text-base font-bold text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-all cursor-pointer"
+        :class="{ '!opacity-35 !cursor-not-allowed': !hasTransaction || disabled }"
+        :disabled="!hasTransaction || disabled"
         @click="emit('action', 'tender')"
       >
         <i class="pi pi-money-bill"></i> Tender

@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import DatePicker from 'primevue/datepicker'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
+import Message from 'primevue/message'
+import ProgressBar from 'primevue/progressbar'
+import { useToast } from 'primevue/usetoast'
 import { eisReportService } from '@/services/eisReportService'
+import { eisService } from '@/services/eisService'
 import type { EISSummaryReport, EISZReadingComparison, EISDailyBreakdown } from '@/types/eis'
 
+const router = useRouter()
+const toast = useToast()
 const loading = ref(false)
+const eisEnabled = ref(true)
+const backfilling = ref(false)
+const backfillProgress = ref(0)
+const backfillTotal = ref(0)
 const selectedMonth = ref(new Date())
 const summary = ref<EISSummaryReport | null>(null)
 const comparison = ref<EISZReadingComparison | null>(null)
@@ -26,6 +37,9 @@ function getDateRange(date: Date): { dateFrom: string; dateTo: string } {
 async function loadReport() {
   loading.value = true
   try {
+    eisEnabled.value = await eisService.isEnabled()
+    if (!eisEnabled.value) return
+
     const { dateFrom, dateTo } = getDateRange(selectedMonth.value)
     const [s, c, d] = await Promise.all([
       eisReportService.getSubmissionSummary(dateFrom, dateTo),
@@ -42,6 +56,28 @@ async function loadReport() {
   }
 }
 
+async function runBackfill() {
+  backfilling.value = true
+  backfillProgress.value = 0
+  backfillTotal.value = 0
+  try {
+    const count = await eisService.backfillHistorical(undefined, (current, total) => {
+      backfillProgress.value = current
+      backfillTotal.value = total
+    })
+    toast.add({ severity: 'success', summary: 'Backfill Complete', detail: `${count} transactions enqueued for EIS submission.`, life: 4000 })
+    await loadReport()
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Backfill Failed', detail: 'Could not backfill historical transactions.', life: 4000 })
+  } finally {
+    backfilling.value = false
+  }
+}
+
+function goToSettings() {
+  router.push('/settings')
+}
+
 function formatCurrency(val: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val)
 }
@@ -52,23 +88,46 @@ function matchSeverity(pct: number): 'success' | 'warn' | 'danger' {
   return 'danger'
 }
 
+const hasNoData = () => summary.value && summary.value.submittedCount === 0 && summary.value.pendingCount === 0 && summary.value.failedCount === 0
+
 onMounted(loadReport)
 </script>
 
 <template>
   <div class="eis-summary-report">
-    <div class="report-toolbar">
-      <DatePicker
-        v-model="selectedMonth"
-        view="month"
-        dateFormat="MM yy"
-        showIcon
-        class="month-picker"
-      />
-      <Button label="Generate" icon="pi pi-chart-bar" :loading="loading" @click="loadReport" />
-    </div>
+    <!-- EIS Not Enabled Warning -->
+    <Message v-if="!eisEnabled && !loading" severity="warn" class="mb-4" :closable="false">
+      <div class="eis-warning">
+        <span>EIS integration is not enabled. Configure it in <strong>Settings → EIS</strong> tab to start submitting transactions to BIR.</span>
+        <Button label="Go to Settings" icon="pi pi-cog" severity="warn" size="small" class="mt-2" @click="goToSettings" />
+      </div>
+    </Message>
 
-    <div v-if="summary" class="summary-cards mt-4">
+    <template v-if="eisEnabled">
+      <div class="report-toolbar">
+        <DatePicker
+          v-model="selectedMonth"
+          view="month"
+          dateFormat="MM yy"
+          showIcon
+          class="month-picker"
+        />
+        <Button label="Generate" icon="pi pi-chart-bar" :loading="loading" @click="loadReport" />
+      </div>
+
+      <!-- Backfill prompt when EIS is enabled but no submissions exist -->
+      <Message v-if="hasNoData() && !loading" severity="info" class="mt-4" :closable="false">
+        <div class="eis-warning">
+          <span>No EIS submissions found. You can backfill historical transactions to enqueue them for submission.</span>
+          <div class="mt-2">
+            <Button label="Submit Historical Transactions" icon="pi pi-history" :loading="backfilling" @click="runBackfill" />
+          </div>
+          <ProgressBar v-if="backfilling && backfillTotal > 0" :value="Math.round((backfillProgress / backfillTotal) * 100)" class="mt-2" style="height: 6px" />
+        </div>
+      </Message>
+    </template>
+
+    <div v-if="summary && eisEnabled" class="summary-cards mt-4">
       <Card class="summary-card">
         <template #content>
           <div class="card-stat">
@@ -115,7 +174,7 @@ onMounted(loadReport)
       </Card>
     </div>
 
-    <div v-if="comparison" class="comparison-section mt-4">
+    <div v-if="comparison && eisEnabled" class="comparison-section mt-4">
       <h3>EIS vs Z-Reading Comparison</h3>
       <div class="comparison-grid">
         <div class="comparison-item">
@@ -139,7 +198,7 @@ onMounted(loadReport)
       </div>
     </div>
 
-    <div v-if="dailyBreakdown.length > 0" class="daily-section mt-4">
+    <div v-if="dailyBreakdown.length > 0 && eisEnabled" class="daily-section mt-4">
       <h3>Daily Breakdown</h3>
       <DataTable :value="dailyBreakdown" stripedRows size="small">
         <Column field="date" header="Date" :sortable="true" style="width: 120px" />
@@ -230,5 +289,11 @@ onMounted(loadReport)
 h3 {
   margin: 0 0 0.5rem;
   font-size: 1rem;
+}
+
+.eis-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 </style>

@@ -15,12 +15,12 @@ import type {
 
 /** Map dimension keys to their SQL column expressions */
 const DIMENSION_COLUMN_MAP: Record<string, string> = {
-  date: "date(orders.created_at)",
+  date: "date(transactions.created_at)",
   category: "categories.name",
   product: "products.name",
-  branch: "orders.branch_id",
+  branch: "transactions.branch_id",
   cashier: "(users.first_name || ' ' || users.last_name)",
-  payment_method: "payments.payment_method"
+  payment_method: "transaction_payments.payment_method"
 }
 
 /** Map dimension keys to their display alias */
@@ -35,12 +35,12 @@ const DIMENSION_ALIAS_MAP: Record<string, string> = {
 
 /** Map measure keys to their SQL aggregate expression and column type */
 const MEASURE_SQL_MAP: Record<string, { sql: string; type: 'number' | 'currency' | 'percent' }> = {
-  quantity: { sql: 'SUM(order_items.quantity)', type: 'number' },
-  revenue: { sql: 'SUM(order_items.total)', type: 'currency' },
-  profit: { sql: 'SUM(order_items.total - (order_items.cost_price * order_items.quantity))', type: 'currency' },
-  transaction_count: { sql: 'COUNT(DISTINCT orders.id)', type: 'number' },
-  avg_transaction: { sql: 'AVG(orders.total)', type: 'currency' },
-  discount_total: { sql: 'SUM(order_items.discount_amount)', type: 'currency' }
+  quantity: { sql: 'SUM(transaction_items.quantity)', type: 'number' },
+  revenue: { sql: 'SUM(transaction_items.line_total)', type: 'currency' },
+  profit: { sql: 'SUM(transaction_items.line_total - (transaction_items.unit_price * transaction_items.quantity))', type: 'currency' },
+  transaction_count: { sql: 'COUNT(DISTINCT transactions.id)', type: 'number' },
+  avg_transaction: { sql: 'AVG(transactions.total_amount)', type: 'currency' },
+  discount_total: { sql: 'SUM(transaction_items.discount)', type: 'currency' }
 }
 
 /** Map measure keys to their display labels */
@@ -138,32 +138,32 @@ class CustomReportService {
 
     // --- FROM / JOIN ---
     let fromClause = `
-      FROM orders
-      JOIN order_items ON order_items.order_id = orders.id
-      LEFT JOIN products ON order_items.product_id = products.id
+      FROM transactions
+      JOIN transaction_items ON transaction_items.transaction_id = transactions.id
+      LEFT JOIN products ON transaction_items.product_id = products.id
       LEFT JOIN categories ON products.category_id = categories.id
-      LEFT JOIN users ON orders.user_id = users.id
+      LEFT JOIN users ON transactions.user_id = users.id
     `
 
-    // Only join payments table when payment_method dimension is selected
+    // Only join transaction_payments table when payment_method dimension is selected
     if (dimensions.includes('payment_method')) {
-      fromClause += `\n      LEFT JOIN payments ON payments.order_id = orders.id`
+      fromClause += `\n      LEFT JOIN transaction_payments ON transaction_payments.transaction_id = transactions.id`
     }
 
     // --- WHERE clause ---
-    const whereParts: string[] = ["orders.status = 'completed'"]
+    const whereParts: string[] = ["transactions.status = 'completed'"]
     const params: any[] = []
 
     if (dateFrom) {
-      whereParts.push('date(orders.created_at) >= ?')
+      whereParts.push('date(transactions.created_at) >= ?')
       params.push(dateFrom)
     }
     if (dateTo) {
-      whereParts.push('date(orders.created_at) <= ?')
+      whereParts.push('date(transactions.created_at) <= ?')
       params.push(dateTo)
     }
     if (branchId) {
-      whereParts.push('orders.branch_id = ?')
+      whereParts.push('transactions.branch_id = ?')
       params.push(branchId)
     }
 

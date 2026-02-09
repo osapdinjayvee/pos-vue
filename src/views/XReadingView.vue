@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
@@ -11,6 +11,8 @@ import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import XReadingDisplay from '@/components/reports/XReadingDisplay.vue'
 import { useReports } from '@/composables/useReports'
+import { useShift } from '@/composables/useShift'
+import { useAuthStore } from '@/stores/auth'
 import { formatCurrency, formatXCounter, getSyncStatusLabel, getSyncStatusSeverity } from '@/utils/reportFormatter'
 import type { DisplayXReading } from '@/types/xReading'
 
@@ -28,17 +30,31 @@ const {
   printReport
 } = useReports()
 
+const shift = useShift()
+const authStore = useAuthStore()
+
 const showReadingDialog = ref(false)
 const selectedReading = ref<DisplayXReading | null>(null)
+
+const canGenerate = computed(() => !!shift.currentShift.value?.id && !!authStore.currentUser?.id)
 
 onMounted(() => {
   loadXReadings()
 })
 
 async function handleGenerate() {
-  // TODO: Get actual shift/cashier from auth context
-  const shiftId = 'current-shift'
-  const cashierId = 'user-admin'
+  const shiftId = shift.currentShift.value?.id
+  const cashierId = authStore.currentUser?.id
+
+  if (!shiftId || !cashierId) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No Active Shift',
+      detail: 'X-Reading can only be generated during an active shift',
+      life: 4000
+    })
+    return
+  }
 
   const result = await generateXReading(shiftId, cashierId)
 
@@ -110,7 +126,9 @@ function goBack() {
           label="Generate X-Reading"
           icon="pi pi-plus"
           :loading="isGenerating"
+          :disabled="!canGenerate"
           @click="handleGenerate"
+          v-tooltip.bottom="!canGenerate ? 'Requires an active shift' : ''"
         />
       </div>
     </div>
@@ -124,11 +142,12 @@ function goBack() {
       <div v-else-if="xReadings.length === 0" class="empty-state">
         <i class="pi pi-file" style="font-size: 3rem; color: var(--p-surface-300)"></i>
         <h3>No X-Readings Yet</h3>
-        <p>Generate your first X-Reading to see shift totals</p>
+        <p>Generate your first X-Reading during an active shift</p>
         <Button
           label="Generate X-Reading"
           icon="pi pi-plus"
           :loading="isGenerating"
+          :disabled="!canGenerate"
           @click="handleGenerate"
         />
       </div>

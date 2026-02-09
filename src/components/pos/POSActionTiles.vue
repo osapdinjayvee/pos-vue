@@ -16,8 +16,9 @@ interface ActionTile {
   icon: string
   altIcon?: string
   shortcut?: string
-  severity?: 'primary' | 'danger'
+  severity?: 'primary' | 'danger' | 'shift-start' | 'shift-end'
   needsTransaction?: boolean
+  needsShift?: boolean
 }
 
 function getTileLabel(tile: ActionTile): string {
@@ -35,24 +36,63 @@ function getTileAction(tile: ActionTile): string {
   return tile.id
 }
 
+function getTileSeverity(tile: ActionTile): string {
+  if (tile.id === 'end-shift') {
+    return props.hasOpenShift ? 'shift-end' : 'shift-start'
+  }
+  return tile.severity || 'primary'
+}
+
 const tiles: ActionTile[] = [
-  { id: 'discount', label: 'Discount', icon: 'pi pi-percentage', shortcut: 'F6', needsTransaction: true },
-  { id: 'browse', label: 'Browse', icon: 'pi pi-search', shortcut: 'F4' },
-  { id: 'return', label: 'Return', icon: 'pi pi-undo' },
-  { id: 'hold', label: 'Suspend', icon: 'pi pi-pause', needsTransaction: true },
-  { id: 'recall', label: 'Recall', icon: 'pi pi-replay' },
+  { id: 'discount', label: 'Discount', icon: 'pi pi-percentage', shortcut: 'F6', needsTransaction: true, needsShift: true },
+  { id: 'browse', label: 'Browse', icon: 'pi pi-search', shortcut: 'F4', needsShift: true },
+  { id: 'return', label: 'Return', icon: 'pi pi-undo', needsShift: true },
+  { id: 'hold', label: 'Suspend', icon: 'pi pi-pause', needsTransaction: true, needsShift: true },
+  { id: 'recall', label: 'Recall', icon: 'pi pi-replay', needsShift: true },
   { id: 'price-check', label: 'Price Check', icon: 'pi pi-info-circle' },
   { id: 'manager-override', label: 'Manager', icon: 'pi pi-shield' },
-  { id: 'cash-drawer', label: 'Cash Drawer', icon: 'pi pi-money-bill' },
+  { id: 'cash-drawer', label: 'Cash Drawer', icon: 'pi pi-money-bill', needsShift: true },
   { id: 'clear-cart', label: 'Clear Cart', icon: 'pi pi-trash', severity: 'danger', needsTransaction: true },
-  { id: 'reprint', label: 'Reprint', icon: 'pi pi-print' },
+  { id: 'transactions', label: 'Transactions', icon: 'pi pi-list', shortcut: 'F7' },
+  { id: 'x-reading', label: 'X-Reading', icon: 'pi pi-file', needsShift: true },
+  { id: 'z-reading', label: 'Z-Reading', icon: 'pi pi-file-export' },
   { id: 'end-shift', label: 'End Shift', altLabel: 'Start Shift', icon: 'pi pi-sign-out', altIcon: 'pi pi-sign-in' },
-  { id: 'calculator', label: 'Calculator', icon: 'pi pi-calculator' }
+  { id: 'calculator', label: 'Calculator', icon: 'pi pi-calculator' },
+  { id: 'logout', label: 'Logout', icon: 'pi pi-power-off', severity: 'danger' }
 ]
 
 function isDisabled(tile: ActionTile): boolean {
   if (tile.needsTransaction && !props.hasTransaction) return true
+  if (tile.needsShift && !props.hasOpenShift) return true
   return false
+}
+
+function tileClasses(tile: ActionTile): string {
+  const severity = getTileSeverity(tile)
+  const disabled = isDisabled(tile)
+  const base = 'flex flex-col items-center justify-center gap-1.5 rounded-xl border transition-all relative text-white min-h-[72px] sm:min-h-[88px] lg:min-h-[96px]'
+
+  if (disabled) {
+    const bg = severity === 'danger' ? 'bg-red-600 border-red-600' : 'border-transparent'
+    return `${base} ${bg} opacity-35 cursor-not-allowed`
+  }
+
+  switch (severity) {
+    case 'danger':
+      return `${base} bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer active:scale-95`
+    case 'shift-start':
+      return `${base} bg-amber-500 border-amber-500 hover:bg-amber-600 cursor-pointer active:scale-95 ring-2 ring-amber-300 ring-offset-1`
+    case 'shift-end':
+      return `${base} bg-emerald-600 border-emerald-600 hover:bg-emerald-700 cursor-pointer active:scale-95`
+    default:
+      return `${base} border-transparent hover:brightness-110 cursor-pointer active:scale-95`
+  }
+}
+
+function tileStyle(tile: ActionTile): Record<string, string> | undefined {
+  const severity = getTileSeverity(tile)
+  if (severity === 'primary') return { backgroundColor: 'var(--p-primary-color)' }
+  return undefined
 }
 </script>
 
@@ -61,14 +101,8 @@ function isDisabled(tile: ActionTile): boolean {
     <button
       v-for="tile in tiles"
       :key="tile.id"
-      :class="[
-        'flex flex-col items-center justify-center gap-1.5 rounded-xl border transition-all relative text-white',
-        'min-h-[72px] sm:min-h-[88px] lg:min-h-[96px]',
-        tile.severity === 'danger' ? 'bg-red-600 border-red-600 hover:bg-red-700' : '',
-        !tile.severity || tile.severity === 'primary' ? 'border-transparent hover:brightness-110' : '',
-        isDisabled(tile) ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer active:scale-95'
-      ]"
-      :style="tile.severity !== 'danger' ? { backgroundColor: 'var(--p-primary-color)' } : undefined"
+      :class="tileClasses(tile)"
+      :style="tileStyle(tile)"
       :disabled="isDisabled(tile)"
       @click="emit('action', getTileAction(tile))"
     >

@@ -8,12 +8,11 @@ import {
   calculateCartVAT,
   applySeniorPWDDiscount,
   round2,
-  VAT_RATE,
-  VAT_MULTIPLIER,
-  VAT_DIVISOR,
+  DEFAULT_VAT_RATE,
   formatCurrency,
   formatVATBreakdown
 } from '@/utils/vatCalculator'
+import { useSettingsStore } from '@/stores/settings'
 import type { TaxType } from '@/types/transaction'
 import type { ItemVATResult, CartVATBreakdown } from '@/utils/vatCalculator'
 
@@ -34,46 +33,89 @@ export interface SeniorPWDDiscountResult {
 
 class VATService {
   /**
-   * Current VAT rate (12%)
+   * Get current VAT rate from settings store (falls back to default)
    */
-  readonly vatRate = VAT_RATE
+  get vatRate(): number {
+    try {
+      return useSettingsStore().vatRate
+    } catch {
+      return DEFAULT_VAT_RATE
+    }
+  }
 
   /**
-   * VAT multiplier for extraction (12/112)
+   * Get current VAT rate as percentage from settings store
    */
-  readonly vatMultiplier = VAT_MULTIPLIER
+  get vatRatePercent(): number {
+    try {
+      return useSettingsStore().vatRatePercent
+    } catch {
+      return 12
+    }
+  }
 
   /**
-   * VAT divisor (1.12)
+   * VAT multiplier for extraction
    */
-  readonly vatDivisor = VAT_DIVISOR
+  get vatMultiplier(): number {
+    return this.vatRate / (1 + this.vatRate)
+  }
+
+  /**
+   * VAT divisor
+   */
+  get vatDivisor(): number {
+    return 1 + this.vatRate
+  }
+
+  /**
+   * Get senior citizen discount rate from settings
+   */
+  get seniorDiscountRate(): number {
+    try {
+      return useSettingsStore().seniorDiscount
+    } catch {
+      return 0.20
+    }
+  }
+
+  /**
+   * Get PWD discount rate from settings
+   */
+  get pwdDiscountRate(): number {
+    try {
+      return useSettingsStore().pwdDiscount
+    } catch {
+      return 0.20
+    }
+  }
 
   /**
    * Extract VAT from inclusive price
    */
   extractVAT(inclusivePrice: number): number {
-    return extractVAT(inclusivePrice)
+    return extractVAT(inclusivePrice, this.vatRate)
   }
 
   /**
    * Extract net amount from inclusive price
    */
   extractNetAmount(inclusivePrice: number): number {
-    return extractNetAmount(inclusivePrice)
+    return extractNetAmount(inclusivePrice, this.vatRate)
   }
 
   /**
    * Add VAT to net amount
    */
   addVAT(netAmount: number): number {
-    return addVAT(netAmount)
+    return addVAT(netAmount, this.vatRate)
   }
 
   /**
    * Calculate VAT from net amount
    */
   calculateVAT(netAmount: number): number {
-    return calculateVAT(netAmount)
+    return calculateVAT(netAmount, this.vatRate)
   }
 
   /**
@@ -92,23 +134,25 @@ class VATService {
     taxType: TaxType,
     lineDiscount: number = 0
   ): ItemVATResult {
-    return calculateItemVAT(unitPrice, quantity, taxType, lineDiscount)
+    return calculateItemVAT(unitPrice, quantity, taxType, lineDiscount, this.vatRate)
   }
 
   /**
    * Calculate VAT breakdown for cart items
    */
   calculateCartVAT(items: VATCalculationItem[]): CartVATBreakdown {
-    return calculateCartVAT(items)
+    return calculateCartVAT(items, this.vatRate)
   }
 
   /**
-   * Apply Senior Citizen/PWD discount (20%, VAT-exempt)
+   * Apply Senior Citizen/PWD discount
+   * Reads discount rate from settings based on discount type
    */
   applySeniorPWDDiscount(
     items: VATCalculationItem[],
-    discountRate: number = 0.20
+    discountType: 'senior_citizen' | 'pwd' = 'senior_citizen'
   ): SeniorPWDDiscountResult {
+    const discountRate = discountType === 'pwd' ? this.pwdDiscountRate : this.seniorDiscountRate
     const result = applySeniorPWDDiscount(items, discountRate)
 
     // Count affected items (VATable items only)
@@ -188,9 +232,9 @@ class VATService {
   } {
     const errors: string[] = []
 
-    // VAT amount should be 12% of VATable sales
+    // VAT amount should be rate% of VATable sales
     if (breakdown.vatableSales > 0) {
-      const expectedVAT = round2(breakdown.vatableSales * VAT_RATE)
+      const expectedVAT = round2(breakdown.vatableSales * this.vatRate)
       const tolerance = 0.02 // 2 centavos tolerance for rounding
 
       if (Math.abs(breakdown.vatAmount - expectedVAT) > tolerance) {
@@ -214,11 +258,6 @@ class VATService {
       )
     }
 
-    // VAT exempt and zero-rated should have no VAT
-    if (breakdown.vatExemptSales > 0 || breakdown.zeroRatedSales > 0) {
-      // This is just a note, not an error - the breakdown handles this correctly
-    }
-
     return {
       isValid: errors.length === 0,
       errors
@@ -236,7 +275,7 @@ class VATService {
    * Format VAT breakdown for display
    */
   formatVATBreakdown(breakdown: CartVATBreakdown): string[] {
-    return formatVATBreakdown(breakdown)
+    return formatVATBreakdown(breakdown, this.vatRatePercent)
   }
 
   /**
@@ -260,20 +299,22 @@ class VATService {
 
   /**
    * Calculate effective price after SC/PWD discount
-   * For VATable items, removes VAT first, then applies 20% discount
+   * For VATable items, removes VAT first, then applies discount
    */
   calculateSCPWDEffectivePrice(
     inclusivePrice: number,
-    taxType: TaxType
+    taxType: TaxType,
+    discountType: 'senior_citizen' | 'pwd' = 'senior_citizen'
   ): {
     originalPrice: number
     netPrice: number
     discountAmount: number
     finalPrice: number
   } {
+    const discountRate = discountType === 'pwd' ? this.pwdDiscountRate : this.seniorDiscountRate
+
     if (taxType !== 'vatable') {
-      // Non-VATable items: 20% discount on full price
-      const discountAmount = round2(inclusivePrice * 0.20)
+      const discountAmount = round2(inclusivePrice * discountRate)
       return {
         originalPrice: inclusivePrice,
         netPrice: inclusivePrice,
@@ -282,10 +323,9 @@ class VATService {
       }
     }
 
-    // VATable items: First remove VAT, then apply 20% discount
-    // The item becomes VAT-exempt
+    // VATable items: First remove VAT, then apply discount
     const netPrice = this.extractNetAmount(inclusivePrice)
-    const discountAmount = round2(inclusivePrice * 0.20)
+    const discountAmount = round2(inclusivePrice * discountRate)
     const finalPrice = round2(inclusivePrice - discountAmount)
 
     return {
@@ -318,7 +358,7 @@ class VATService {
         formatted: this.formatCurrency(breakdown.vatableSales)
       })
       lines.push({
-        label: 'VAT (12%)',
+        label: `VAT (${this.vatRatePercent}%)`,
         amount: breakdown.vatAmount,
         formatted: this.formatCurrency(breakdown.vatAmount)
       })

@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import DatePicker from 'primevue/datepicker'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { eisSubmissionRepository } from '@/repositories/eisSubmissionRepository'
+import { eisService } from '@/services/eisService'
 
+const router = useRouter()
 const toast = useToast()
 const selectedMonth = ref(new Date())
 const previewCount = ref(0)
 const isExporting = ref(false)
+const eisEnabled = ref(true)
+
+onMounted(async () => {
+  eisEnabled.value = await eisService.isEnabled()
+})
 
 async function updatePreview() {
   const { dateFrom, dateTo } = getDateRange(selectedMonth.value)
@@ -82,6 +90,14 @@ async function exportReport() {
 
 <template>
   <div class="eis-compliance-export">
+    <Message v-if="!eisEnabled" severity="warn" class="mb-4" :closable="false">
+      <div class="eis-warning">
+        <span>EIS integration is not enabled. Configure it in <strong>Settings → EIS</strong> tab to start submitting transactions to BIR.</span>
+        <Button label="Go to Settings" icon="pi pi-cog" severity="warn" size="small" class="mt-2" @click="router.push('/settings')" />
+      </div>
+    </Message>
+
+    <template v-if="eisEnabled">
     <Message severity="info" class="mb-4">
       Export EIS compliance data in CSV format for BIR filing.
     </Message>
@@ -111,6 +127,7 @@ async function exportReport() {
         <Button label="Generate CSV Report" icon="pi pi-download" :loading="isExporting" @click="exportReport" />
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -143,5 +160,11 @@ async function exportReport() {
 .action-buttons {
   display: flex;
   gap: 0.75rem;
+}
+
+.eis-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 </style>

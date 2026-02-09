@@ -259,27 +259,27 @@ class ShiftRepository extends BaseRepository<Shift> {
   }> {
     // This would typically join with orders table
     // For now, return placeholder values
-    const ordersResult = await db.getOne<{
+    const txResult = await db.getOne<{
       total_sales: number
       void_count: number
       refund_count: number
       tx_count: number
     }>(
       `SELECT
-         COALESCE(SUM(CASE WHEN status = 'completed' THEN total ELSE 0 END), 0) as total_sales,
-         COALESCE(SUM(CASE WHEN status = 'void' THEN 1 ELSE 0 END), 0) as void_count,
-         COALESCE(SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END), 0) as refund_count,
+         COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END), 0) as total_sales,
+         COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
+         0 as refund_count,
          COUNT(*) as tx_count
-       FROM orders
+       FROM transactions
        WHERE shift_id = ?`,
       [shiftId]
     )
 
     return {
-      totalSales: ordersResult?.total_sales || 0,
-      totalVoids: ordersResult?.void_count || 0,
-      totalRefunds: ordersResult?.refund_count || 0,
-      transactionCount: ordersResult?.tx_count || 0
+      totalSales: txResult?.total_sales || 0,
+      totalVoids: txResult?.void_count || 0,
+      totalRefunds: txResult?.refund_count || 0,
+      transactionCount: txResult?.tx_count || 0
     }
   }
 
@@ -290,14 +290,14 @@ class ShiftRepository extends BaseRepository<Shift> {
     const shift = await this.findById(shiftId)
     if (!shift) return 0
 
-    // Get cash transactions from orders
+    // Get cash transactions from transaction_payments
     const cashResult = await db.getOne<{ cash_in: number; cash_out: number }>(
       `SELECT
-         COALESCE(SUM(CASE WHEN p.payment_method = 'cash' AND o.status = 'completed' THEN p.amount ELSE 0 END), 0) as cash_in,
-         COALESCE(SUM(CASE WHEN p.payment_method = 'cash' AND o.status = 'refunded' THEN p.amount ELSE 0 END), 0) as cash_out
-       FROM orders o
-       LEFT JOIN payments p ON p.order_id = o.id
-       WHERE o.shift_id = ?`,
+         COALESCE(SUM(CASE WHEN tp.payment_method = 'cash' AND t.status = 'completed' THEN tp.amount ELSE 0 END), 0) as cash_in,
+         0 as cash_out
+       FROM transactions t
+       LEFT JOIN transaction_payments tp ON tp.transaction_id = t.id
+       WHERE t.shift_id = ?`,
       [shiftId]
     )
 

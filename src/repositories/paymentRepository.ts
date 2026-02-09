@@ -221,14 +221,17 @@ class PaymentRepository extends BaseRepository<Payment> {
 
   // =================================
   // Transaction Payment Methods (POS)
+  // Uses separate `transaction_payments` table
   // =================================
+
+  private txPayTable = 'transaction_payments'
 
   /**
    * Find all payments for a transaction (POS)
    */
   async findByTransaction(transactionId: string): Promise<TransactionPayment[]> {
     return await db.query<TransactionPayment>(
-      `SELECT * FROM ${this.tableName} WHERE transaction_id = ? ORDER BY created_at ASC`,
+      `SELECT * FROM ${this.txPayTable} WHERE transaction_id = ? ORDER BY created_at ASC`,
       [transactionId]
     )
   }
@@ -241,7 +244,7 @@ class PaymentRepository extends BaseRepository<Payment> {
     const now = db.getCurrentTimestamp()
 
     await db.execute(
-      `INSERT INTO ${this.tableName}
+      `INSERT INTO ${this.txPayTable}
        (id, transaction_id, payment_method, amount, tendered, change_amount,
         reference_number, card_type, last_four_digits, approval_code, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?)`,
@@ -260,7 +263,11 @@ class PaymentRepository extends BaseRepository<Payment> {
       ]
     )
 
-    return await this.findById(id) as unknown as TransactionPayment
+    const result = await db.getOne<TransactionPayment>(
+      `SELECT * FROM ${this.txPayTable} WHERE id = ?`,
+      [id]
+    )
+    return result!
   }
 
   /**
@@ -282,7 +289,7 @@ class PaymentRepository extends BaseRepository<Payment> {
    */
   async getTransactionPaymentTotal(transactionId: string): Promise<number> {
     const result = await db.getOne<{ total: number }>(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM ${this.tableName} WHERE transaction_id = ?`,
+      `SELECT COALESCE(SUM(amount), 0) as total FROM ${this.txPayTable} WHERE transaction_id = ?`,
       [transactionId]
     )
     return result?.total || 0
@@ -303,7 +310,7 @@ class PaymentRepository extends BaseRepository<Payment> {
 
     const payments = await db.query<{ payment_method: string; amount: number }>(
       `SELECT p.payment_method, p.amount
-       FROM ${this.tableName} p
+       FROM ${this.txPayTable} p
        JOIN transactions t ON p.transaction_id = t.id
        WHERE p.created_at >= ? AND p.created_at <= ? AND t.status = 'completed'`,
       [startOfDay, endOfDay]
@@ -342,7 +349,7 @@ class PaymentRepository extends BaseRepository<Payment> {
    */
   async deleteByTransaction(transactionId: string): Promise<void> {
     await db.execute(
-      `DELETE FROM ${this.tableName} WHERE transaction_id = ?`,
+      `DELETE FROM ${this.txPayTable} WHERE transaction_id = ?`,
       [transactionId]
     )
   }

@@ -42,7 +42,8 @@ const rawGroups: MenuGroup[] = [
     label: 'Sales',
     icon: 'pi pi-shopping-cart',
     items: [
-      { label: 'Orders', icon: 'pi pi-list', route: '/orders', permission: PERMISSIONS.SALES_CREATE }
+      { label: 'Transactions', icon: 'pi pi-receipt', route: '/orders', permission: PERMISSIONS.SALES_CREATE },
+      { label: 'Discounts', icon: 'pi pi-percentage', route: '/discounts', permission: PERMISSIONS.SALES_DISCOUNT }
     ]
   },
   {

@@ -10,12 +10,9 @@ import { verifyPin } from '@/utils/crypto'
 import type {
   User,
   DisplayUser,
-  LoginCredentials,
-  AuthResponse,
-  DisplayRole
+  LoginCredentials
 } from '@/types/user'
 import { toDisplayUser } from '@/types/user'
-import { cachedCredentialsService } from './cachedCredentialsService'
 
 // Maximum failed login attempts before lockout
 const MAX_FAILED_ATTEMPTS = 5
@@ -75,115 +72,58 @@ class AuthService {
         }
       }
 
-      // Try online authentication first
-      let user = await userRepository.findByUsername(username)
-      let roles: DisplayRole[] = []
-      let permissions: string[] = []
+      // Authenticate against SQLite database
+      const user = await userRepository.findByUsername(username)
 
-      if (user) {
-        // Online authentication
-        const isValid = await verifyPin(pin, user.pin_hash)
-
-        if (!isValid) {
-          await authLogRepository.logLoginFailure(
-            username,
-            terminalId,
-            'Invalid PIN'
-          )
-
-          return {
-            success: false,
-            error: 'Invalid username or PIN'
-          }
-        }
-
-        // Check if user is active
-        if (!user.is_active) {
-          await authLogRepository.logLoginFailure(
-            username,
-            terminalId,
-            'Account is deactivated'
-          )
-
-          return {
-            success: false,
-            error: 'Account is deactivated. Contact your administrator.'
-          }
-        }
-
-        // Get roles and permissions
-        roles = await userRepository.getUserRoles(user.id)
-        permissions = await userRepository.getUserPermissions(user.id)
-
-        // Update last login
-        await userRepository.updateLastLogin(user.id)
-
-        // Cache credentials for offline use
-        await cachedCredentialsService.cacheUser(user, roles, permissions)
-      } else {
-        // Try offline authentication
-        const cachedAuth = await cachedCredentialsService.authenticate(username, pin)
-
-        if (!cachedAuth.success) {
-          await authLogRepository.logLoginFailure(
-            username,
-            terminalId,
-            cachedAuth.error || 'User not found'
-          )
-
-          return {
-            success: false,
-            error: cachedAuth.error || 'Invalid username or PIN'
-          }
-        }
-
-        // Use cached data
-        const cachedUser = cachedAuth.user!
-
-        // Create a minimal user object for display
-        const displayUser: DisplayUser = {
-          id: cachedUser.id,
-          username: cachedUser.username,
-          firstName: cachedUser.firstName,
-          lastName: cachedUser.lastName,
-          fullName: `${cachedUser.firstName} ${cachedUser.lastName}`,
-          email: '',
-          branchId: '',
-          isActive: true,
-          lastLoginAt: null,
-          roles: cachedUser.roles.map((code) => ({
-            id: '',
-            name: code,
-            code,
-            description: '',
-            isDefault: false,
-            isActive: true,
-            permissions: [],
-            createdAt: '',
-            updatedAt: ''
-          })),
-          permissions: cachedUser.permissions,
-          createdAt: '',
-          updatedAt: ''
-        }
-
-        // Log successful offline login
-        await authLogRepository.logLoginSuccess(
-          cachedUser.id,
+      if (!user) {
+        await authLogRepository.logLoginFailure(
           username,
-          terminalId
+          terminalId,
+          'User not found'
         )
 
-        this.currentUser = displayUser
-        this.currentPermissions = cachedUser.permissions
-
         return {
-          success: true,
-          user: displayUser,
-          permissions: cachedUser.permissions,
-          requiresShift: true
+          success: false,
+          error: 'Invalid username or PIN'
         }
       }
+
+      // Verify PIN
+      const isValid = await verifyPin(pin, user.pin_hash)
+
+      if (!isValid) {
+        await authLogRepository.logLoginFailure(
+          username,
+          terminalId,
+          'Invalid PIN'
+        )
+
+        return {
+          success: false,
+          error: 'Invalid username or PIN'
+        }
+      }
+
+      // Check if user is active
+      if (!user.is_active) {
+        await authLogRepository.logLoginFailure(
+          username,
+          terminalId,
+          'Account is deactivated'
+        )
+
+        return {
+          success: false,
+          error: 'Account is deactivated. Contact your administrator.'
+        }
+      }
+
+      // Get roles and permissions
+      const roles = await userRepository.getUserRoles(user.id)
+      const permissions = await userRepository.getUserPermissions(user.id)
+
+      // Update last login
+      await userRepository.updateLastLogin(user.id)
 
       // Log successful login
       await authLogRepository.logLoginSuccess(user.id, username, terminalId)
@@ -227,16 +167,6 @@ class AuthService {
     }
 
     try {
-      // Check if user has an open shift
-      const openShift = await shiftRepository.findOpenShift(this.currentUser.id)
-
-      if (openShift) {
-        return {
-          success: false,
-          error: 'Please close your shift before logging out.'
-        }
-      }
-
       // Log the logout
       await authLogRepository.logLogout(
         this.currentUser.id,
@@ -282,20 +212,13 @@ class AuthService {
       return false
     }
 
-    // Try online first
     const user = await userRepository.findById(this.currentUser.id)
 
-    if (user) {
-      return verifyPin(pin, user.pin_hash)
+    if (!user) {
+      return false
     }
 
-    // Try cached credentials
-    const cachedAuth = await cachedCredentialsService.authenticate(
-      this.currentUser.username,
-      pin
-    )
-
-    return cachedAuth.success
+    return verifyPin(pin, user.pin_hash)
   }
 
   /**

@@ -25,9 +25,9 @@ class AnalyticsAggregationService {
         CAST(strftime('%H', created_at) AS INTEGER) as hour,
         terminal_id,
         branch_id,
-        COALESCE(SUM(total), 0) as total_sales,
+        COALESCE(SUM(total_amount), 0) as total_sales,
         COUNT(*) as order_count
-       FROM orders
+       FROM transactions
        WHERE date(created_at) = ?
          AND status = 'completed'
        GROUP BY hour, terminal_id, branch_id`,
@@ -63,19 +63,19 @@ class AnalyticsAggregationService {
       cost: number
     }>(
       `SELECT
-        oi.product_id,
-        oi.variant_id,
+        ti.product_id,
+        ti.variant_id,
         p.category_id,
-        o.branch_id,
-        SUM(oi.quantity) as quantity_sold,
-        SUM(oi.total) as revenue,
-        SUM(oi.cost_price * oi.quantity) as cost
-       FROM order_items oi
-       JOIN orders o ON oi.order_id = o.id
-       LEFT JOIN products p ON oi.product_id = p.id
-       WHERE date(o.created_at) = ?
-         AND o.status = 'completed'
-       GROUP BY oi.product_id, o.branch_id`,
+        t.branch_id,
+        SUM(ti.quantity) as quantity_sold,
+        SUM(ti.line_total) as revenue,
+        SUM(ti.unit_price * ti.quantity) as cost
+       FROM transaction_items ti
+       JOIN transactions t ON ti.transaction_id = t.id
+       LEFT JOIN products p ON ti.product_id = p.id
+       WHERE date(t.created_at) = ?
+         AND t.status = 'completed'
+       GROUP BY ti.product_id, t.branch_id`,
       [date]
     )
 
@@ -115,6 +115,47 @@ class AnalyticsAggregationService {
       [date]
     )
     return result?.latest || null
+  }
+
+  /**
+   * Aggregate all dates in a range (inclusive).
+   * Loops through each day and calls aggregateAll() which is idempotent.
+   */
+  async aggregateDateRange(startDate: string, endDate: string): Promise<void> {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const current = new Date(start)
+
+    while (current <= end) {
+      const dateStr = current.toISOString().split('T')[0]
+      await this.aggregateAll(dateStr)
+      current.setDate(current.getDate() + 1)
+    }
+  }
+
+  /**
+   * Ensure aggregation data exists for a date range.
+   * Checks if transactions exist but aggregation data is missing, then triggers aggregation.
+   * Lightweight: skips if aggregation rows already exist for the range.
+   */
+  async ensureAggregated(dateFrom: string, dateTo: string): Promise<void> {
+    // Check if there are transactions in the range
+    const txnResult = await db.getOne<{ cnt: number }>(
+      `SELECT COUNT(*) as cnt FROM transactions
+       WHERE date(created_at) >= ? AND date(created_at) <= ? AND status = 'completed'`,
+      [dateFrom, dateTo]
+    )
+    if (!txnResult || txnResult.cnt === 0) return
+
+    // Check if aggregation data exists
+    const aggResult = await db.getOne<{ cnt: number }>(
+      `SELECT COUNT(*) as cnt FROM sales_hourly WHERE date >= ? AND date <= ?`,
+      [dateFrom, dateTo]
+    )
+    if (aggResult && aggResult.cnt > 0) return
+
+    // Transactions exist but no aggregation — run it
+    await this.aggregateDateRange(dateFrom, dateTo)
   }
 
   /**

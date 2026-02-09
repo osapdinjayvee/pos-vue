@@ -4,8 +4,11 @@ import { storeToRefs } from 'pinia'
 import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
+import gcashIcon from '@/assets/icons/gcash-svgrepo-com.svg'
+import mayaIcon from '@/assets/icons/maya-svgrepo-com.svg'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 import { vatService } from '@/services/vatService'
 import { receiptService } from '@/services/receiptService'
 import { customerRepository } from '@/repositories/customerRepository'
@@ -25,17 +28,26 @@ const emit = defineEmits<{
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
+const settingsStore = useSettingsStore()
 const { totals } = storeToRefs(cartStore)
 
 const businessInfo = computed(() => receiptService.getBusinessInfo())
 
-// Payment methods
-const paymentMethods: Array<{ label: string; value: PaymentMethod; icon: string }> = [
-  { label: 'Cash', value: 'cash', icon: 'pi pi-money-bill' },
-  { label: 'Card', value: 'card', icon: 'pi pi-credit-card' },
-  { label: 'GCash', value: 'gcash', icon: 'pi pi-mobile' },
-  { label: 'Maya', value: 'maya', icon: 'pi pi-wallet' }
+// All possible payment methods
+const allPaymentMethods: Array<{ label: string; value: PaymentMethod; icon: string; svgIcon?: string; key: keyof typeof settingsStore.paymentMethods }> = [
+  { label: 'Cash', value: 'cash', icon: 'pi pi-money-bill', key: 'cash' },
+  { label: 'Card', value: 'card', icon: 'pi pi-credit-card', key: 'card' },
+  { label: 'GCash', value: 'gcash', icon: '', svgIcon: gcashIcon, key: 'gcash' },
+  { label: 'Maya', value: 'maya', icon: '', svgIcon: mayaIcon, key: 'maya' },
+  { label: 'GrabPay', value: 'grab_pay', icon: 'pi pi-car', key: 'grabPay' },
+  { label: 'Bank Transfer', value: 'bank_transfer', icon: 'pi pi-building', key: 'bankTransfer' },
+  { label: 'Check', value: 'check', icon: 'pi pi-file', key: 'check' }
 ]
+
+// Filter by enabled payment methods from settings
+const paymentMethods = computed(() =>
+  allPaymentMethods.filter(m => settingsStore.paymentMethods[m.key])
+)
 
 // State
 const selectedMethod = ref<PaymentMethod>('cash')
@@ -136,7 +148,7 @@ const canComplete = computed(() => {
     return cashTendered.value >= remainingAmount.value
   }
 
-  if (['gcash', 'maya', 'card'].includes(selectedMethod.value)) {
+  if (selectedMethod.value !== 'cash') {
     return referenceNumber.value.trim().length > 0
   }
 
@@ -259,7 +271,7 @@ function handleCancel() {
 }
 
 function getMethodLabel(method: PaymentMethod): string {
-  const found = paymentMethods.find(m => m.value === method)
+  const found = allPaymentMethods.find(m => m.value === method)
   return found?.label || method
 }
 </script>
@@ -292,11 +304,11 @@ function getMethodLabel(method: PaymentMethod): string {
         </button>
 
         <!-- Store details -->
-        <div class="px-6 pt-5 pb-4 border-b border-white/15">
-          <div class="text-base font-bold text-white">{{ businessInfo.name }}</div>
-          <div v-if="businessInfo.branchName" class="text-xs text-white/80 mt-0.5">{{ businessInfo.branchName }}</div>
-          <div class="text-xs text-white/80 mt-1">{{ businessInfo.address }}</div>
-          <div class="flex flex-wrap gap-x-3 mt-1.5 text-[11px] text-white/70">
+        <div class="px-6 pt-6 pb-5 border-b border-white/15">
+          <div class="text-2xl font-extrabold text-white leading-tight">{{ businessInfo.name }}</div>
+          <div v-if="businessInfo.branchName" class="text-base text-white/80 mt-1">{{ businessInfo.branchName }}</div>
+          <div class="text-base text-white/80 mt-1.5">{{ businessInfo.address }}</div>
+          <div class="flex flex-wrap gap-x-4 mt-2.5 text-sm text-white/70">
             <span v-if="businessInfo.tin">TIN: {{ businessInfo.tin }}</span>
             <span>Terminal: {{ authStore.terminalId }}</span>
           </div>
@@ -318,10 +330,10 @@ function getMethodLabel(method: PaymentMethod): string {
 
           <!-- Change display -->
           <div v-if="selectedMethod === 'cash' && change > 0"
-               class="mt-8 w-full max-w-xs p-5 rounded-2xl text-center"
-               style="background: rgba(255,255,255,0.20); backdrop-filter: blur(4px)">
-            <div class="text-xs uppercase tracking-widest text-white/80 mb-1">Change</div>
-            <div class="text-4xl font-extrabold tabular-nums">{{ formattedChange }}</div>
+               class="mt-8 w-full max-w-xs p-5 rounded-2xl text-center bg-emerald-500/90"
+               style="backdrop-filter: blur(4px)">
+            <div class="text-xs uppercase tracking-widest text-emerald-100 mb-1">Change</div>
+            <div class="text-4xl font-extrabold tabular-nums text-white">{{ formattedChange }}</div>
           </div>
         </div>
 
@@ -420,7 +432,7 @@ function getMethodLabel(method: PaymentMethod): string {
           <!-- Payment Method Selection — Pill Buttons -->
           <div class="mb-6">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Payment Method</label>
-            <div class="grid grid-cols-4 gap-2.5">
+            <div class="grid gap-2.5" :class="paymentMethods.length <= 4 ? 'grid-cols-4' : 'grid-cols-4'">
               <button
                 v-for="m in paymentMethods"
                 :key="m.value"
@@ -432,7 +444,8 @@ function getMethodLabel(method: PaymentMethod): string {
                     : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'
                 ]"
               >
-                <i :class="m.icon" class="text-xl"></i>
+                <img v-if="m.svgIcon" :src="m.svgIcon" :alt="m.label" class="w-6 h-6" />
+                <i v-else :class="m.icon" class="text-xl"></i>
                 {{ m.label }}
               </button>
             </div>
@@ -456,15 +469,9 @@ function getMethodLabel(method: PaymentMethod): string {
           <!-- Cash Payment -->
           <div v-if="selectedMethod === 'cash'">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Cash Tendered</label>
-            <InputNumber
-              v-model="cashTendered"
-              mode="currency"
-              currency="PHP"
-              locale="en-PH"
-              :min="0"
-              class="w-full"
-              autofocus
-            />
+            <div class="cash-tendered-display">
+              <span class="cash-tendered-value">{{ vatService.formatCurrency(cashTendered) }}</span>
+            </div>
 
             <!-- Denomination Buttons -->
             <div class="grid grid-cols-4 gap-2.5 mt-4">
@@ -556,3 +563,21 @@ function getMethodLabel(method: PaymentMethod): string {
     @cancel="showPointsRedemption = false"
   />
 </template>
+
+<style scoped>
+.cash-tendered-display {
+  background: var(--p-surface-100);
+  border: 2px solid var(--p-surface-200);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+.cash-tendered-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-color);
+  letter-spacing: -0.02em;
+}
+</style>

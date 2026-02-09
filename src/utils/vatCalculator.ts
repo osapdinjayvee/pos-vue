@@ -1,48 +1,43 @@
 // VAT Calculator utility for Philippine BIR compliance
-// VAT rate: 12% (current Philippine standard)
+// VAT rate is configurable via settings store (default: 12%)
 // Prices are VAT-inclusive
 
 import type { TaxType } from '@/types/transaction'
 
-// VAT rate constant (12%)
-export const VAT_RATE = 0.12
-
-// VAT multiplier for extracting VAT from inclusive price (12/112)
-export const VAT_MULTIPLIER = VAT_RATE / (1 + VAT_RATE)
-
-// Divisor for extracting net amount from inclusive price (1.12)
-export const VAT_DIVISOR = 1 + VAT_RATE
+// Default VAT rate constant (12%) — used as fallback when settings not yet loaded
+export const DEFAULT_VAT_RATE = 0.12
 
 /**
  * Extract VAT amount from a VAT-inclusive price
- * Formula: VAT = Price * (12/112)
+ * Formula: VAT = Price * (rate / (1 + rate))
  */
-export function extractVAT(inclusivePrice: number): number {
-  return round2(inclusivePrice * VAT_MULTIPLIER)
+export function extractVAT(inclusivePrice: number, vatRate: number = DEFAULT_VAT_RATE): number {
+  const multiplier = vatRate / (1 + vatRate)
+  return round2(inclusivePrice * multiplier)
 }
 
 /**
  * Extract net amount (VATable sales) from a VAT-inclusive price
- * Formula: Net = Price / 1.12
+ * Formula: Net = Price / (1 + rate)
  */
-export function extractNetAmount(inclusivePrice: number): number {
-  return round2(inclusivePrice / VAT_DIVISOR)
+export function extractNetAmount(inclusivePrice: number, vatRate: number = DEFAULT_VAT_RATE): number {
+  return round2(inclusivePrice / (1 + vatRate))
 }
 
 /**
  * Add VAT to a net amount
- * Formula: Inclusive = Net * 1.12
+ * Formula: Inclusive = Net * (1 + rate)
  */
-export function addVAT(netAmount: number): number {
-  return round2(netAmount * VAT_DIVISOR)
+export function addVAT(netAmount: number, vatRate: number = DEFAULT_VAT_RATE): number {
+  return round2(netAmount * (1 + vatRate))
 }
 
 /**
  * Calculate VAT from net amount
- * Formula: VAT = Net * 0.12
+ * Formula: VAT = Net * rate
  */
-export function calculateVAT(netAmount: number): number {
-  return round2(netAmount * VAT_RATE)
+export function calculateVAT(netAmount: number, vatRate: number = DEFAULT_VAT_RATE): number {
+  return round2(netAmount * vatRate)
 }
 
 /**
@@ -71,14 +66,15 @@ export function calculateItemVAT(
   unitPrice: number,
   quantity: number,
   taxType: TaxType,
-  lineDiscount: number = 0
+  lineDiscount: number = 0,
+  vatRate: number = DEFAULT_VAT_RATE
 ): ItemVATResult {
   const grossAmount = round2(unitPrice * quantity - lineDiscount)
 
   if (taxType === 'vatable') {
     // For VATable items, price is VAT-inclusive
-    const netAmount = extractNetAmount(grossAmount)
-    const vatAmount = extractVAT(grossAmount)
+    const netAmount = extractNetAmount(grossAmount, vatRate)
+    const vatAmount = extractVAT(grossAmount, vatRate)
 
     return {
       grossAmount,
@@ -132,7 +128,8 @@ export function calculateCartVAT(
     quantity: number
     taxType: TaxType
     lineDiscount?: number
-  }>
+  }>,
+  vatRate: number = DEFAULT_VAT_RATE
 ): CartVATBreakdown {
   let subtotal = 0
   let vatableSales = 0
@@ -145,7 +142,8 @@ export function calculateCartVAT(
       item.unitPrice,
       item.quantity,
       item.taxType,
-      item.lineDiscount || 0
+      item.lineDiscount || 0,
+      vatRate
     )
 
     subtotal += result.grossAmount
@@ -167,7 +165,7 @@ export function calculateCartVAT(
 
 /**
  * Apply senior citizen/PWD discount
- * - 20% discount on applicable items
+ * - Configurable discount rate on applicable items
  * - Discounted items become VAT-exempt
  * - Only applies to VATable items (per BIR rules)
  */
@@ -178,7 +176,7 @@ export function applySeniorPWDDiscount(
     taxType: TaxType
     lineDiscount?: number
   }>,
-  discountRate: number = 0.20
+  discountRate: number
 ): {
   originalTotal: number
   discountAmount: number
@@ -247,12 +245,12 @@ export function formatCurrency(amount: number): string {
 /**
  * Format VAT breakdown for receipt display
  */
-export function formatVATBreakdown(breakdown: CartVATBreakdown): string[] {
+export function formatVATBreakdown(breakdown: CartVATBreakdown, vatRatePercent: number = 12): string[] {
   const lines: string[] = []
 
   if (breakdown.vatableSales > 0) {
     lines.push(`VATable Sales: ${formatCurrency(breakdown.vatableSales)}`)
-    lines.push(`VAT (12%): ${formatCurrency(breakdown.vatAmount)}`)
+    lines.push(`VAT (${vatRatePercent}%): ${formatCurrency(breakdown.vatAmount)}`)
   }
 
   if (breakdown.vatExemptSales > 0) {

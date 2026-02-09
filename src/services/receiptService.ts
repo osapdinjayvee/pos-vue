@@ -20,24 +20,7 @@ import type {
   TerminalInfo
 } from '@/types/receipt'
 import type { Transaction, TransactionItem } from '@/types/transaction'
-
-// Default business info (should be configured in settings)
-const DEFAULT_BUSINESS_INFO: BusinessInfo = {
-  name: 'My POS Store',
-  address: '123 Main Street, City, Province',
-  tin: '000-000-000-000',
-  branchCode: 'MAIN',
-  phoneNumber: '(02) 1234-5678'
-}
-
-// Default terminal info (should be configured per terminal)
-const DEFAULT_TERMINAL_INFO: TerminalInfo = {
-  terminalId: 'T001',
-  machineSerial: 'SN-00000001',
-  minNumber: 'MIN-00000001',
-  ptuNumber: 'PTU-00000001',
-  ptuValidUntil: '2027-12-31'
-}
+import { useSettingsStore } from '@/stores/settings'
 
 export interface GenerateReceiptOptions {
   business?: BusinessInfo
@@ -53,35 +36,69 @@ export interface PrintReceiptOptions extends GenerateReceiptOptions {
 }
 
 class ReceiptService {
-  private businessInfo: BusinessInfo = DEFAULT_BUSINESS_INFO
-  private terminalInfo: TerminalInfo = DEFAULT_TERMINAL_INFO
+  private businessInfoOverride: BusinessInfo | null = null
+  private terminalInfoOverride: TerminalInfo | null = null
 
   /**
-   * Configure business info
+   * Get business info from settings store (or override)
    */
-  setBusinessInfo(info: BusinessInfo): void {
-    this.businessInfo = info
+  private getSettingsBusinessInfo(): BusinessInfo {
+    try {
+      return useSettingsStore().businessInfo
+    } catch {
+      return {
+        name: 'My POS Store',
+        address: '123 Main Street, City, Province',
+        tin: '000-000-000-000',
+        branchCode: 'MAIN',
+        phoneNumber: '(02) 1234-5678'
+      }
+    }
   }
 
   /**
-   * Configure terminal info
+   * Get terminal info from settings store (or override)
+   */
+  private getSettingsTerminalInfo(): TerminalInfo {
+    try {
+      return useSettingsStore().terminalInfo
+    } catch {
+      return {
+        terminalId: 'T001',
+        machineSerial: 'SN-00000001',
+        minNumber: 'MIN-00000001',
+        ptuNumber: 'PTU-00000001',
+        ptuValidUntil: '2027-12-31'
+      }
+    }
+  }
+
+  /**
+   * Configure business info override (takes precedence over settings)
+   */
+  setBusinessInfo(info: BusinessInfo): void {
+    this.businessInfoOverride = info
+  }
+
+  /**
+   * Configure terminal info override (takes precedence over settings)
    */
   setTerminalInfo(info: TerminalInfo): void {
-    this.terminalInfo = info
+    this.terminalInfoOverride = info
   }
 
   /**
    * Get current business info
    */
   getBusinessInfo(): BusinessInfo {
-    return this.businessInfo
+    return this.businessInfoOverride || this.getSettingsBusinessInfo()
   }
 
   /**
    * Get current terminal info
    */
   getTerminalInfo(): TerminalInfo {
-    return this.terminalInfo
+    return this.terminalInfoOverride || this.getSettingsTerminalInfo()
   }
 
   /**
@@ -104,8 +121,8 @@ class ReceiptService {
     const receiptItems = this.convertToReceiptItems(items)
     const receiptPayments = this.convertToReceiptPayments(payments)
 
-    const business = options.business || this.businessInfo
-    const terminal = options.terminal || this.terminalInfo
+    const business = options.business || this.getBusinessInfo()
+    const terminal = options.terminal || this.getTerminalInfo()
 
     // Create receipt data
     const receiptData = createReceiptData(
@@ -129,6 +146,16 @@ class ReceiptService {
       terminal,
       options.cashierName
     )
+
+    // Add VAT rate and footer lines from settings
+    try {
+      const settings = useSettingsStore()
+      receiptData.vatRatePercent = settings.vatRatePercent
+      receiptData.footerLine1 = settings.receiptSettings.footerLine1
+      receiptData.footerLine2 = settings.receiptSettings.footerLine2
+    } catch {
+      // Settings not available - use defaults
+    }
 
     // Add customer info if transaction has customer_id
     if (transaction.customer_id) {
@@ -230,8 +257,8 @@ class ReceiptService {
       return null
     }
 
-    const business = options.business || this.businessInfo
-    const terminal = options.terminal || this.terminalInfo
+    const business = options.business || this.getBusinessInfo()
+    const terminal = options.terminal || this.getTerminalInfo()
     const txDate = new Date()
 
     // Calculate refund totals
@@ -241,11 +268,17 @@ class ReceiptService {
     let vatExemptSales = 0
     let zeroRatedSales = 0
 
+    let vatRate = 0.12
+    try {
+      vatRate = useSettingsStore().vatRate
+    } catch { /* use default */ }
+    const vatDivisor = 1 + vatRate
+
     for (const item of refundItems) {
       subtotal += item.lineTotal
       if (item.taxType === 'vatable') {
-        vatableSales += item.lineTotal / 1.12
-        vatAmount += item.lineTotal * (0.12 / 1.12)
+        vatableSales += item.lineTotal / vatDivisor
+        vatAmount += item.lineTotal * (vatRate / vatDivisor)
       } else if (item.taxType === 'exempt') {
         vatExemptSales += item.lineTotal
       } else {
@@ -412,7 +445,11 @@ class ReceiptService {
    * Get receipt width for formatting
    */
   getReceiptWidth(): number {
-    return RECEIPT_WIDTH
+    try {
+      return useSettingsStore().receiptWidth
+    } catch {
+      return RECEIPT_WIDTH
+    }
   }
 
   /**

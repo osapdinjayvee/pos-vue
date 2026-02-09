@@ -167,28 +167,82 @@ class DatabaseService {
       await this.recordMigration('015_sales')
     }
 
+    if (!migrations.includes('016_system_settings')) {
+      await this.runSystemSettingsMigration()
+      await this.recordMigration('016_system_settings')
+    }
+
+    if (!migrations.includes('017_discount_management')) {
+      await this.runDiscountManagementMigration()
+      await this.recordMigration('017_discount_management')
+    }
+
+    if (!migrations.includes('018_transaction_payments')) {
+      await this.runTransactionPaymentsMigration()
+      await this.recordMigration('018_transaction_payments')
+    }
+
+    if (!migrations.includes('019_logo_url')) {
+      await this.runLogoUrlMigration()
+      await this.recordMigration('019_logo_url')
+    }
+
+    if (!migrations.includes('020_onboarding')) {
+      await this.runOnboardingMigration()
+      await this.recordMigration('020_onboarding')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
 
   /**
-   * Verify critical tables exist and re-create if missing.
-   * Handles case where localStorage DB is stale after a quota-exceeded save failure.
+   * Verify critical tables exist with required columns and re-create if missing/stale.
+   * Handles case where localStorage DB is stale after a quota-exceeded save failure
+   * or has an outdated schema from an older version.
    */
   private async ensureCriticalTables(): Promise<void> {
     if (!this.adapter) return
 
-    const criticalTables = ['transactions', 'transaction_items', 'or_series', 'voids', 'refunds', 'refund_items']
+    const criticalTables = ['transactions', 'transaction_items', 'transaction_payments', 'or_series', 'voids', 'refunds', 'refund_items']
     for (const table of criticalTables) {
       const result = await this.adapter.getOne<{ name: string }>(
         `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
         [table]
       )
       if (!result) {
-        console.warn(`[DatabaseService] Critical table "${table}" missing — re-running 015_sales migration`)
+        console.warn(`[DatabaseService] Critical table "${table}" missing — re-running sales migrations`)
         await this.runSalesMigration()
+        await this.runTransactionPaymentsMigration()
         return
       }
+    }
+
+    // Verify transaction_items has required columns (stale DB may lack them)
+    const cols = await this.adapter.query<{ name: string }>(
+      `PRAGMA table_info(transaction_items)`
+    )
+    const colNames = new Set(cols.map(c => c.name))
+    if (!colNames.has('product_id')) {
+      console.warn('[DatabaseService] transaction_items missing product_id — dropping and re-creating sales tables')
+      for (const t of ['refund_items', 'refunds', 'voids', 'transaction_items', 'transactions']) {
+        await this.adapter.execute(`DROP TABLE IF EXISTS ${t}`)
+      }
+      await this.runSalesMigration()
+    }
+
+    // Verify customers table has CRM columns (tier_id, lifetime_spend)
+    const custCols = await this.adapter.query<{ name: string }>(
+      `PRAGMA table_info(customers)`
+    )
+    const custColNames = new Set(custCols.map(c => c.name))
+    if (!custColNames.has('tier_id')) {
+      console.warn('[DatabaseService] customers missing tier_id — adding CRM columns')
+      try { await this.adapter.execute(`ALTER TABLE customers ADD COLUMN tier_id TEXT DEFAULT 'tier-bronze'`) } catch { /* exists */ }
+    }
+    if (!custColNames.has('lifetime_spend')) {
+      console.warn('[DatabaseService] customers missing lifetime_spend — adding column')
+      try { await this.adapter.execute(`ALTER TABLE customers ADD COLUMN lifetime_spend REAL DEFAULT 0`) } catch { /* exists */ }
     }
   }
 
@@ -1053,9 +1107,9 @@ class DatabaseService {
     await this.adapter.execute(`
       CREATE TABLE IF NOT EXISTS sync_queue (
         id TEXT PRIMARY KEY,
-        entity_type TEXT NOT NULL CHECK (entity_type IN ('transaction', 'void', 'refund', 'stock_movement')),
+        entity_type TEXT NOT NULL,
         entity_id TEXT NOT NULL,
-        operation TEXT NOT NULL CHECK (operation IN ('create', 'update')),
+        operation TEXT NOT NULL,
         payload TEXT NOT NULL,
         priority INTEGER DEFAULT 1,
         created_at TEXT NOT NULL,
@@ -1618,6 +1672,340 @@ class DatabaseService {
     )
 
     console.log('[Migration] 015_sales completed')
+  }
+
+  private async runSystemSettingsMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+    const now = this.getCurrentTimestamp()
+
+    // Business config (Business Info + BIR Compliance)
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS business_config (
+        id TEXT PRIMARY KEY,
+        business_name TEXT NOT NULL DEFAULT '',
+        trade_name TEXT NOT NULL DEFAULT '',
+        tin TEXT NOT NULL DEFAULT '',
+        branch_code TEXT NOT NULL DEFAULT '0001',
+        address TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        province TEXT NOT NULL DEFAULT '',
+        zip_code TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        website TEXT NOT NULL DEFAULT '',
+        ptu_number TEXT NOT NULL DEFAULT '',
+        ptu_valid_from TEXT NOT NULL DEFAULT '',
+        ptu_valid_until TEXT NOT NULL DEFAULT '',
+        machine_serial TEXT NOT NULL DEFAULT '',
+        min_number TEXT NOT NULL DEFAULT '',
+        accreditation_number TEXT NOT NULL DEFAULT '',
+        date_accredited TEXT NOT NULL DEFAULT '',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO business_config (id, business_name, trade_name, tin, branch_code, address, city, province, zip_code, phone, email, created_at, updated_at)
+       VALUES ('default', '', '', '', '0001', '', '', '', '', '', '', ?, ?)`,
+      [now, now]
+    )
+
+    // Tax config
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS tax_config (
+        id TEXT PRIMARY KEY,
+        vat_rate REAL NOT NULL DEFAULT 12,
+        default_tax_type TEXT NOT NULL DEFAULT 'vatable',
+        senior_citizen_discount REAL NOT NULL DEFAULT 20,
+        pwd_discount REAL NOT NULL DEFAULT 20,
+        show_vat_breakdown INTEGER NOT NULL DEFAULT 1,
+        include_vat_in_price INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO tax_config (id, vat_rate, default_tax_type, senior_citizen_discount, pwd_discount, show_vat_breakdown, include_vat_in_price, created_at, updated_at)
+       VALUES ('default', 12, 'vatable', 20, 20, 1, 1, ?, ?)`,
+      [now, now]
+    )
+
+    // Receipt config (Receipt + Printer settings)
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS receipt_config (
+        id TEXT PRIMARY KEY,
+        header_line1 TEXT NOT NULL DEFAULT '',
+        header_line2 TEXT NOT NULL DEFAULT '',
+        header_line3 TEXT NOT NULL DEFAULT '',
+        footer_line1 TEXT NOT NULL DEFAULT 'Thank you for your purchase!',
+        footer_line2 TEXT NOT NULL DEFAULT 'Please come again.',
+        show_logo INTEGER NOT NULL DEFAULT 1,
+        paper_width TEXT NOT NULL DEFAULT '80mm',
+        font_size TEXT NOT NULL DEFAULT 'normal',
+        print_duplicate INTEGER NOT NULL DEFAULT 0,
+        printer_name TEXT NOT NULL DEFAULT '',
+        connection_type TEXT NOT NULL DEFAULT 'usb',
+        ip_address TEXT NOT NULL DEFAULT '192.168.1.100',
+        port INTEGER NOT NULL DEFAULT 9100,
+        usb_device TEXT NOT NULL DEFAULT '',
+        bluetooth_device TEXT NOT NULL DEFAULT '',
+        serial_port TEXT NOT NULL DEFAULT 'COM1',
+        baud_rate INTEGER NOT NULL DEFAULT 9600,
+        auto_cut INTEGER NOT NULL DEFAULT 1,
+        open_cash_drawer INTEGER NOT NULL DEFAULT 1,
+        cash_drawer_pin INTEGER NOT NULL DEFAULT 2,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO receipt_config (id, header_line1, header_line2, header_line3, footer_line1, footer_line2, created_at, updated_at)
+       VALUES ('default', '', '', '', 'Thank you for your purchase!', 'Please come again.', ?, ?)`,
+      [now, now]
+    )
+
+    // Payment config
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS payment_config (
+        id TEXT PRIMARY KEY,
+        cash_enabled INTEGER NOT NULL DEFAULT 1,
+        card_enabled INTEGER NOT NULL DEFAULT 1,
+        gcash_enabled INTEGER NOT NULL DEFAULT 1,
+        maya_enabled INTEGER NOT NULL DEFAULT 1,
+        grab_pay_enabled INTEGER NOT NULL DEFAULT 0,
+        bank_transfer_enabled INTEGER NOT NULL DEFAULT 0,
+        check_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO payment_config (id, cash_enabled, card_enabled, gcash_enabled, maya_enabled, grab_pay_enabled, bank_transfer_enabled, check_enabled, created_at, updated_at)
+       VALUES ('default', 1, 1, 1, 1, 0, 0, 0, ?, ?)`,
+      [now, now]
+    )
+
+    // System config (System + Backup + Sync)
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS system_config (
+        id TEXT PRIMARY KEY,
+        offline_mode_enabled INTEGER NOT NULL DEFAULT 1,
+        auto_sync_enabled INTEGER NOT NULL DEFAULT 1,
+        sync_interval INTEGER NOT NULL DEFAULT 5,
+        data_retention_years INTEGER NOT NULL DEFAULT 10,
+        low_stock_threshold INTEGER NOT NULL DEFAULT 10,
+        enable_notifications INTEGER NOT NULL DEFAULT 1,
+        enable_sound_alerts INTEGER NOT NULL DEFAULT 1,
+        auto_backup_enabled INTEGER NOT NULL DEFAULT 1,
+        backup_frequency TEXT NOT NULL DEFAULT 'daily',
+        backup_time TEXT NOT NULL DEFAULT '02:00',
+        cloud_backup_enabled INTEGER NOT NULL DEFAULT 1,
+        local_backup_enabled INTEGER NOT NULL DEFAULT 1,
+        local_backup_path TEXT NOT NULL DEFAULT '',
+        keep_backup_days INTEGER NOT NULL DEFAULT 30,
+        encrypt_backup INTEGER NOT NULL DEFAULT 1,
+        sync_strategy TEXT NOT NULL DEFAULT 'realtime',
+        conflict_resolution TEXT NOT NULL DEFAULT 'server_wins',
+        sync_products INTEGER NOT NULL DEFAULT 1,
+        sync_orders INTEGER NOT NULL DEFAULT 1,
+        sync_customers INTEGER NOT NULL DEFAULT 1,
+        sync_inventory INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO system_config (id, created_at, updated_at)
+       VALUES ('default', ?, ?)`,
+      [now, now]
+    )
+
+    console.log('[Migration] 016_system_settings completed')
+  }
+
+  private async runDiscountManagementMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    // Add new columns to existing discounts table
+    const alterStatements = [
+      'ALTER TABLE discounts ADD COLUMN auto_apply INTEGER DEFAULT 0',
+      'ALTER TABLE discounts ADD COLUMN start_time TEXT',
+      'ALTER TABLE discounts ADD COLUMN end_time TEXT',
+      'ALTER TABLE discounts ADD COLUMN weekdays TEXT',
+      'ALTER TABLE discounts ADD COLUMN deleted_at TEXT'
+    ]
+
+    for (const stmt of alterStatements) {
+      try {
+        await this.adapter.execute(stmt)
+      } catch {
+        // Column already exists, ignore
+      }
+    }
+
+    // Add discount metadata columns to transaction_items
+    const txItemAlters = [
+      'ALTER TABLE transaction_items ADD COLUMN discount_name TEXT',
+      'ALTER TABLE transaction_items ADD COLUMN discount_id TEXT'
+    ]
+
+    for (const stmt of txItemAlters) {
+      try {
+        await this.adapter.execute(stmt)
+      } catch {
+        // Column already exists, ignore
+      }
+    }
+
+    // Junction table for product/category scopes
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS discount_scopes (
+        id TEXT PRIMARY KEY,
+        discount_id TEXT NOT NULL,
+        product_id TEXT,
+        category_id TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (discount_id) REFERENCES discounts(id),
+        CHECK (product_id IS NOT NULL OR category_id IS NOT NULL)
+      )
+    `)
+
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_ds_discount ON discount_scopes(discount_id)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_ds_product ON discount_scopes(product_id)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_ds_category ON discount_scopes(category_id)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_discounts_auto ON discounts(auto_apply, is_active)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_discounts_deleted ON discounts(deleted_at)')
+
+    // Seed sample promo discounts
+    const now = this.getCurrentTimestamp()
+
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO discounts (id, name, code, type, value, min_purchase, max_discount, auto_apply, is_active, weekdays, start_time, end_time, start_date, end_date, applicable_to, applicable_ids, usage_limit, usage_count, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['disc-promo-001', '10% Off Beverages', null, 'percentage', 10, 0, null, 1, 1, null, null, null, null, null, 'all', null, null, 0, now, now]
+    )
+
+    // Set scope for beverages discount -> category
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO discount_scopes (id, discount_id, category_id, created_at)
+       VALUES (?, ?, ?, ?)`,
+      ['ds-001', 'disc-promo-001', 'cat-004', now]
+    )
+
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO discounts (id, name, code, type, value, min_purchase, max_discount, auto_apply, is_active, weekdays, start_time, end_time, start_date, end_date, applicable_to, applicable_ids, usage_limit, usage_count, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['disc-promo-002', 'Weekend Special 15%', null, 'percentage', 15, 0, null, 1, 1, '[0,6]', null, null, null, null, 'all', null, null, 0, now, now]
+    )
+
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO discounts (id, name, code, type, value, min_purchase, max_discount, auto_apply, is_active, weekdays, start_time, end_time, start_date, end_date, applicable_to, applicable_ids, usage_limit, usage_count, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['disc-promo-003', 'Happy Hour 20%', null, 'percentage', 20, 0, null, 1, 1, null, '14:00', '17:00', null, null, 'all', null, null, 0, now, now]
+    )
+
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO discounts (id, name, code, type, value, min_purchase, max_discount, auto_apply, is_active, weekdays, start_time, end_time, start_date, end_date, applicable_to, applicable_ids, usage_limit, usage_count, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['disc-promo-004', 'PHP 50 Off Premium', 'PREMIUM50', 'fixed', 50, 200, 50, 0, 1, null, null, null, null, null, 'all', null, null, 0, now, now]
+    )
+
+    console.log('[Migration] 017_discount_management completed')
+  }
+
+  private async runTransactionPaymentsMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS transaction_payments (
+        id TEXT PRIMARY KEY,
+        transaction_id TEXT NOT NULL,
+        payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'card', 'gcash', 'maya', 'other_ewallet', 'points')),
+        amount REAL NOT NULL,
+        tendered REAL,
+        change_amount REAL DEFAULT 0,
+        reference_number TEXT,
+        card_type TEXT,
+        last_four_digits TEXT,
+        approval_code TEXT,
+        status TEXT DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed', 'refunded', 'void')),
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+      )
+    `)
+
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_txpay_transaction ON transaction_payments(transaction_id)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_txpay_method ON transaction_payments(payment_method)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_txpay_created ON transaction_payments(created_at)')
+
+    console.log('[Migration] 018_transaction_payments completed')
+  }
+
+  private async runLogoUrlMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    try {
+      await this.adapter.execute(`ALTER TABLE business_config ADD COLUMN logo_url TEXT DEFAULT ''`)
+    } catch {
+      // Column may already exist
+    }
+
+    console.log('[Migration] 019_logo_url completed')
+  }
+
+  /**
+   * Migration 020: Onboarding tables
+   */
+  private async runOnboardingMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    const now = new Date().toISOString()
+
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS onboarding_progress (
+        id TEXT PRIMARY KEY,
+        current_step TEXT NOT NULL DEFAULT 'welcome',
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        license_key TEXT,
+        license_type TEXT,
+        license_verified_at TEXT,
+        activated_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `)
+
+    // Insert default row if not exists
+    await this.adapter.execute(
+      `INSERT OR IGNORE INTO onboarding_progress (id, current_step, is_completed, created_at, updated_at)
+       VALUES ('default', 'welcome', 0, ?, ?)`,
+      [now, now]
+    )
+
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS terms_documents (
+        id TEXT PRIMARY KEY,
+        version TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content_html TEXT NOT NULL,
+        published_at TEXT NOT NULL,
+        fetched_at TEXT NOT NULL
+      )
+    `)
+
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS terms_acceptances (
+        id TEXT PRIMARY KEY,
+        terms_id TEXT NOT NULL REFERENCES terms_documents(id),
+        terms_version TEXT NOT NULL,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        accepted_at TEXT NOT NULL,
+        synced_at TEXT,
+        sync_status TEXT DEFAULT 'pending' CHECK(sync_status IN ('pending','synced','failed'))
+      )
+    `)
+
+    console.log('[Migration] 020_onboarding completed')
   }
 
   // =====================

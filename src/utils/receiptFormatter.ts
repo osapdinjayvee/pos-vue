@@ -186,7 +186,8 @@ export function formatReceipt(data: ReceiptData): string[] {
   lines.push('VAT Breakdown:')
   if (data.vatBreakdown.vatableSales > 0) {
     lines.push(formatTwoColumns('  VATable Sales:', formatCurrency(data.vatBreakdown.vatableSales)))
-    lines.push(formatTwoColumns('  VAT (12%):', formatCurrency(data.vatBreakdown.vatAmount)))
+    const vatLabel = data.vatRatePercent ? `VAT (${data.vatRatePercent}%):` : 'VAT (12%):'
+    lines.push(formatTwoColumns(`  ${vatLabel}`, formatCurrency(data.vatBreakdown.vatAmount)))
   }
   if (data.vatBreakdown.vatExemptSales > 0) {
     lines.push(formatTwoColumns('  VAT-Exempt:', formatCurrency(data.vatBreakdown.vatExemptSales)))
@@ -243,7 +244,11 @@ export function formatReceipt(data: ReceiptData): string[] {
   lines.push(centerText('THIS SERVES AS YOUR'))
   lines.push(centerText('OFFICIAL RECEIPT'))
   lines.push('')
-  lines.push(centerText('Thank you for your purchase!'))
+  const footerLine1 = data.footerLine1 || 'Thank you for your purchase!'
+  lines.push(centerText(footerLine1))
+  if (data.footerLine2) {
+    lines.push(centerText(data.footerLine2))
+  }
   lines.push('')
 
   // Remarks

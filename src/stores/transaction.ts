@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 import { transactionService } from '@/services/transactionService'
 import { receiptService } from '@/services/receiptService'
 import { useCartStore } from './cart'
+import { useAuthStore } from './auth'
 import type { Transaction, TransactionItem } from '@/types/transaction'
 import type { PaymentEntry } from '@/types/payment'
 import type { TransactionDiscount } from '@/services/transactionService'
@@ -30,12 +31,21 @@ export const useTransactionStore = defineStore('transaction', () => {
   const recentTransactions = ref<Transaction[]>([])
   const error = ref<string | null>(null)
 
-  // Terminal configuration (should be set from settings)
+  // Terminal configuration — synced from auth store, overridable via setTerminalConfig
   const branchId = ref('branch_main')
-  const terminalId = ref('terminal_001')
-  const userId = ref('user_001')
+  const terminalId = computed(() => {
+    const authStore = useAuthStore()
+    return authStore.terminalId || 'POS-001'
+  })
+  const userId = computed(() => {
+    const authStore = useAuthStore()
+    return authStore.currentUser?.id || 'user_001'
+  })
   const shiftId = ref<string | null>(null)
-  const cashierName = ref('Cashier')
+  const cashierName = computed(() => {
+    const authStore = useAuthStore()
+    return authStore.currentUser?.firstName || 'Cashier'
+  })
 
   // Getters
   const hasCurrentTransaction = computed(() => currentTransaction.value !== null)
@@ -196,16 +206,10 @@ export const useTransactionStore = defineStore('transaction', () => {
 
   function setTerminalConfig(config: {
     branchId?: string
-    terminalId?: string
-    userId?: string
     shiftId?: string | null
-    cashierName?: string
   }): void {
     if (config.branchId) branchId.value = config.branchId
-    if (config.terminalId) terminalId.value = config.terminalId
-    if (config.userId) userId.value = config.userId
     if (config.shiftId !== undefined) shiftId.value = config.shiftId
-    if (config.cashierName) cashierName.value = config.cashierName
   }
 
   function startShift(id: string): void {

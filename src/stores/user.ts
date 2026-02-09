@@ -15,6 +15,7 @@ import type {
   UserUpdateInput
 } from '@/types/user'
 import { toDisplayUser, toDisplayRole } from '@/types/user'
+import { hashPin } from '@/utils/crypto'
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -72,7 +73,23 @@ export const useUserStore = defineStore('user', () => {
         return { success: false, error: 'Username already exists' }
       }
 
-      const newUser = await userRepository.create(input)
+      // Transform UserInput → db row: hash pin, strip role_ids
+      const { pin, role_ids, password, ...rest } = input
+      const pin_hash = await hashPin(pin)
+      const password_hash = password ? await hashPin(password) : null
+
+      const newUser = await userRepository.create({
+        ...rest,
+        username: rest.username.toLowerCase(),
+        pin_hash,
+        password_hash
+      } as Omit<User, 'id' | 'created_at' | 'updated_at'>)
+
+      // Assign roles
+      if (role_ids && role_ids.length > 0) {
+        await userRepository.setRoles(newUser.id, role_ids)
+      }
+
       const userRoles = await userRepository.getUserRoles(newUser.id)
       const permissions = await userRepository.getUserPermissions(newUser.id)
       const displayUser = toDisplayUser(newUser, userRoles, permissions)
@@ -97,15 +114,26 @@ export const useUserStore = defineStore('user', () => {
     error.value = null
 
     try {
-      const updatedUser = await userRepository.update(userId, input)
+      // Transform UserUpdateInput → db columns: hash pin/password, strip role_ids
+      const { pin, password, role_ids, ...rest } = input
+      const dbData: Record<string, any> = { ...rest }
+
+      if (pin) {
+        dbData.pin_hash = await hashPin(pin)
+      }
+      if (password) {
+        dbData.password_hash = await hashPin(password)
+      }
+
+      const updatedUser = await userRepository.update(userId, dbData as Partial<User>)
 
       if (!updatedUser) {
         return { success: false, error: 'User not found' }
       }
 
       // Update roles if provided
-      if (input.role_ids) {
-        await userRepository.setRoles(userId, input.role_ids)
+      if (role_ids) {
+        await userRepository.setRoles(userId, role_ids)
       }
 
       const userRoles = await userRepository.getUserRoles(userId)

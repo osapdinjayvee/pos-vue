@@ -53,9 +53,23 @@ const breadcrumbItems = computed(() => {
     ]
   }
 
+  // Handle discount sub-routes
+  if (path === '/discounts/new') {
+    return [
+      { label: 'Discounts', route: '/discounts' },
+      { label: 'New Discount' }
+    ]
+  }
+  if (path.match(/^\/discounts\/[^/]+\/edit$/)) {
+    return [
+      { label: 'Discounts', route: '/discounts' },
+      { label: 'Edit' }
+    ]
+  }
+
   const titles: Record<string, string> = {
     '/': 'Dashboard',
-    '/orders': 'Orders',
+    '/orders': 'Transactions',
     '/products': 'Products',
     '/categories': 'Categories',
     '/inventory': 'Inventory',
@@ -81,7 +95,8 @@ const breadcrumbItems = computed(() => {
     '/cash-variance': 'Cash Variance Report',
     '/sync-health': 'Sync Health',
     '/eis-submissions': 'EIS Submissions',
-    '/eis-reports': 'EIS Reports'
+    '/eis-reports': 'EIS Reports',
+    '/discounts': 'Discounts'
   }
 
   return [{ label: titles[path] || 'Dashboard' }]
@@ -166,11 +181,6 @@ function toggleShiftMenu(event: Event) {
 }
 
 async function handleLogout() {
-  if (hasOpenShift.value) {
-    // Show error - need to close shift first
-    return
-  }
-
   const result = await logout()
   if (!result.success && result.error) {
     console.error('Logout failed:', result.error)

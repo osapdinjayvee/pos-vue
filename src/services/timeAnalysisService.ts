@@ -6,6 +6,7 @@
 
 import db from '@/db/database'
 import { salesHourlyRepository } from '@/repositories/salesHourlyRepository'
+import { analyticsAggregationService } from '@/services/analyticsAggregationService'
 import type {
   HeatmapCell,
   StaffingRecommendation,
@@ -24,6 +25,7 @@ class TimeAnalysisService {
     dateTo: string,
     branchId?: string
   ): Promise<HeatmapCell[]> {
+    await analyticsAggregationService.ensureAggregated(dateFrom, dateTo)
     return await salesHourlyRepository.getHeatmapData(dateFrom, dateTo, branchId)
   }
 
@@ -37,6 +39,7 @@ class TimeAnalysisService {
     dateTo: string,
     branchId?: string
   ): Promise<StaffingRecommendation[]> {
+    await analyticsAggregationService.ensureAggregated(dateFrom, dateTo)
     let sql = `
       SELECT
         hour,
@@ -88,6 +91,11 @@ class TimeAnalysisService {
     period2To: string,
     branchId?: string
   ): Promise<{ period1: SalesTrendPoint[]; period2: SalesTrendPoint[] }> {
+    await Promise.all([
+      analyticsAggregationService.ensureAggregated(period1From, period1To),
+      analyticsAggregationService.ensureAggregated(period2From, period2To)
+    ])
+
     const fetchPeriod = async (
       dateFrom: string,
       dateTo: string
@@ -128,6 +136,8 @@ class TimeAnalysisService {
     date: string,
     branchId?: string
   ): Promise<DayDrilldown> {
+    await analyticsAggregationService.ensureAggregated(date, date)
+
     // --- Hourly breakdown from sales_hourly ---
     let hourlySql = `
       SELECT
@@ -158,52 +168,51 @@ class TimeAnalysisService {
       count: r.count
     }))
 
-    // --- Top 10 products from order_items joined with products ---
+    // --- Top 10 products from transaction_items joined with products ---
     let productsSql = `
       SELECT
         p.name as name,
-        SUM(oi.quantity) as quantity,
-        SUM(oi.total) as revenue
-      FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id
-      JOIN products p ON oi.product_id = p.id
-      WHERE DATE(o.created_at) = ?
-        AND o.status IN ('completed', 'confirmed', 'processing')
+        SUM(ti.quantity) as quantity,
+        SUM(ti.line_total) as revenue
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.id
+      JOIN products p ON ti.product_id = p.id
+      WHERE DATE(t.created_at) = ?
+        AND t.status IN ('completed')
     `
     const productsParams: any[] = [date]
 
     if (branchId) {
-      productsSql += ' AND o.branch_id = ?'
+      productsSql += ' AND t.branch_id = ?'
       productsParams.push(branchId)
     }
 
-    productsSql += ' GROUP BY oi.product_id ORDER BY revenue DESC LIMIT 10'
+    productsSql += ' GROUP BY ti.product_id ORDER BY revenue DESC LIMIT 10'
 
     const topProducts = await db.query<{ name: string; quantity: number; revenue: number }>(
       productsSql,
       productsParams
     )
 
-    // --- Payment breakdown from payments ---
+    // --- Payment breakdown from transaction_payments ---
     let paymentSql = `
       SELECT
-        py.payment_method as method,
-        SUM(py.amount) as amount,
-        COUNT(py.id) as count
-      FROM payments py
-      JOIN orders o ON py.order_id = o.id
-      WHERE DATE(o.created_at) = ?
-        AND o.status IN ('completed', 'confirmed', 'processing')
-        AND py.status = 'completed'
+        tp.payment_method as method,
+        SUM(tp.amount) as amount,
+        COUNT(tp.id) as count
+      FROM transaction_payments tp
+      JOIN transactions t ON tp.transaction_id = t.id
+      WHERE DATE(t.created_at) = ?
+        AND t.status IN ('completed')
     `
     const paymentParams: any[] = [date]
 
     if (branchId) {
-      paymentSql += ' AND o.branch_id = ?'
+      paymentSql += ' AND t.branch_id = ?'
       paymentParams.push(branchId)
     }
 
-    paymentSql += ' GROUP BY py.payment_method ORDER BY amount DESC'
+    paymentSql += ' GROUP BY tp.payment_method ORDER BY amount DESC'
 
     const paymentBreakdown = await db.query<{
       method: string

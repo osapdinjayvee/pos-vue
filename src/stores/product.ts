@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import productRepository from '@/repositories/productRepository'
 import variantRepository from '@/repositories/variantRepository'
+import { useSettingsStore } from '@/stores/settings'
 import type {
   Product,
   ProductInput,
@@ -145,7 +146,7 @@ export const useProductStore = defineStore('product', () => {
         category_id: data.category_id || '',
         supplier_id: data.supplier_id || null,
         stock: initialStock,
-        low_stock_threshold: data.low_stock_threshold || 10,
+        low_stock_threshold: data.low_stock_threshold || (() => { try { return useSettingsStore().lowStockThreshold } catch { return 10 } })(),
         status: data.status || 'active',
         tax_type: data.tax_type || 'vatable',
         sold: 0,
