@@ -22,11 +22,13 @@ import Column from 'primevue/column'
 import DatePicker from 'primevue/datepicker'
 import EISConfigForm from '@/components/eis/EISConfigForm.vue'
 import { useEIS } from '@/composables/useEIS'
+import { useSettingsStore } from '@/stores/settings'
 import { useSettings } from '@/composables/useSettings'
 import { testConnection } from '@/services/eisConnectionTestService'
 import type { EISConfig } from '@/types/eis'
 
 const toast = useToast()
+const settingsStore = useSettingsStore()
 const activeTab = ref('business')
 
 // Settings composable
@@ -136,6 +138,7 @@ async function handleSlideshowUpload(event: Event) {
     }
 
     toast.add({ severity: 'success', summary: 'Uploaded', detail: `${files.length} image(s) uploaded.`, life: 3000 })
+    await settingsStore.reloadSlideshow()
   } catch {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload images.', life: 3000 })
   } finally {
@@ -158,6 +161,7 @@ async function removeSlideshowImage(id: string) {
     const { slideshowRepository } = await import('@/repositories/slideshowRepository')
     await slideshowRepository.remove(id)
     slideshowImages.value = slideshowImages.value.filter(img => img.id !== id)
+    await settingsStore.reloadSlideshow()
     toast.add({ severity: 'info', summary: 'Removed', detail: 'Image removed.', life: 2000 })
   } catch {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove image.', life: 3000 })

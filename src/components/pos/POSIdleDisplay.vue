@@ -24,6 +24,7 @@ const props = withDefaults(defineProps<{
   timeFormat?: string
   dateFormat?: string
   slideshowInterval?: number
+  infoDisplayDuration?: number
 }>(), {
   showStoreName: true,
   showLogo: true,
@@ -34,8 +35,13 @@ const props = withDefaults(defineProps<{
   timeFormat: '12h',
   dateFormat: 'long',
   slideshowInterval: 5,
-  slideshowImages: () => []
+  slideshowImages: () => [],
+  infoDisplayDuration: 20
 })
+
+// Display mode: 'info' shows store details, 'slideshow' shows full-width images
+const displayMode = ref<'info' | 'slideshow'>('info')
+let infoTimer: number | null = null
 
 // Clock
 const currentTime = ref(formatTime())
@@ -69,6 +75,10 @@ const currentSlideIndex = ref(0)
 let slideshowTimer: number | null = null
 
 const hasSlideshow = computed(() => props.slideshowImages.length > 0)
+const currentSlideUrl = computed(() => {
+  if (!hasSlideshow.value) return ''
+  return props.slideshowImages[currentSlideIndex.value]?.image_data ?? ''
+})
 
 function startSlideshow() {
   stopSlideshow()
@@ -85,13 +95,38 @@ function stopSlideshow() {
   }
 }
 
-watch(() => props.slideshowImages.length, () => {
+function startInfoTimer() {
+  clearInfoTimer()
+  if (!hasSlideshow.value) return
+  infoTimer = window.setTimeout(() => {
+    displayMode.value = 'slideshow'
+    startSlideshow()
+  }, props.infoDisplayDuration * 1000)
+}
+
+function clearInfoTimer() {
+  if (infoTimer) {
+    clearTimeout(infoTimer)
+    infoTimer = null
+  }
+}
+
+// When slideshow images change, reset to info mode and restart cycle
+watch(() => props.slideshowImages.length, (len) => {
   currentSlideIndex.value = 0
-  startSlideshow()
+  stopSlideshow()
+  displayMode.value = 'info'
+  if (len > 0) {
+    startInfoTimer()
+  } else {
+    clearInfoTimer()
+  }
 })
 
 watch(() => props.slideshowInterval, () => {
-  startSlideshow()
+  if (displayMode.value === 'slideshow') {
+    startSlideshow()
+  }
 })
 
 onMounted(() => {
@@ -101,37 +136,21 @@ onMounted(() => {
   }, 1000)
 
   if (hasSlideshow.value) {
-    startSlideshow()
+    startInfoTimer()
   }
 })
 
 onUnmounted(() => {
   if (clockInterval) clearInterval(clockInterval)
+  clearInfoTimer()
   stopSlideshow()
 })
 </script>
 
 <template>
-  <div class="idle-display" :class="{ 'idle-with-slideshow': hasSlideshow }">
-    <!-- Slideshow background -->
-    <div v-if="hasSlideshow" class="idle-slideshow">
-      <TransitionGroup name="slide-fade">
-        <img
-          v-for="(img, idx) in slideshowImages"
-          v-show="idx === currentSlideIndex"
-          :key="img.id"
-          :src="img.image_data"
-          alt="Slideshow"
-          class="idle-slideshow-img"
-        />
-      </TransitionGroup>
-      <!-- Overlay for readability -->
-      <div class="idle-slideshow-overlay"></div>
-    </div>
-
-    <!-- Content (overlaid on slideshow or standalone) -->
-    <div class="idle-content" :class="{ 'idle-content-over-slideshow': hasSlideshow }">
-      <!-- Store avatar -->
+  <div class="idle-display">
+    <!-- Info Mode: Store details -->
+    <div v-if="displayMode === 'info'" class="idle-content">
       <div v-if="showLogo" class="idle-avatar-wrap">
         <img v-if="logoUrl" :src="logoUrl" :alt="storeName" class="idle-logo-img" />
         <div v-else class="idle-avatar-letter">
@@ -139,34 +158,34 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Business name -->
-      <h1 v-if="showStoreName" class="idle-store-name" :class="{ 'text-white': hasSlideshow }">{{ storeName }}</h1>
+      <h1 v-if="showStoreName" class="idle-store-name">{{ storeName }}</h1>
+      <p v-if="showAddress && address" class="idle-address">{{ address }}</p>
+      <p v-if="tagline" class="idle-tagline">{{ tagline }}</p>
 
-      <!-- Address -->
-      <p v-if="showAddress && address" class="idle-address" :class="{ 'text-white/70': hasSlideshow }">{{ address }}</p>
-
-      <!-- Tagline -->
-      <p v-if="tagline" class="idle-tagline" :class="{ 'text-white/80': hasSlideshow }">{{ tagline }}</p>
-
-      <!-- Badges -->
       <div class="idle-badges" v-if="showTin || showTerminal">
-        <span v-if="showTin && tin" class="idle-badge" :class="{ 'idle-badge-dark': hasSlideshow }">
+        <span v-if="showTin && tin" class="idle-badge">
           <i class="pi pi-id-card"></i> TIN: {{ tin }}
         </span>
-        <span v-if="showTin && accreditationNo" class="idle-badge" :class="{ 'idle-badge-dark': hasSlideshow }">
+        <span v-if="showTin && accreditationNo" class="idle-badge">
           <i class="pi pi-verified"></i> {{ accreditationNo }}
         </span>
-        <span v-if="showTerminal && terminalId" class="idle-badge" :class="{ 'idle-badge-dark': hasSlideshow }">
+        <span v-if="showTerminal && terminalId" class="idle-badge">
           <i class="pi pi-desktop"></i> Terminal {{ terminalId }}
         </span>
       </div>
 
-      <!-- Date & Time -->
-      <div v-if="showTime" class="idle-clock-section" :class="{ 'idle-clock-dark': hasSlideshow }">
-        <div class="idle-time" :class="{ 'text-white': hasSlideshow }">{{ currentTime }}</div>
-        <div class="idle-date" :class="{ 'text-white/60': hasSlideshow }">{{ currentDate }}</div>
+      <div v-if="showTime" class="idle-clock-section">
+        <div class="idle-time">{{ currentTime }}</div>
+        <div class="idle-date">{{ currentDate }}</div>
       </div>
     </div>
+
+    <!-- Slideshow Mode: Full-width image via CSS background -->
+    <div
+      v-if="displayMode === 'slideshow'"
+      class="idle-slideshow"
+      :style="{ backgroundImage: currentSlideUrl ? `url(${currentSlideUrl})` : 'none' }"
+    ></div>
   </div>
 </template>
 
@@ -177,69 +196,23 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 2rem;
   text-align: center;
-  animation: idle-fade-in 0.5s ease both;
   position: relative;
   overflow: hidden;
 }
 
-.idle-with-slideshow {
-  padding: 0;
+/* Info content */
+.idle-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  animation: idle-fade-in 0.5s ease both;
 }
 
 @keyframes idle-fade-in {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* Slideshow */
-.idle-slideshow {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.idle-slideshow-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.idle-slideshow-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.55));
-  z-index: 1;
-}
-
-/* Slide transition */
-.slide-fade-enter-active {
-  transition: opacity 0.8s ease;
-}
-.slide-fade-leave-active {
-  transition: opacity 0.8s ease;
-}
-.slide-fade-enter-from {
-  opacity: 0;
-}
-.slide-fade-leave-to {
-  opacity: 0;
-}
-
-/* Content layer */
-.idle-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.idle-content-over-slideshow {
-  padding: 2rem;
 }
 
 /* Avatar */
@@ -265,19 +238,6 @@ onUnmounted(() => {
   width: 18rem;
   height: 18rem;
   object-fit: contain;
-}
-
-.idle-with-slideshow .idle-logo-img {
-  width: 10rem;
-  height: 10rem;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-}
-
-.idle-with-slideshow .idle-avatar-letter {
-  width: 10rem;
-  height: 10rem;
-  font-size: 5rem;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 
 /* Store name */
@@ -328,16 +288,6 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.idle-badge-dark {
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(4px);
-}
-
-.idle-badge-dark i {
-  color: rgba(255, 255, 255, 0.6);
-}
-
 .idle-badge i {
   font-size: 0.625rem;
   color: #a1a1aa;
@@ -349,10 +299,6 @@ onUnmounted(() => {
   padding-top: 1.5rem;
   border-top: 1px solid #e4e4e7;
   min-width: 200px;
-}
-
-.idle-clock-dark {
-  border-top-color: rgba(255, 255, 255, 0.2);
 }
 
 .idle-time {
@@ -369,8 +315,15 @@ onUnmounted(() => {
   color: #a1a1aa;
 }
 
-/* Tailwind-like utility classes for slideshow overlay text */
-.text-white {
-  color: white !important;
+/* Slideshow (full-width mode) */
+.idle-slideshow {
+  position: absolute;
+  inset: 0;
+  background-color: #000;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.6s ease;
+  animation: idle-fade-in 0.8s ease both;
 }
 </style>

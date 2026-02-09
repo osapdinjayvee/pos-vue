@@ -3,6 +3,7 @@ const props = defineProps<{
   hasTransaction: boolean
   hasDiscount: boolean
   hasOpenShift?: boolean
+  isAdmin?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -43,23 +44,34 @@ function getTileSeverity(tile: ActionTile): string {
   return tile.severity || 'primary'
 }
 
-const tiles: ActionTile[] = [
-  { id: 'discount', label: 'Discount', icon: 'pi pi-percentage', shortcut: 'F6', needsTransaction: true, needsShift: true },
-  { id: 'browse', label: 'Browse', icon: 'pi pi-search', shortcut: 'F4', needsShift: true },
-  { id: 'return', label: 'Return', icon: 'pi pi-undo', needsShift: true },
-  { id: 'hold', label: 'Suspend', icon: 'pi pi-pause', needsTransaction: true, needsShift: true },
-  { id: 'recall', label: 'Recall', icon: 'pi pi-replay', needsShift: true },
-  { id: 'price-check', label: 'Price Check', icon: 'pi pi-info-circle' },
-  { id: 'manager-override', label: 'Manager', icon: 'pi pi-shield' },
-  { id: 'cash-drawer', label: 'Cash Drawer', icon: 'pi pi-money-bill', needsShift: true },
-  { id: 'clear-cart', label: 'Clear Cart', icon: 'pi pi-trash', severity: 'danger', needsTransaction: true },
-  { id: 'transactions', label: 'Transactions', icon: 'pi pi-list', shortcut: 'F7' },
-  { id: 'x-reading', label: 'X-Reading', icon: 'pi pi-file', needsShift: true },
-  { id: 'z-reading', label: 'Z-Reading', icon: 'pi pi-file-export' },
-  { id: 'end-shift', label: 'End Shift', altLabel: 'Start Shift', icon: 'pi pi-sign-out', altIcon: 'pi pi-sign-in' },
-  { id: 'calculator', label: 'Calculator', icon: 'pi pi-calculator' },
-  { id: 'logout', label: 'Logout', icon: 'pi pi-power-off', severity: 'danger' }
-]
+import { computed } from 'vue'
+
+const tiles = computed<ActionTile[]>(() => {
+  const list: ActionTile[] = [
+    { id: 'discount', label: 'Discount', icon: 'pi pi-percentage', shortcut: 'F6', needsTransaction: true, needsShift: true },
+    { id: 'browse', label: 'Browse', icon: 'pi pi-search', shortcut: 'F4', needsShift: true },
+    { id: 'return', label: 'Return', icon: 'pi pi-undo', needsShift: true },
+    { id: 'hold', label: 'Suspend', icon: 'pi pi-pause', needsTransaction: true, needsShift: true },
+    { id: 'recall', label: 'Recall', icon: 'pi pi-replay', needsShift: true },
+    { id: 'price-check', label: 'Price Check', icon: 'pi pi-info-circle' },
+    { id: 'manager-override', label: 'Manager', icon: 'pi pi-shield' },
+    { id: 'cash-drawer', label: 'Cash Drawer', icon: 'pi pi-money-bill', needsShift: true },
+    { id: 'clear-cart', label: 'Clear Cart', icon: 'pi pi-trash', severity: 'danger', needsTransaction: true },
+    { id: 'transactions', label: 'Transactions', icon: 'pi pi-list', shortcut: 'F7' },
+    { id: 'x-reading', label: 'X-Reading', icon: 'pi pi-file', needsShift: true },
+    { id: 'z-reading', label: 'Z-Reading', icon: 'pi pi-file-export' },
+    { id: 'end-shift', label: 'End Shift', altLabel: 'Start Shift', icon: 'pi pi-sign-out', altIcon: 'pi pi-sign-in' },
+    { id: 'calculator', label: 'Calculator', icon: 'pi pi-calculator' },
+  ]
+
+  if (props.isAdmin) {
+    list.push({ id: 'back-office', label: 'Back Office', icon: 'pi pi-cog' })
+  }
+
+  list.push({ id: 'logout', label: 'Logout', icon: 'pi pi-power-off', severity: 'danger' })
+
+  return list
+})
 
 function isDisabled(tile: ActionTile): boolean {
   if (tile.needsTransaction && !props.hasTransaction) return true
