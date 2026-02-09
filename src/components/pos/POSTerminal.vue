@@ -426,6 +426,7 @@ function handleActionTile(action: string) {
     case 'calculator':
       showCalculator.value = true
       break
+    case 'back-office': router.push('/'); break
     case 'logout': handleLogout(); break
   }
 }
@@ -892,6 +893,16 @@ onUnmounted(() => {
                 :terminalId="authStore.terminalId"
                 :logoUrl="settingsStore.businessInfo.logoUrl"
                 :tagline="settingsStore.receiptSettings.headerLine1 || settingsStore.receiptSettings.headerLine2"
+                :slideshowImages="settingsStore.slideshowImages"
+                :showStoreName="settingsStore.displaySettings.showStoreName"
+                :showLogo="settingsStore.displaySettings.showLogo"
+                :showAddress="settingsStore.displaySettings.showAddress"
+                :showTin="settingsStore.displaySettings.showTin"
+                :showTerminal="settingsStore.displaySettings.showTerminal"
+                :showTime="settingsStore.displaySettings.showTime"
+                :timeFormat="settingsStore.displaySettings.timeFormat"
+                :dateFormat="settingsStore.displaySettings.dateFormat"
+                :slideshowInterval="settingsStore.displaySettings.slideshowInterval"
               />
             </template>
           </div>
@@ -934,6 +945,7 @@ onUnmounted(() => {
           :hasTransaction="hasTransaction"
           :hasDiscount="hasDiscount"
           :hasOpenShift="shiftStore.hasOpenShift"
+          :isAdmin="!authStore.isCashier"
           @action="handleActionTile"
         />
 

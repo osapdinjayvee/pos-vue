@@ -192,6 +192,11 @@ class DatabaseService {
       await this.recordMigration('020_onboarding')
     }
 
+    if (!migrations.includes('021_slideshow_display')) {
+      await this.runSlideshowDisplayMigration()
+      await this.recordMigration('021_slideshow_display')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
@@ -2006,6 +2011,44 @@ class DatabaseService {
     `)
 
     console.log('[Migration] 020_onboarding completed')
+  }
+
+  /**
+   * Migration 021: Slideshow images table + display settings columns on business_config
+   */
+  private async runSlideshowDisplayMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS slideshow_images (
+        id TEXT PRIMARY KEY,
+        image_data TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    `)
+
+    const alterStatements = [
+      'ALTER TABLE business_config ADD COLUMN show_store_name INTEGER DEFAULT 1',
+      'ALTER TABLE business_config ADD COLUMN show_logo INTEGER DEFAULT 1',
+      'ALTER TABLE business_config ADD COLUMN show_address INTEGER DEFAULT 1',
+      'ALTER TABLE business_config ADD COLUMN show_tin INTEGER DEFAULT 1',
+      'ALTER TABLE business_config ADD COLUMN show_terminal INTEGER DEFAULT 1',
+      'ALTER TABLE business_config ADD COLUMN show_time INTEGER DEFAULT 1',
+      "ALTER TABLE business_config ADD COLUMN time_format TEXT DEFAULT '12h'",
+      "ALTER TABLE business_config ADD COLUMN date_format TEXT DEFAULT 'long'",
+      'ALTER TABLE business_config ADD COLUMN slideshow_interval INTEGER DEFAULT 5'
+    ]
+
+    for (const stmt of alterStatements) {
+      try {
+        await this.adapter.execute(stmt)
+      } catch {
+        // Column already exists, ignore
+      }
+    }
+
+    console.log('[Migration] 021_slideshow_display completed')
   }
 
   // =====================

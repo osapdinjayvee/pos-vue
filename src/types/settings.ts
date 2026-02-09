@@ -26,6 +26,15 @@ export interface BusinessConfig {
   accreditation_number: string
   date_accredited: string
   logo_url?: string
+  show_store_name?: number
+  show_logo?: number
+  show_address?: number
+  show_tin?: number
+  show_terminal?: number
+  show_time?: number
+  time_format?: string
+  date_format?: string
+  slideshow_interval?: number
   created_at?: string
   updated_at?: string
 }
@@ -50,6 +59,26 @@ export interface BusinessConfigInput {
   accreditation_number?: string
   date_accredited?: string
   logo_url?: string
+  show_store_name?: number
+  show_logo?: number
+  show_address?: number
+  show_tin?: number
+  show_terminal?: number
+  show_time?: number
+  time_format?: string
+  date_format?: string
+  slideshow_interval?: number
+}
+
+// =====================
+// Slideshow Image
+// =====================
+
+export interface SlideshowImage {
+  id: string
+  image_data: string
+  sort_order: number
+  created_at: string
 }
 
 // =====================

@@ -6,7 +6,8 @@ import type {
   TaxConfig,
   ReceiptConfig,
   PaymentConfig,
-  SystemConfig
+  SystemConfig,
+  SlideshowImage
 } from '@/types/settings'
 
 export type SettingsGroup = 'business' | 'tax' | 'receipt' | 'payment' | 'system'
@@ -18,6 +19,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const receiptConfig = ref<ReceiptConfig | null>(null)
   const paymentConfig = ref<PaymentConfig | null>(null)
   const systemConfig = ref<SystemConfig | null>(null)
+  const slideshowImages = ref<SlideshowImage[]>([])
   const initialized = ref(false)
 
   // =====================
@@ -102,6 +104,21 @@ export const useSettingsStore = defineStore('settings', () => {
   const lowStockThreshold = computed(() => systemConfig.value?.low_stock_threshold ?? 10)
 
   // =====================
+  // Display Settings Getters
+  // =====================
+  const displaySettings = computed(() => ({
+    showStoreName: (businessConfig.value?.show_store_name ?? 1) === 1,
+    showLogo: (businessConfig.value?.show_logo ?? 1) === 1,
+    showAddress: (businessConfig.value?.show_address ?? 1) === 1,
+    showTin: (businessConfig.value?.show_tin ?? 1) === 1,
+    showTerminal: (businessConfig.value?.show_terminal ?? 1) === 1,
+    showTime: (businessConfig.value?.show_time ?? 1) === 1,
+    timeFormat: businessConfig.value?.time_format || '12h',
+    dateFormat: businessConfig.value?.date_format || 'long',
+    slideshowInterval: businessConfig.value?.slideshow_interval ?? 5
+  }))
+
+  // =====================
   // Actions
   // =====================
   async function initialize() {
@@ -133,6 +150,14 @@ export const useSettingsStore = defineStore('settings', () => {
     paymentConfig.value = payment
     systemConfig.value = system
     initialized.value = true
+
+    // Load slideshow images (non-blocking)
+    try {
+      const { slideshowRepository } = await import('@/repositories/slideshowRepository')
+      slideshowImages.value = await slideshowRepository.getAll()
+    } catch {
+      // Non-blocking
+    }
   }
 
   async function reload(group: SettingsGroup) {
@@ -165,6 +190,15 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  async function reloadSlideshow() {
+    try {
+      const { slideshowRepository } = await import('@/repositories/slideshowRepository')
+      slideshowImages.value = await slideshowRepository.getAll()
+    } catch {
+      // Non-blocking
+    }
+  }
+
   return {
     // Raw state (for SettingsView binding)
     businessConfig,
@@ -172,6 +206,7 @@ export const useSettingsStore = defineStore('settings', () => {
     receiptConfig,
     paymentConfig,
     systemConfig,
+    slideshowImages,
     initialized,
 
     // Tax getters
@@ -198,8 +233,12 @@ export const useSettingsStore = defineStore('settings', () => {
     // System getters
     lowStockThreshold,
 
+    // Display getters
+    displaySettings,
+
     // Actions
     initialize,
-    reload
+    reload,
+    reloadSlideshow
   }
 })

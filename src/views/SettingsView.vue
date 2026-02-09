@@ -86,6 +86,93 @@ async function handleEISTest() {
   }
 }
 
+// POS Display Settings
+const displaySettings = ref({
+  showStoreName: true,
+  showLogo: true,
+  showAddress: true,
+  showTin: true,
+  showTerminal: true,
+  showTime: true,
+  timeFormat: '12h',
+  dateFormat: 'long',
+  slideshowInterval: 5
+})
+
+import type { SlideshowImage } from '@/types/settings'
+const slideshowImages = ref<SlideshowImage[]>([])
+const slideshowUploading = ref(false)
+const slideshowFileInput = ref<HTMLInputElement | null>(null)
+
+const timeFormatOptions = [
+  { label: '12-hour (2:30 PM)', value: '12h' },
+  { label: '24-hour (14:30)', value: '24h' }
+]
+
+const dateFormatOptions = [
+  { label: 'Long (Monday, February 9, 2026)', value: 'long' },
+  { label: 'Short (Feb 9, 2026)', value: 'short' },
+  { label: 'Numeric (02/09/2026)', value: 'numeric' }
+]
+
+async function handleSlideshowUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+  if (!files || files.length === 0) return
+
+  slideshowUploading.value = true
+  try {
+    const { slideshowRepository } = await import('@/repositories/slideshowRepository')
+
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue
+      if (file.size > 2 * 1024 * 1024) {
+        toast.add({ severity: 'warn', summary: 'File Too Large', detail: `${file.name} exceeds 2MB limit.`, life: 3000 })
+        continue
+      }
+      const dataUrl = await readFileAsDataURL(file)
+      const img = await slideshowRepository.add(dataUrl)
+      slideshowImages.value.push(img)
+    }
+
+    toast.add({ severity: 'success', summary: 'Uploaded', detail: `${files.length} image(s) uploaded.`, life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload images.', life: 3000 })
+  } finally {
+    slideshowUploading.value = false
+    if (slideshowFileInput.value) slideshowFileInput.value.value = ''
+  }
+}
+
+function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target?.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function removeSlideshowImage(id: string) {
+  try {
+    const { slideshowRepository } = await import('@/repositories/slideshowRepository')
+    await slideshowRepository.remove(id)
+    slideshowImages.value = slideshowImages.value.filter(img => img.id !== id)
+    toast.add({ severity: 'info', summary: 'Removed', detail: 'Image removed.', life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove image.', life: 3000 })
+  }
+}
+
+async function loadSlideshowImages() {
+  try {
+    const { slideshowRepository } = await import('@/repositories/slideshowRepository')
+    slideshowImages.value = await slideshowRepository.getAll()
+  } catch {
+    // Non-blocking
+  }
+}
+
 // Business Information
 const businessInfo = ref({
   businessName: '',
@@ -432,6 +519,17 @@ function hydrateFromDB() {
       accreditationNumber: biz.accreditation_number,
       dateAccredited: biz.date_accredited ? new Date(biz.date_accredited) : null
     }
+    displaySettings.value = {
+      showStoreName: (biz.show_store_name ?? 1) === 1,
+      showLogo: (biz.show_logo ?? 1) === 1,
+      showAddress: (biz.show_address ?? 1) === 1,
+      showTin: (biz.show_tin ?? 1) === 1,
+      showTerminal: (biz.show_terminal ?? 1) === 1,
+      showTime: (biz.show_time ?? 1) === 1,
+      timeFormat: biz.time_format || '12h',
+      dateFormat: biz.date_format || 'long',
+      slideshowInterval: biz.slideshow_interval ?? 5
+    }
   }
 
   const tax = taxConfig.value
@@ -560,7 +658,16 @@ const saveBusinessSettings = async () => {
       machine_serial: birCompliance.value.machineSerial,
       min_number: birCompliance.value.minNumber,
       accreditation_number: birCompliance.value.accreditationNumber,
-      date_accredited: formatDateForDB(birCompliance.value.dateAccredited)
+      date_accredited: formatDateForDB(birCompliance.value.dateAccredited),
+      show_store_name: displaySettings.value.showStoreName ? 1 : 0,
+      show_logo: displaySettings.value.showLogo ? 1 : 0,
+      show_address: displaySettings.value.showAddress ? 1 : 0,
+      show_tin: displaySettings.value.showTin ? 1 : 0,
+      show_terminal: displaySettings.value.showTerminal ? 1 : 0,
+      show_time: displaySettings.value.showTime ? 1 : 0,
+      time_format: displaySettings.value.timeFormat,
+      date_format: displaySettings.value.dateFormat,
+      slideshow_interval: displaySettings.value.slideshowInterval
     })
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Business settings saved.', life: 3000 })
   } catch {
@@ -667,6 +774,7 @@ onMounted(async () => {
   try {
     await loadAllSettings()
     hydrateFromDB()
+    await loadSlideshowImages()
   } catch (e) {
     console.error('Failed to load settings:', e)
   }
@@ -845,6 +953,140 @@ onMounted(async () => {
                     </div>
                   </template>
                 </Card>
+              </div>
+
+              <Divider />
+
+              <div class="section-header">
+                <h2>POS Display Settings</h2>
+                <p>Control what appears on the POS idle screen</p>
+              </div>
+
+              <div class="toggle-grid">
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <label>Show Store Name</label>
+                    <small>Display business name on idle screen</small>
+                  </div>
+                  <ToggleSwitch v-model="displaySettings.showStoreName" />
+                </div>
+
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <label>Show Logo</label>
+                    <small>Display store logo on idle screen</small>
+                  </div>
+                  <ToggleSwitch v-model="displaySettings.showLogo" />
+                </div>
+
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <label>Show Address</label>
+                    <small>Display business address on idle screen</small>
+                  </div>
+                  <ToggleSwitch v-model="displaySettings.showAddress" />
+                </div>
+
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <label>Show TIN</label>
+                    <small>Display TIN and accreditation badges</small>
+                  </div>
+                  <ToggleSwitch v-model="displaySettings.showTin" />
+                </div>
+
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <label>Show Terminal Number</label>
+                    <small>Display terminal ID badge</small>
+                  </div>
+                  <ToggleSwitch v-model="displaySettings.showTerminal" />
+                </div>
+
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <label>Show Time &amp; Date</label>
+                    <small>Display clock and date on idle screen</small>
+                  </div>
+                  <ToggleSwitch v-model="displaySettings.showTime" />
+                </div>
+              </div>
+
+              <div class="form-grid mt-4">
+                <div class="form-group">
+                  <label>Time Format</label>
+                  <Select
+                    v-model="displaySettings.timeFormat"
+                    :options="timeFormatOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="w-full"
+                    :disabled="!displaySettings.showTime"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Date Format</label>
+                  <Select
+                    v-model="displaySettings.dateFormat"
+                    :options="dateFormatOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="w-full"
+                    :disabled="!displaySettings.showTime"
+                  />
+                </div>
+              </div>
+
+              <Divider />
+
+              <div class="section-header">
+                <h3>Slideshow Images</h3>
+                <p>Upload images to cycle on the POS idle screen</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Slide Interval (seconds)</label>
+                  <InputNumber v-model="displaySettings.slideshowInterval" :min="2" :max="60" suffix=" sec" class="w-full" />
+                </div>
+              </div>
+
+              <div class="slideshow-upload-area mt-4">
+                <Button
+                  label="Upload Images"
+                  icon="pi pi-upload"
+                  outlined
+                  :loading="slideshowUploading"
+                  @click="slideshowFileInput?.click()"
+                />
+                <small class="ml-2" style="color: var(--p-text-muted-color)">PNG, JPG (max 2MB each)</small>
+                <input
+                  ref="slideshowFileInput"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  class="hidden"
+                  @change="handleSlideshowUpload"
+                />
+              </div>
+
+              <div v-if="slideshowImages.length > 0" class="slideshow-grid mt-4">
+                <div
+                  v-for="img in slideshowImages"
+                  :key="img.id"
+                  class="slideshow-thumb"
+                >
+                  <img :src="img.image_data" alt="Slideshow image" />
+                  <button class="slideshow-thumb-remove" @click="removeSlideshowImage(img.id)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div v-else class="slideshow-empty mt-4">
+                <i class="pi pi-images" style="font-size: 1.5rem; color: var(--p-text-muted-color)"></i>
+                <p style="margin: 0.5rem 0 0; color: var(--p-text-muted-color); font-size: 0.875rem;">No slideshow images. The POS idle screen will show the store logo instead.</p>
               </div>
 
               <div class="action-buttons">
@@ -2374,6 +2616,68 @@ onMounted(async () => {
 
 .text-muted {
   color: var(--p-text-muted-color);
+}
+
+.slideshow-upload-area {
+  display: flex;
+  align-items: center;
+}
+
+.slideshow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.slideshow-thumb {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--p-surface-200);
+  aspect-ratio: 16/9;
+}
+
+.slideshow-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slideshow-thumb-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  transition: background 0.15s;
+}
+
+.slideshow-thumb-remove:hover {
+  background: rgba(239, 68, 68, 0.9);
+}
+
+.slideshow-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background: var(--p-surface-50);
+  border-radius: 8px;
+  border: 2px dashed var(--p-surface-200);
+  text-align: center;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
 }
 
 @media (max-width: 1024px) {
