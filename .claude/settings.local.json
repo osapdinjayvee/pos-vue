@@ -33,7 +33,12 @@
       "Bash(npx cap sync:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix dashboard scroll, period filter, and replace mock data with live queries\n\n- Remove overflow:hidden from .layout-main and .dashboard-grid to fix scrolling\n- Add getMetricsForPeriod\\(\\) to analyticsService for date-range-aware stats\n- Fix changePeriod\\(\\) to reload metrics/trend/comparison together via Promise.all\n- Rewrite SalesChart, PaymentChart, TopProducts, RecentOrders with live SQL queries\n- All dashboard widgets now accept dateFrom/dateTo props and react to period changes\n- Remove redundant RevenueChart from dashboard layout\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(find:*)",
-      "Bash(xargs -I {} bash -c \"grep -r \"\"Stepper\\\\|Steps\"\" . 2>/dev/null | head -20\")"
+      "Bash(xargs -I {} bash -c \"grep -r \"\"Stepper\\\\|Steps\"\" . 2>/dev/null | head -20\")",
+      "Bash(grep:*)",
+      "Bash(wsl ls:*)",
+      "Bash(wsl find:*)",
+      "Bash(wsl --list:*)",
+      "Bash(wsl:*)"
     ]
   }
 }
