@@ -138,7 +138,8 @@ class XReadingRepository {
    * Get X-Readings generated today for a terminal
    */
   async getTodayReadings(terminalId: string): Promise<XReading[]> {
-    const today = new Date().toISOString().split('T')[0]
+    const { toLocalDateStr } = await import('@/utils/dateHelpers')
+    const today = toLocalDateStr()
     return await db.query<XReading>(
       `SELECT * FROM x_readings
        WHERE terminal_id = ? AND date(generated_at) = ?

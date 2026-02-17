@@ -88,7 +88,8 @@ class ZCounterRepository {
     const counter = await this.getCounter(terminalId)
     if (!counter?.last_z_date) return false
 
-    const today = new Date().toISOString().split('T')[0]
+    const { toLocalDateStr } = await import('@/utils/dateHelpers')
+    const today = toLocalDateStr()
     return counter.last_z_date === today
   }
 

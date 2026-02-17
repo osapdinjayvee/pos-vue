@@ -73,6 +73,7 @@ const breadcrumbItems = computed(() => {
     '/products': 'Products',
     '/categories': 'Categories',
     '/inventory': 'Inventory',
+    '/stock-movements': 'Product Movements',
     '/adjustments': 'Stock Adjustments',
     '/suppliers': 'Suppliers',
     '/transfers': 'Stock Transfers',

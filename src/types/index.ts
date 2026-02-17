@@ -62,6 +62,7 @@ export interface StatsData {
   trend: number
   trendLabel: string
   color: string
+  subtitle?: string
 }
 
 export interface Order {

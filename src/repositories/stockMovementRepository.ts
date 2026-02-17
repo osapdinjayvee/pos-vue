@@ -360,6 +360,64 @@ class StockMovementRepository extends BaseRepository<StockMovement> {
     )
     return result?.count || 0
   }
+
+  async getFilteredWithDetails(filters: {
+    movementType?: MovementType
+    search?: string
+    dateFrom?: string
+    dateTo?: string
+    limit?: number
+    offset?: number
+  }): Promise<{ data: any[]; total: number }> {
+    const conditions: string[] = []
+    const params: any[] = []
+
+    if (filters.movementType) {
+      conditions.push('m.movement_type = ?')
+      params.push(filters.movementType)
+    }
+
+    if (filters.search) {
+      conditions.push('(p.name LIKE ? OR v.name LIKE ? OR v.sku LIKE ? OR m.reason LIKE ?)')
+      const term = `%${filters.search}%`
+      params.push(term, term, term, term)
+    }
+
+    if (filters.dateFrom) {
+      conditions.push('m.created_at >= ?')
+      params.push(filters.dateFrom)
+    }
+
+    if (filters.dateTo) {
+      conditions.push('m.created_at <= ?')
+      params.push(filters.dateTo + 'T23:59:59')
+    }
+
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : ''
+
+    const countResult = await db.getOne<{ count: number }>(
+      `SELECT COUNT(*) as count
+       FROM ${this.tableName} m
+       JOIN product_variants v ON m.variant_id = v.id
+       JOIN products p ON v.product_id = p.id
+       ${whereClause}`,
+      params
+    )
+
+    const data = await db.query(
+      `SELECT m.*, v.name as variant_name, v.sku, p.name as product_name, p.id as product_id, b.batch_number
+       FROM ${this.tableName} m
+       JOIN product_variants v ON m.variant_id = v.id
+       JOIN products p ON v.product_id = p.id
+       LEFT JOIN batches b ON m.batch_id = b.id
+       ${whereClause}
+       ORDER BY m.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, filters.limit || 25, filters.offset || 0]
+    )
+
+    return { data, total: countResult?.count || 0 }
+  }
 }
 
 export const stockMovementRepository = new StockMovementRepository()

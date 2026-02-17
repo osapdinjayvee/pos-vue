@@ -16,6 +16,7 @@ import type {
   ProductComparisonData
 } from '@/types/analytics'
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const toast = useToast()
 
@@ -42,7 +43,7 @@ const loadingCompare = ref(false)
 const comparisonRef = ref<InstanceType<typeof ProductComparison> | null>(null)
 
 function formatDateStr(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return toLocalDateStr(date)
 }
 
 function getDateRange(): { dateFrom: string; dateTo: string } {

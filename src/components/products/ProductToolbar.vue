@@ -23,6 +23,7 @@ const emit = defineEmits<{
   bulkDeactivate: []
   bulkReceiveStock: []
   openFilters: []
+  importCsv: []
 }>()
 
 const bulkMenu = ref()
@@ -108,6 +109,13 @@ const toggleBulkMenu = (event: Event) => {
             <i :class="option.icon"></i>
           </template>
         </SelectButton>
+        <Button
+          icon="pi pi-upload"
+          severity="secondary"
+          outlined
+          @click="emit('importCsv')"
+          v-tooltip.bottom="'Import CSV'"
+        />
         <Button
           label="Create"
           icon="pi pi-plus"

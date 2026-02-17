@@ -5,6 +5,7 @@
  */
 
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { salesHourlyRepository } from '@/repositories/salesHourlyRepository'
 import { productDailyRepository } from '@/repositories/productDailyRepository'
 
@@ -127,7 +128,7 @@ class AnalyticsAggregationService {
     const current = new Date(start)
 
     while (current <= end) {
-      const dateStr = current.toISOString().split('T')[0]
+      const dateStr = toLocalDateStr(current)
       await this.aggregateAll(dateStr)
       current.setDate(current.getDate() + 1)
     }

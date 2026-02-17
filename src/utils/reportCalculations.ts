@@ -3,6 +3,7 @@
  * Functions for calculating report totals and breakdowns
  */
 
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import type { VATBreakdown, HourlyBreakdown, PaymentBreakdown, CategoryBreakdown } from '@/types/report'
 
 // =====================
@@ -278,7 +279,7 @@ export function getDateRange(start: string, end: string): string[] {
   const endDate = new Date(end)
 
   while (current <= endDate) {
-    dates.push(current.toISOString().split('T')[0])
+    dates.push(toLocalDateStr(current))
     current.setDate(current.getDate() + 1)
   }
 

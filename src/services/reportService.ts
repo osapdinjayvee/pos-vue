@@ -5,6 +5,7 @@
  */
 
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { zCounterRepository } from '@/repositories/zCounterRepository'
 import { xCounterRepository } from '@/repositories/xCounterRepository'
 import { zReadingRepository } from '@/repositories/zReadingRepository'
@@ -138,7 +139,7 @@ class ReportService {
    * Calculate Z-Reading data for end of day
    */
   async calculateZReading(terminalId: string): Promise<ZReadingCalculation> {
-    const today = new Date().toISOString().split('T')[0]
+    const today = toLocalDateStr()
     const startOfDay = `${today}T00:00:00`
     const endOfDay = `${today}T23:59:59`
 
@@ -312,7 +313,7 @@ class ReportService {
    * Update daily sales aggregate from transaction data
    */
   async updateDailySalesAggregate(terminalId: string, branchId: string): Promise<void> {
-    const today = new Date().toISOString().split('T')[0]
+    const today = toLocalDateStr()
     const startOfDay = `${today}T00:00:00`
     const endOfDay = `${today}T23:59:59`
 

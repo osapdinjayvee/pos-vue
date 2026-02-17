@@ -1,4 +1,5 @@
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { BaseRepository } from './baseRepository'
 import type { QueryOptions as BaseQueryOptions } from './baseRepository'
 
@@ -175,7 +176,7 @@ class ProductRepository extends BaseRepository<Product> {
       const thirtyDaysFromNow = new Date()
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
       sql += ' AND p.expiration_date IS NOT NULL AND p.expiration_date <= ? AND p.expiration_date >= date("now")'
-      params.push(thirtyDaysFromNow.toISOString().split('T')[0])
+      params.push(toLocalDateStr(thirtyDaysFromNow))
     }
 
     if (filters.movement) {

@@ -128,10 +128,17 @@ export interface DrawerOperationDisplay {
   createdAt: string
 }
 
+export interface RefundDetail {
+  orNumber: string
+  amount: number
+  createdAt: string
+}
+
 export interface ExpectedCashBreakdown {
   openingAmount: number
   cashSales: number
   cashRefunds: number
+  refundDetails: RefundDetail[]
   totalDrops: number
   totalPaidIns: number
   expectedCash: number

@@ -15,6 +15,7 @@ import { formatCurrency, formatDateLong, formatPaymentMethod } from '@/utils/rep
 import { toCSV, downloadCSV } from '@/utils/reportFormatter'
 import { reportService } from '@/services/reportService'
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const router = useRouter()
 const toast = useToast()
@@ -93,7 +94,7 @@ watch(selectedDate, () => {
 
 async function loadDailyReport() {
   isLoading.value = true
-  const dateStr = selectedDate.value.toISOString().split('T')[0]
+  const dateStr = toLocalDateStr(selectedDate.value)
 
   try {
     // Try to get from aggregate first
@@ -238,7 +239,7 @@ async function loadDailyReport() {
 function handleExportCSV() {
   if (!salesData.value) return
 
-  const dateStr = selectedDate.value.toISOString().split('T')[0]
+  const dateStr = toLocalDateStr(selectedDate.value)
   const rows = [
     { field: 'Gross Sales', value: salesData.value.grossSales },
     { field: 'Discounts', value: salesData.value.discountTotal },

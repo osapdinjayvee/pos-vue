@@ -178,7 +178,8 @@ export const useTransactionStore = defineStore('transaction', () => {
     voidedCount: number
     voidedAmount: number
   }> {
-    const targetDate = date || new Date().toISOString().split('T')[0] || new Date().toISOString().slice(0, 10)
+    const { toLocalDateStr } = await import('@/utils/dateHelpers')
+    const targetDate = date || toLocalDateStr()
     return await transactionService.getDailySummary(targetDate)
   }
 

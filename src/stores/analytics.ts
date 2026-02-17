@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { analyticsService } from '@/services/analyticsService'
 import { analyticsAggregationService } from '@/services/analyticsAggregationService'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import type {
   AnalyticsPeriod,
   TodayMetrics,
@@ -107,8 +108,15 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     error.value = null
 
     try {
+      // Resolve period to date range so metrics match the selected period
+      const dates = analyticsService.resolvePeriodDates(
+        p,
+        p === 'custom' ? customDateFrom.value : undefined,
+        p === 'custom' ? customDateTo.value : undefined
+      )
+
       await Promise.all([
-        loadTodayMetrics(branchId),
+        loadMetricsForPeriod(dates.from, dates.to, branchId),
         loadSalesTrend(p, branchId),
         loadPeriodComparison(p, branchId)
       ])
@@ -121,7 +129,7 @@ export const useAnalyticsStore = defineStore('analytics', () => {
   }
 
   async function runAggregation(date?: string) {
-    const targetDate = date || new Date().toISOString().split('T')[0]
+    const targetDate = date || toLocalDateStr()
     isAggregating.value = true
     error.value = null
 
@@ -137,7 +145,7 @@ export const useAnalyticsStore = defineStore('analytics', () => {
   }
 
   async function ensureFreshData() {
-    const today = new Date().toISOString().split('T')[0]
+    const today = toLocalDateStr()
     const stale = await analyticsAggregationService.isStale(today)
     if (stale) {
       await runAggregation(today)

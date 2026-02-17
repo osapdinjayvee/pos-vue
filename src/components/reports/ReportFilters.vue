@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import DatePicker from 'primevue/datepicker'
 import Button from 'primevue/button'
 import SelectButton from 'primevue/selectbutton'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const props = defineProps<{
   modelValue: { dateFrom: string; dateTo: string }
@@ -56,8 +57,8 @@ function applyPeriod() {
   dateTo.value = end
 
   emit('update:modelValue', {
-    dateFrom: start.toISOString().split('T')[0],
-    dateTo: end.toISOString().split('T')[0]
+    dateFrom: toLocalDateStr(start),
+    dateTo: toLocalDateStr(end)
   })
   emit('apply')
 }

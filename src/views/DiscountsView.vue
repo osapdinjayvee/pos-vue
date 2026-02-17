@@ -15,11 +15,17 @@ import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { PromoDiscount } from '@/types/discount'
+import CsvImportDialog from '@/components/import/CsvImportDialog.vue'
+import { discountImportConfig } from '@/config/csvImportConfigs'
+import type { ImportResult } from '@/services/csvImportService'
 
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const store = useDiscountManagementStore()
+
+// CSV import state
+const showImportDialog = ref(false)
 
 // Search and filters
 const searchQuery = ref('')
@@ -73,6 +79,19 @@ onMounted(async () => {
 
 const openCreatePage = () => {
   router.push('/discounts/new')
+}
+
+const handleImportComplete = async (result: ImportResult) => {
+  const total = result.created + result.updated
+  if (total > 0) {
+    toast.add({
+      severity: 'success',
+      summary: 'Import Complete',
+      detail: `${result.created} created, ${result.updated} updated${result.errors > 0 ? `, ${result.errors} failed` : ''}`,
+      life: 4000
+    })
+    await store.fetchAll()
+  }
 }
 
 const openEditPage = (discount: PromoDiscount) => {
@@ -220,6 +239,13 @@ const getTimeRange = (discount: PromoDiscount): string | null => {
           <InputText v-model="searchQuery" placeholder="Search discounts..." />
         </IconField>
         <Button
+          icon="pi pi-upload"
+          severity="secondary"
+          outlined
+          @click="showImportDialog = true"
+          v-tooltip.bottom="'Import CSV'"
+        />
+        <Button
           label="Add Discount"
           icon="pi pi-plus"
           @click="openCreatePage"
@@ -355,6 +381,12 @@ const getTimeRange = (discount: PromoDiscount): string | null => {
       </DataTable>
     </div>
 
+    <!-- CSV Import Dialog -->
+    <CsvImportDialog
+      v-model:visible="showImportDialog"
+      :config="discountImportConfig"
+      @import-complete="handleImportComplete"
+    />
   </div>
 </template>
 

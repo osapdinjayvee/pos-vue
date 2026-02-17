@@ -26,6 +26,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useSettings } from '@/composables/useSettings'
 import { testConnection } from '@/services/eisConnectionTestService'
 import type { EISConfig } from '@/types/eis'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const toast = useToast()
 const settingsStore = useSettingsStore()
@@ -637,7 +638,7 @@ function formatBackupTime(date: Date | null): string {
 
 function formatDateForDB(date: Date | null): string {
   if (!date) return ''
-  return date.toISOString().split('T')[0]
+  return toLocalDateStr(date)
 }
 
 // Per-tab save handlers

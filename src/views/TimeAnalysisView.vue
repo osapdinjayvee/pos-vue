@@ -17,6 +17,7 @@ import SalesHeatmap from '@/components/analytics/SalesHeatmap.vue'
 import StaffingRecommendations from '@/components/analytics/StaffingRecommendations.vue'
 import PeriodOverlayChart from '@/components/analytics/PeriodOverlayChart.vue'
 import { timeAnalysisService } from '@/services/timeAnalysisService'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { formatCurrency, getHourLabel } from '@/types/report'
 import type { HeatmapCell, StaffingRecommendation as StaffingRec, SalesTrendPoint, DayDrilldown } from '@/types/analytics'
 
@@ -33,27 +34,23 @@ const dateRange = ref<Date[]>([])
 // Compute default date range: last 4 weeks
 function getDefaultRange(): { from: string; to: string } {
   const now = new Date()
-  const to = now.toISOString().split('T')[0]
-  const from = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]
+  const to = toLocalDateStr(now)
+  const from = toLocalDateStr(new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000))
   return { from, to }
 }
 
 function getWeekRange(): { from: string; to: string } {
   const now = new Date()
-  const to = now.toISOString().split('T')[0]
-  const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]
+  const to = toLocalDateStr(now)
+  const from = toLocalDateStr(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000))
   return { from, to }
 }
 
 const effectiveDateRange = computed(() => {
   if (dateRange.value && dateRange.value.length === 2 && dateRange.value[0] && dateRange.value[1]) {
     return {
-      from: dateRange.value[0].toISOString().split('T')[0],
-      to: dateRange.value[1].toISOString().split('T')[0]
+      from: toLocalDateStr(dateRange.value[0]),
+      to: toLocalDateStr(dateRange.value[1])
     }
   }
   return selectedPeriod.value === 'week' ? getWeekRange() : getDefaultRange()
@@ -83,7 +80,7 @@ const period2Label = computed(() => {
   const diff = toDate.getTime() - fromDate.getTime()
   const prevTo = new Date(fromDate.getTime() - 1 * 24 * 60 * 60 * 1000)
   const prevFrom = new Date(prevTo.getTime() - diff)
-  return `${prevFrom.toISOString().split('T')[0]} to ${prevTo.toISOString().split('T')[0]}`
+  return `${toLocalDateStr(prevFrom)} to ${toLocalDateStr(prevTo)}`
 })
 
 // --- Drill-down dialog ---
@@ -139,8 +136,8 @@ async function fetchData() {
     const overlay = await timeAnalysisService.getPeriodOverlay(
       from,
       to,
-      prevFrom.toISOString().split('T')[0],
-      prevTo.toISOString().split('T')[0]
+      toLocalDateStr(prevFrom),
+      toLocalDateStr(prevTo)
     )
     period1Data.value = overlay.period1
     period2Data.value = overlay.period2
@@ -169,7 +166,7 @@ async function handleCellClick(cell: HeatmapCell) {
   for (let i = 0; i < 7; i++) {
     const candidate = new Date(toDate.getTime() - i * 24 * 60 * 60 * 1000)
     if (candidate.getDay() === cell.dayOfWeek) {
-      const dateStr = candidate.toISOString().split('T')[0]
+      const dateStr = toLocalDateStr(candidate)
       if (dateStr >= from) {
         await openDrilldown(dateStr)
         return

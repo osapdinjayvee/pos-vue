@@ -14,65 +14,31 @@ import type {
   AnalyticsPeriod
 } from '@/types/analytics'
 import { getHourLabel } from '@/types/report'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 class AnalyticsService {
   /**
    * Get today's metrics from completed orders (live query)
    */
   async getTodayMetrics(branchId?: string): Promise<TodayMetrics> {
-    const today = new Date().toISOString().split('T')[0]
-
-    let sql = `
-      SELECT
-        COALESCE(SUM(total_amount), 0) as gross_sales,
-        COALESCE(SUM(total_amount - discount_total), 0) as net_sales,
-        COUNT(*) as transaction_count,
-        CASE WHEN COUNT(*) > 0 THEN SUM(total_amount) / COUNT(*) ELSE 0 END as avg_ticket,
-        COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
-        0 as refund_count
-      FROM transactions
-      WHERE date(created_at) = ?
-        AND status IN ('completed', 'voided')
-    `
-    const params: any[] = [today]
-
-    if (branchId) {
-      sql += ' AND branch_id = ?'
-      params.push(branchId)
-    }
-
-    const result = await db.getOne<{
-      gross_sales: number
-      net_sales: number
-      transaction_count: number
-      avg_ticket: number
-      void_count: number
-      refund_count: number
-    }>(sql, params)
-
-    return {
-      grossSales: result?.gross_sales || 0,
-      netSales: result?.net_sales || 0,
-      transactionCount: result?.transaction_count || 0,
-      averageTicket: result?.avg_ticket || 0,
-      voidCount: result?.void_count || 0,
-      refundCount: result?.refund_count || 0,
-      lastUpdated: new Date().toISOString()
-    }
+    const today = toLocalDateStr()
+    return this.getMetricsForPeriod(today, today, branchId)
   }
 
   /**
-   * Get metrics for an arbitrary date range (period-aware version of getTodayMetrics)
+   * Get metrics for an arbitrary date range
+   * - Gross/Net sales only from completed positive-amount transactions (excludes returns)
+   * - Transaction count only counts completed sales (not voids or returns)
+   * - Void and refund counts tracked separately
    */
   async getMetricsForPeriod(dateFrom: string, dateTo: string, branchId?: string): Promise<TodayMetrics> {
     let sql = `
       SELECT
-        COALESCE(SUM(total_amount), 0) as gross_sales,
-        COALESCE(SUM(total_amount - discount_total), 0) as net_sales,
-        COUNT(*) as transaction_count,
-        CASE WHEN COUNT(*) > 0 THEN SUM(total_amount) / COUNT(*) ELSE 0 END as avg_ticket,
+        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN total_amount ELSE 0 END), 0) as gross_sales,
+        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN total_amount - discount_total ELSE 0 END), 0) as net_sales,
+        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN 1 ELSE 0 END), 0) as transaction_count,
         COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
-        0 as refund_count
+        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount < 0 THEN 1 ELSE 0 END), 0) as refund_count
       FROM transactions
       WHERE date(created_at) >= ? AND date(created_at) <= ?
         AND status IN ('completed', 'voided')
@@ -88,16 +54,18 @@ class AnalyticsService {
       gross_sales: number
       net_sales: number
       transaction_count: number
-      avg_ticket: number
       void_count: number
       refund_count: number
     }>(sql, params)
 
+    const grossSales = result?.gross_sales || 0
+    const txCount = result?.transaction_count || 0
+
     return {
-      grossSales: result?.gross_sales || 0,
+      grossSales,
       netSales: result?.net_sales || 0,
-      transactionCount: result?.transaction_count || 0,
-      averageTicket: result?.avg_ticket || 0,
+      transactionCount: txCount,
+      averageTicket: txCount > 0 ? grossSales / txCount : 0,
       voidCount: result?.void_count || 0,
       refundCount: result?.refund_count || 0,
       lastUpdated: new Date().toISOString()
@@ -194,7 +162,7 @@ class AnalyticsService {
    */
   resolvePeriodDates(period: AnalyticsPeriod, customFrom?: string, customTo?: string): { from: string; to: string } {
     const now = new Date()
-    const today = now.toISOString().split('T')[0]
+    const today = toLocalDateStr(now)
 
     switch (period) {
       case 'today':
@@ -203,23 +171,23 @@ class AnalyticsService {
       case 'week': {
         const start = new Date(now)
         start.setDate(now.getDate() - now.getDay())
-        return { from: start.toISOString().split('T')[0], to: today }
+        return { from: toLocalDateStr(start), to: today }
       }
 
       case 'month': {
         const start = new Date(now.getFullYear(), now.getMonth(), 1)
-        return { from: start.toISOString().split('T')[0], to: today }
+        return { from: toLocalDateStr(start), to: today }
       }
 
       case 'quarter': {
         const quarterMonth = Math.floor(now.getMonth() / 3) * 3
         const start = new Date(now.getFullYear(), quarterMonth, 1)
-        return { from: start.toISOString().split('T')[0], to: today }
+        return { from: toLocalDateStr(start), to: today }
       }
 
       case 'year': {
         const start = new Date(now.getFullYear(), 0, 1)
-        return { from: start.toISOString().split('T')[0], to: today }
+        return { from: toLocalDateStr(start), to: today }
       }
 
       case 'custom':
@@ -244,8 +212,8 @@ class AnalyticsService {
     prevFrom.setDate(prevFrom.getDate() - daysDiff + 1)
 
     return {
-      from: prevFrom.toISOString().split('T')[0],
-      to: prevTo.toISOString().split('T')[0]
+      from: toLocalDateStr(prevFrom),
+      to: toLocalDateStr(prevTo)
     }
   }
 

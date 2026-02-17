@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import SelectButton from 'primevue/selectbutton'
 import DatePicker from 'primevue/datepicker'
 import type { AnalyticsPeriod } from '@/types/analytics'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const props = defineProps<{
   modelValue?: AnalyticsPeriod
@@ -48,34 +49,34 @@ function emitChange(period: AnalyticsPeriod, from?: Date, to?: Date) {
 
   switch (period) {
     case 'today':
-      dateFrom = dateTo = now.toISOString().split('T')[0]
+      dateFrom = dateTo = toLocalDateStr(now)
       break
     case 'week': {
       const start = new Date(now)
       start.setDate(now.getDate() - now.getDay())
-      dateFrom = start.toISOString().split('T')[0]
-      dateTo = now.toISOString().split('T')[0]
+      dateFrom = toLocalDateStr(start)
+      dateTo = toLocalDateStr(now)
       break
     }
     case 'month': {
       const start = new Date(now.getFullYear(), now.getMonth(), 1)
-      dateFrom = start.toISOString().split('T')[0]
-      dateTo = now.toISOString().split('T')[0]
+      dateFrom = toLocalDateStr(start)
+      dateTo = toLocalDateStr(now)
       break
     }
     case 'quarter': {
       const qm = Math.floor(now.getMonth() / 3) * 3
       const start = new Date(now.getFullYear(), qm, 1)
-      dateFrom = start.toISOString().split('T')[0]
-      dateTo = now.toISOString().split('T')[0]
+      dateFrom = toLocalDateStr(start)
+      dateTo = toLocalDateStr(now)
       break
     }
     case 'custom':
-      dateFrom = from ? from.toISOString().split('T')[0] : now.toISOString().split('T')[0]
-      dateTo = to ? to.toISOString().split('T')[0] : now.toISOString().split('T')[0]
+      dateFrom = from ? toLocalDateStr(from) : toLocalDateStr(now)
+      dateTo = to ? toLocalDateStr(to) : toLocalDateStr(now)
       break
     default:
-      dateFrom = dateTo = now.toISOString().split('T')[0]
+      dateFrom = dateTo = toLocalDateStr(now)
   }
 
   emit('change', { period, dateFrom, dateTo })

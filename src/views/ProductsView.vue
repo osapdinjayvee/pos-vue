@@ -22,6 +22,9 @@ import { formatCurrency } from '@/utils/format'
 import ProductCard from '@/components/products/ProductCard.vue'
 import ProductToolbar from '@/components/products/ProductToolbar.vue'
 import BulkReceiveStockDialog from '@/components/inventory/BulkReceiveStockDialog.vue'
+import CsvImportDialog from '@/components/import/CsvImportDialog.vue'
+import { productImportConfig } from '@/config/csvImportConfigs'
+import type { ImportResult } from '@/services/csvImportService'
 
 const router = useRouter()
 const confirm = useConfirm()
@@ -43,6 +46,8 @@ const filterDrawerVisible = ref(false)
 
 // Bulk receive dialog state
 const showBulkReceiveDialog = ref(false)
+// CSV import dialog state
+const showImportDialog = ref(false)
 const filters = ref<ProductFilters & {
   lowStock: boolean
   outOfStock: boolean
@@ -365,6 +370,23 @@ const openBulkReceiveDialog = () => {
   showBulkReceiveDialog.value = true
 }
 
+const openImportDialog = () => {
+  showImportDialog.value = true
+}
+
+const handleImportComplete = async (result: ImportResult) => {
+  const total = result.created + result.updated
+  if (total > 0) {
+    toast.add({
+      severity: 'success',
+      summary: 'Import Complete',
+      detail: `${result.created} created, ${result.updated} updated${result.errors > 0 ? `, ${result.errors} failed` : ''}`,
+      life: 4000
+    })
+    await productStore.fetchAll()
+  }
+}
+
 const handleBulkStockReceived = async (result: { success: number; failed: number }) => {
   if (result.success > 0) {
     toast.add({
@@ -412,6 +434,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
         @bulkActivate="bulkSetStatus('active')"
         @bulkDeactivate="bulkSetStatus('inactive')"
         @bulkReceiveStock="openBulkReceiveDialog"
+        @importCsv="openImportDialog"
         @openFilters="filterDrawerVisible = true"
       />
     </div>
@@ -680,6 +703,13 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
       v-model:visible="showBulkReceiveDialog"
       :products="selectedProducts"
       @stock-received="handleBulkStockReceived"
+    />
+
+    <!-- CSV Import Dialog -->
+    <CsvImportDialog
+      v-model:visible="showImportDialog"
+      :config="productImportConfig"
+      @import-complete="handleImportComplete"
     />
   </div>
 </template>

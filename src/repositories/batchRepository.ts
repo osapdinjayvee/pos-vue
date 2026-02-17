@@ -1,4 +1,5 @@
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { BaseRepository } from './baseRepository'
 import type { QueryOptions } from './baseRepository'
 import type { Batch, BatchInput } from '@/types/inventory'
@@ -43,7 +44,7 @@ class BatchRepository extends BaseRepository<Batch> {
   async findExpiringSoon(daysUntilExpiry: number = 7): Promise<Batch[]> {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() + daysUntilExpiry)
-    const cutoffStr = cutoffDate.toISOString().split('T')[0]
+    const cutoffStr = toLocalDateStr(cutoffDate)
 
     return await db.query<Batch>(
       `SELECT * FROM ${this.tableName}
@@ -219,7 +220,7 @@ class BatchRepository extends BaseRepository<Batch> {
   async getExpiringBatchesSummary(daysAhead: number = 30): Promise<any[]> {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() + daysAhead)
-    const cutoffStr = cutoffDate.toISOString().split('T')[0]
+    const cutoffStr = toLocalDateStr(cutoffDate)
 
     return await db.query(
       `SELECT b.*, v.name as variant_name, v.sku, p.name as product_name, COALESCE(SUM(m.quantity), 0) as current_quantity

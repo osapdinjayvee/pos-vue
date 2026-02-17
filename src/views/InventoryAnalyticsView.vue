@@ -15,6 +15,7 @@ import type {
   ReorderSuggestion,
   ABCClassification
 } from '@/types/analytics'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const toast = useToast()
 
@@ -95,8 +96,8 @@ async function loadAbcAnalysis() {
 
   loadingAbc.value = true
   try {
-    const dateFrom = abcDateRange.value[0].toISOString().split('T')[0]
-    const dateTo = abcDateRange.value[1].toISOString().split('T')[0]
+    const dateFrom = toLocalDateStr(abcDateRange.value[0])
+    const dateTo = toLocalDateStr(abcDateRange.value[1])
     abcClassifications.value = await inventoryAnalyticsService.getAbcAnalysis(dateFrom, dateTo)
   } catch (e) {
     console.error('Failed to load ABC analysis:', e)

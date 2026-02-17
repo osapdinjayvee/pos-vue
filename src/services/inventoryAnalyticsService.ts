@@ -5,6 +5,7 @@
  */
 
 import db from '@/db/database'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { analyticsAggregationService } from '@/services/analyticsAggregationService'
 import type {
   InventoryOverview,
@@ -26,8 +27,8 @@ class InventoryAnalyticsService {
     const thirtyDaysAgo = new Date(today)
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     await analyticsAggregationService.ensureAggregated(
-      thirtyDaysAgo.toISOString().split('T')[0],
-      today.toISOString().split('T')[0]
+      toLocalDateStr(thirtyDaysAgo),
+      toLocalDateStr(today)
     )
 
     // Total inventory value from products table

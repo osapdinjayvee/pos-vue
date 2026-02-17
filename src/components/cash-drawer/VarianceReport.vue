@@ -13,6 +13,7 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Button from 'primevue/button'
 import { varianceService } from '@/services/varianceService'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 // Types
 interface VarianceRecord {
@@ -74,8 +75,8 @@ const flaggedCount = computed(() => {
 const loadReport = async () => {
   loading.value = true
   try {
-    const start = startDate.value.toISOString().split('T')[0]
-    const end = endDate.value.toISOString().split('T')[0]
+    const start = toLocalDateStr(startDate.value)
+    const end = toLocalDateStr(endDate.value)
     const [records, summaries, flagged] = await Promise.all([
       varianceService.getVarianceReport(start, end),
       varianceService.getCashierVarianceSummary(start, end),

@@ -17,6 +17,7 @@ import { customReportService } from '@/services/customReportService'
 import { reportExportService } from '@/services/reportExportService'
 import { savedReportRepository } from '@/repositories/savedReportRepository'
 import type { ReportConfig, ReportResult } from '@/types/analytics'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const toast = useToast()
 
@@ -143,7 +144,7 @@ async function handleDeleteSaved(id: string) {
 function handleExportCsv() {
   if (!reportResult.value || !reportResult.value.data.length) return
 
-  const filename = `custom-report-${new Date().toISOString().split('T')[0]}`
+  const filename = `custom-report-${toLocalDateStr()}`
   reportExportService.exportToCsv(
     reportResult.value.data,
     reportResult.value.columns,

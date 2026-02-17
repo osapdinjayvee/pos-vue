@@ -4,6 +4,8 @@ import { transactionItemRepository } from '@/repositories/transactionItemReposit
 import { paymentRepository } from '@/repositories/paymentRepository'
 import { orSeriesRepository } from '@/repositories/orSeriesRepository'
 import { stockMovementRepository } from '@/repositories/stockMovementRepository'
+import { variantRepository } from '@/repositories/variantRepository'
+import productRepository from '@/repositories/productRepository'
 import { calculateCartVAT } from '@/utils/vatCalculator'
 import { vatService } from '@/services/vatService'
 import type {
@@ -196,21 +198,49 @@ class TransactionService {
         }
       }
 
-      // 8. Create stock movements (deduct inventory)
+      // 8. Create stock movements (deduct inventory for sales, restore for returns)
       for (const item of data.items) {
-        // Only create stock movement if variantId is provided
-        if (item.variantId) {
-          await stockMovementRepository.recordSale(
-            item.variantId,
-            item.quantity,
-            data.userId,
-            data.terminalId,
-            data.branchId,
-            {
-              referenceId: transaction.id,
-              unitCost: item.unitPrice
-            }
-          )
+        // Resolve variantId — if missing, look up default variant for the product
+        let resolvedVariantId = item.variantId
+        if (!resolvedVariantId && item.productId) {
+          const defaultVariant = await variantRepository.getDefaultVariant(item.productId)
+          if (defaultVariant) {
+            resolvedVariantId = defaultVariant.id
+          }
+        }
+
+        if (resolvedVariantId) {
+          const isReturn = item.unitPrice < 0
+
+          if (isReturn) {
+            // Return item: create 'return' movement with positive quantity (restores stock)
+            await stockMovementRepository.recordReturn(
+              resolvedVariantId,
+              item.quantity,
+              data.userId,
+              data.terminalId,
+              data.branchId,
+              'Customer return',
+              transaction.id
+            )
+            // Update product stock (add back)
+            await productRepository.updateStock(item.productId, item.quantity)
+          } else {
+            // Sale item: create 'sale' movement with negative quantity (deducts stock)
+            await stockMovementRepository.recordSale(
+              resolvedVariantId,
+              item.quantity,
+              data.userId,
+              data.terminalId,
+              data.branchId,
+              {
+                referenceId: transaction.id,
+                unitCost: item.unitPrice
+              }
+            )
+            // Update product stock (deduct) and record sale stats
+            await productRepository.recordSale(item.productId, item.quantity, item.lineTotal)
+          }
         }
       }
 
@@ -230,8 +260,9 @@ class TransactionService {
       )
 
       // 11. Trigger analytics aggregation for today (non-blocking, idempotent)
-      import('@/services/analyticsAggregationService').then(({ analyticsAggregationService }) => {
-        const today = new Date().toISOString().split('T')[0]
+      import('@/services/analyticsAggregationService').then(async ({ analyticsAggregationService }) => {
+        const { toLocalDateStr } = await import('@/utils/dateHelpers')
+        const today = toLocalDateStr()
         analyticsAggregationService.aggregateAll(today).catch((e) =>
           console.error('[TransactionService] Analytics aggregation failed:', e)
         )

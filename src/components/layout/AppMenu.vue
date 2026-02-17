@@ -62,6 +62,7 @@ const rawGroups: MenuGroup[] = [
     icon: 'pi pi-warehouse',
     items: [
       { label: 'Stock Levels', icon: 'pi pi-warehouse', route: '/inventory', permission: PERMISSIONS.INVENTORY_VIEW },
+      { label: 'Product Movements', icon: 'pi pi-history', route: '/stock-movements', permission: PERMISSIONS.INVENTORY_VIEW },
       { label: 'Adjustments', icon: 'pi pi-sliders-h', route: '/adjustments', permission: PERMISSIONS.INVENTORY_ADJUST },
       { label: 'Transfers', icon: 'pi pi-arrow-right-arrow-left', route: '/transfers', permission: PERMISSIONS.INVENTORY_ADJUST }
     ]

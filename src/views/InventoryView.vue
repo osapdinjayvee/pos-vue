@@ -18,6 +18,7 @@ import { formatCurrency } from '@/utils/format'
 import { exportToCsv } from '@/utils/exportCsv'
 import type { Product } from '@/repositories/productRepository'
 import type { ExportColumn } from '@/utils/exportCsv'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const router = useRouter()
 const toast = useToast()
@@ -168,7 +169,7 @@ function handleExport() {
     }
   ]
 
-  const dateStr = new Date().toISOString().split('T')[0]
+  const dateStr = toLocalDateStr()
   const filename = `inventory-${activeFilter.value}-${dateStr}`
 
   exportToCsv(filteredProducts.value, filename, columns)

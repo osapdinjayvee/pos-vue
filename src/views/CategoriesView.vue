@@ -15,10 +15,16 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { Category, CategoryInput } from '@/types'
+import CsvImportDialog from '@/components/import/CsvImportDialog.vue'
+import { categoryImportConfig } from '@/config/csvImportConfigs'
+import type { ImportResult } from '@/services/csvImportService'
 
 const toast = useToast()
 const confirm = useConfirm()
 const categoryStore = useCategoryStore()
+
+// CSV import state
+const showImportDialog = ref(false)
 
 // Dialog state
 const showDialog = ref(false)
@@ -82,6 +88,19 @@ const resetForm = () => {
 const openCreateDialog = () => {
   resetForm()
   showDialog.value = true
+}
+
+const handleImportComplete = async (result: ImportResult) => {
+  const total = result.created + result.updated
+  if (total > 0) {
+    toast.add({
+      severity: 'success',
+      summary: 'Import Complete',
+      detail: `${result.created} created, ${result.updated} updated${result.errors > 0 ? `, ${result.errors} failed` : ''}`,
+      life: 4000
+    })
+    await categoryStore.fetchAll()
+  }
 }
 
 const openEditDialog = (category: Category) => {
@@ -250,6 +269,13 @@ const formatDate = (dateString: string | undefined) => {
           <InputText v-model="searchQuery" placeholder="Search categories..." />
         </IconField>
         <Button
+          icon="pi pi-upload"
+          severity="secondary"
+          outlined
+          @click="showImportDialog = true"
+          v-tooltip.bottom="'Import CSV'"
+        />
+        <Button
           label="Add Category"
           icon="pi pi-plus"
           @click="openCreateDialog"
@@ -415,6 +441,13 @@ const formatDate = (dateString: string | undefined) => {
         />
       </template>
     </Dialog>
+
+    <!-- CSV Import Dialog -->
+    <CsvImportDialog
+      v-model:visible="showImportDialog"
+      :config="categoryImportConfig"
+      @import-complete="handleImportComplete"
+    />
   </div>
 </template>
 

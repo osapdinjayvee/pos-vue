@@ -12,6 +12,7 @@ import EISAlertBanner from '@/components/eis/EISAlertBanner.vue'
 import { useEIS } from '@/composables/useEIS'
 import { eisSubmissionRepository } from '@/repositories/eisSubmissionRepository'
 import type { EISSubmission, EISSubmissionStatus } from '@/types/eis'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const toast = useToast()
 const {
@@ -106,7 +107,7 @@ async function handleExport() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `eis-submissions-${new Date().toISOString().split('T')[0]}.csv`
+  a.download = `eis-submissions-${toLocalDateStr()}.csv`
   a.click()
   URL.revokeObjectURL(url)
   toast.add({ severity: 'success', summary: 'Exported', detail: `${filteredSubmissions.value.length} rows.`, life: 3000 })

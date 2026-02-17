@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import StatsCard from '@/components/dashboard/StatsCard.vue'
 import SalesChart from '@/components/dashboard/SalesChart.vue'
@@ -15,6 +15,7 @@ import PeriodSelector from '@/components/analytics/PeriodSelector.vue'
 import DataFreshnessBanner from '@/components/analytics/DataFreshnessBanner.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { formatCurrency } from '@/types/report'
+import db from '@/db/database'
 import type { StatsData } from '@/types'
 import type { AnalyticsPeriod } from '@/types/analytics'
 import type { DisplayStockAlert } from '@/types/inventory'
@@ -39,57 +40,170 @@ const {
 // Reactive date range derived from current period
 const periodDates = computed(() => getPeriodDates())
 
-// Derive stats cards from live analytics data
-const liveStatsData = computed<StatsData[]>(() => {
+// Inventory summary (loaded once)
+const inventoryStats = ref<{
+  totalUnits: number
+  inventoryValue: number
+  retailValue: number
+  expectedProfit: number
+  profitMargin: number
+  totalProducts: number
+  lowStock: number
+  outOfStock: number
+} | null>(null)
+
+async function loadInventoryStats() {
+  const result = await db.getOne<{
+    total_products: number
+    total_units: number
+    inventory_value: number
+    retail_value: number
+    low_stock: number
+    out_of_stock: number
+  }>(
+    `SELECT
+      COUNT(*) as total_products,
+      COALESCE(SUM(stock), 0) as total_units,
+      COALESCE(SUM(stock * cost), 0) as inventory_value,
+      COALESCE(SUM(stock * price), 0) as retail_value,
+      COALESCE(SUM(CASE WHEN stock > 0 AND stock <= low_stock_threshold THEN 1 ELSE 0 END), 0) as low_stock,
+      COALESCE(SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END), 0) as out_of_stock
+     FROM products WHERE status != 'inactive'`
+  )
+
+  if (result) {
+    const inv = result.inventory_value
+    const ret = result.retail_value
+    const profit = ret - inv
+    inventoryStats.value = {
+      totalProducts: result.total_products,
+      totalUnits: result.total_units,
+      inventoryValue: inv,
+      retailValue: ret,
+      expectedProfit: profit,
+      profitMargin: ret > 0 ? (profit / ret) * 100 : 0,
+      lowStock: result.low_stock,
+      outOfStock: result.out_of_stock
+    }
+  }
+}
+
+// Items sold for the period
+const itemsSold = ref(0)
+async function loadItemsSold() {
+  const dates = getPeriodDates()
+  const result = await db.getOne<{ total: number }>(
+    `SELECT COALESCE(SUM(ti.quantity), 0) as total
+     FROM transaction_items ti
+     INNER JOIN transactions t ON t.id = ti.transaction_id
+     WHERE t.status = 'completed' AND t.total_amount >= 0
+       AND date(t.created_at) >= ? AND date(t.created_at) <= ?`,
+    [dates.from, dates.to]
+  )
+  itemsSold.value = result?.total || 0
+}
+
+// Sales stat cards (top row)
+const salesStats = computed<StatsData[]>(() => {
   const metrics = todayMetrics.value
   const comparison = periodComparison.value
+  const trendLabel = comparison?.periodLabel || 'vs previous'
 
   if (!metrics) {
     return [
-      { label: 'Gross Sales', value: '₱0.00', icon: 'pi pi-dollar', trend: 0, trendLabel: 'No data', color: 'green' },
-      { label: 'Transactions', value: '0', icon: 'pi pi-shopping-cart', trend: 0, trendLabel: 'No data', color: 'blue' },
-      { label: 'Avg. Ticket', value: '₱0.00', icon: 'pi pi-chart-line', trend: 0, trendLabel: 'No data', color: 'orange' },
-      { label: 'Net Sales', value: '₱0.00', icon: 'pi pi-wallet', trend: 0, trendLabel: 'No data', color: 'purple' }
+      { label: 'Total Sales', value: '₱0.00', icon: 'pi pi-wallet', trend: 0, trendLabel: 'No data', color: 'green' },
+      { label: 'Net Sales', value: '₱0.00', icon: 'pi pi-chart-line', trend: 0, trendLabel: 'No data', color: 'blue' },
+      { label: 'Transactions', value: '0', icon: 'pi pi-receipt', trend: 0, trendLabel: 'No data', color: 'purple' },
+      { label: 'Items Sold', value: '0', icon: 'pi pi-shopping-bag', trend: 0, trendLabel: 'No data', color: 'orange' }
     ]
   }
 
   const grossTrend = comparison?.grossChangePercent || 0
   const txTrend = comparison?.transactionChangePercent || 0
-  const avgTrend = comparison?.avgTicketChangePercent || 0
-  const trendLabel = comparison?.periodLabel || 'vs previous'
 
   return [
     {
-      label: 'Gross Sales',
+      label: 'Total Sales',
       value: formatCurrency(metrics.grossSales),
-      icon: 'pi pi-dollar',
+      icon: 'pi pi-wallet',
       trend: parseFloat(grossTrend.toFixed(1)),
       trendLabel,
       color: 'green'
     },
     {
-      label: 'Transactions',
-      value: metrics.transactionCount.toLocaleString(),
-      icon: 'pi pi-shopping-cart',
-      trend: parseFloat(txTrend.toFixed(1)),
+      label: 'Net Sales',
+      value: formatCurrency(metrics.netSales),
+      icon: 'pi pi-chart-line',
+      trend: parseFloat(grossTrend.toFixed(1)),
       trendLabel,
       color: 'blue'
     },
     {
-      label: 'Avg. Ticket',
-      value: formatCurrency(metrics.averageTicket),
-      icon: 'pi pi-chart-line',
-      trend: parseFloat(avgTrend.toFixed(1)),
+      label: 'Transactions',
+      value: metrics.transactionCount.toLocaleString(),
+      icon: 'pi pi-receipt',
+      trend: parseFloat(txTrend.toFixed(1)),
       trendLabel,
-      color: 'orange'
+      color: 'purple',
+      subtitle: metrics.voidCount > 0 ? `${metrics.voidCount} voided` : undefined
     },
     {
-      label: 'Net Sales',
-      value: formatCurrency(metrics.netSales),
-      icon: 'pi pi-wallet',
-      trend: parseFloat(grossTrend.toFixed(1)),
+      label: 'Items Sold',
+      value: itemsSold.value.toLocaleString(),
+      icon: 'pi pi-shopping-bag',
+      trend: 0,
       trendLabel,
-      color: 'purple'
+      color: 'orange'
+    }
+  ]
+})
+
+// Inventory stat cards (second row)
+const inventoryStatsCards = computed<StatsData[]>(() => {
+  const inv = inventoryStats.value
+
+  if (!inv) {
+    return [
+      { label: 'Inventory Value', value: '₱0.00', icon: 'pi pi-box', trend: 0, trendLabel: '', color: 'teal' },
+      { label: 'Retail Value', value: '₱0.00', icon: 'pi pi-tag', trend: 0, trendLabel: '', color: 'blue' },
+      { label: 'Expected Profit', value: '₱0.00', icon: 'pi pi-arrow-up-right', trend: 0, trendLabel: '', color: 'green' },
+      { label: 'Stock Status', value: '0', icon: 'pi pi-warehouse', trend: 0, trendLabel: '', color: 'orange' }
+    ]
+  }
+
+  return [
+    {
+      label: 'Inventory Value',
+      value: formatCurrency(inv.inventoryValue),
+      icon: 'pi pi-box',
+      trend: 0,
+      trendLabel: `${inv.totalUnits.toLocaleString()} units in stock`,
+      color: 'teal',
+      subtitle: `${inv.totalProducts} products`
+    },
+    {
+      label: 'Retail Value',
+      value: formatCurrency(inv.retailValue),
+      icon: 'pi pi-tag',
+      trend: 0,
+      trendLabel: 'at selling price',
+      color: 'blue'
+    },
+    {
+      label: 'Expected Profit',
+      value: formatCurrency(inv.expectedProfit),
+      icon: 'pi pi-trending-up',
+      trend: 0,
+      trendLabel: `${inv.profitMargin.toFixed(1)}% margin`,
+      color: 'green'
+    },
+    {
+      label: 'Stock Alerts',
+      value: `${inv.lowStock + inv.outOfStock}`,
+      icon: 'pi pi-exclamation-triangle',
+      trend: 0,
+      trendLabel: `${inv.lowStock} low, ${inv.outOfStock} out`,
+      color: inv.outOfStock > 0 ? 'red' : inv.lowStock > 0 ? 'orange' : 'green'
     }
   ]
 })
@@ -104,21 +218,27 @@ function handleAddStock(alert: DisplayStockAlert) {
 
 async function handlePeriodChange(payload: { period: AnalyticsPeriod; dateFrom: string; dateTo: string }) {
   await changePeriod(payload.period, payload.dateFrom, payload.dateTo)
+  await loadItemsSold()
 }
 
 onMounted(async () => {
   await ensureFreshData()
-  await loadDashboard()
+  await Promise.all([
+    loadDashboard(),
+    loadInventoryStats(),
+    loadItemsSold()
+  ])
 })
 </script>
 
 <template>
   <div class="dashboard-grid">
+    <!-- Header -->
     <div class="view-header">
       <div class="header-left">
         <div>
           <h1>Dashboard</h1>
-          <p class="text-muted">Overview of business performance</p>
+          <p class="text-muted">Business overview and performance</p>
         </div>
       </div>
       <div class="header-right">
@@ -133,12 +253,19 @@ onMounted(async () => {
       @refresh="refreshData"
     />
 
-    <!-- Row 1: Stats Cards -->
+    <!-- Section: Sales Overview -->
+    <div class="section-label">Sales Overview</div>
     <div class="stats-row">
-      <StatsCard v-for="stat in liveStatsData" :key="stat.label" :data="stat" />
+      <StatsCard v-for="stat in salesStats" :key="stat.label" :data="stat" />
     </div>
 
-    <!-- Row 2: Sales Trend + Period Comparison -->
+    <!-- Section: Inventory Overview -->
+    <div class="section-label">Inventory Overview</div>
+    <div class="stats-row">
+      <StatsCard v-for="stat in inventoryStatsCards" :key="stat.label" :data="stat" />
+    </div>
+
+    <!-- Sales Trend + Period Comparison -->
     <div class="charts-row">
       <SalesTrendChart
         :chartData="salesTrend"
@@ -151,19 +278,19 @@ onMounted(async () => {
       />
     </div>
 
-    <!-- Row 3: Category Breakdown + Payment Methods -->
+    <!-- Category Breakdown + Payment Methods -->
     <div class="data-row">
       <SalesChart :dateFrom="periodDates.from" :dateTo="periodDates.to" />
       <PaymentChart :dateFrom="periodDates.from" :dateTo="periodDates.to" />
     </div>
 
-    <!-- Row 4: Top Products + Recent Transactions -->
+    <!-- Top Products + Recent Transactions -->
     <div class="data-row">
       <TopProducts :dateFrom="periodDates.from" :dateTo="periodDates.to" />
       <RecentOrders :dateFrom="periodDates.from" :dateTo="periodDates.to" />
     </div>
 
-    <!-- Row 5: Inventory, Customers, EIS -->
+    <!-- Low Stock + Customers -->
     <div class="data-row">
       <LowStockList
         @view-product="handleViewProduct"
@@ -172,6 +299,7 @@ onMounted(async () => {
       <CustomerSummaryWidget />
     </div>
 
+    <!-- EIS -->
     <div class="full-width-row">
       <EISDashboardWidget />
     </div>
@@ -183,5 +311,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.section-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-text-muted-color);
+  margin-bottom: -0.75rem;
 }
 </style>

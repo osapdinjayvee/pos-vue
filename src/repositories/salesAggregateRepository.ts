@@ -202,7 +202,8 @@ class SalesAggregateRepository {
    * Get today's aggregate for a terminal
    */
   async getToday(terminalId: string): Promise<SalesAggregate | null> {
-    const today = new Date().toISOString().split('T')[0]
+    const { toLocalDateStr } = await import('@/utils/dateHelpers')
+    const today = toLocalDateStr()
     return this.findByTerminalDate(terminalId, today)
   }
 

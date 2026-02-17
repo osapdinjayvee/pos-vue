@@ -1,0 +1,51 @@
+Product Name,SKU,Price,Cost,Description,Barcode,Category,Supplier,Stock,Low Stock Threshold,Status,Tax Type,Wholesale Price,Wholesale Min Qty,Expiration Date
+Coca-Cola Original 1.5L,PH-BEV-0001,78.0,60.0,"Carbonated soft drink, 1.5L bottle",4807608940310,Beverages,Mercury Drug Wholesale,76,15,Active,VATable (12%),68.55,24,
+Pepsi Cola 1.5L,PH-BEV-0002,75.0,58.0,"Carbonated soft drink, 1.5L bottle",4804078383463,Beverages,Monde Nissin Distributor,214,5,Active,VATable (12%),61.5,24,
+Sprite Lemon-Lime 1.5L,PH-BEV-0003,78.0,60.0,"Lemon-lime soft drink, 1.5L bottle",4808202921026,Beverages,SM Retail Supply,154,5,Active,VATable (12%),68.98,12,
+C2 Green Tea Apple 500mL,PH-BEV-0004,25.0,18.0,"Ready-to-drink green tea, 500mL",4804337712300,Beverages,Mercury Drug Wholesale,174,5,Active,VATable (12%),19.71,24,
+Nature's Spring Water 1L,PH-BEV-0005,20.0,14.0,"Bottled drinking water, 1L",4802811276829,Beverages,Monde Nissin Distributor,211,15,Active,VATable (12%),17.92,12,
+Bear Brand Sterilized Milk 200mL,PH-DAI-0006,32.0,24.0,"Sterilized milk drink, 200mL",4804427693830,Dairy,Gaisano Wholesale,184,10,Active,VATable (12%),28.53,12,2026-05-25
+Dutch Mill Yogurt Drink Strawberry 180mL,PH-DAI-0007,18.0,13.0,"Cultured milk drink, 180mL",4804259158910,Dairy,Unilever Trading,145,20,Active,VATable (12%),14.35,6,2026-03-11
+Nescafé 3-in-1 Original Sachet,PH-GRO-0008,11.0,8.0,"Instant coffee mix, single sachet",,Grocery,Local Produce Supplier,196,5,Active,VATable (12%),9.05,6,
+Milo Chocolate Malt Sachet 22g,PH-GRO-0009,12.0,9.0,"Chocolate malt drink mix, single sachet",,Grocery,Local Produce Supplier,214,5,Active,VATable (12%),10.74,12,
+Piattos Cheese 85g,PH-SNA-0010,28.0,20.0,"Potato crisps, cheese flavor, 85g",4802592928641,Snacks,P&G Distributors PH,24,5,Active,VATable (12%),24.14,12,
+Nova Country Cheddar 78g,PH-SNA-0011,28.0,20.0,"Multigrain snack, cheddar, 78g",4806003579019,Snacks,Nestlé Philippines Distributor,44,10,Active,VATable (12%),23.31,6,
+Chippy Barbecue 110g,PH-SNA-0012,29.0,21.0,"Corn chips, barbecue flavor, 110g",4804630880928,Snacks,S&R Wholesale Trading,159,20,Active,VATable (12%),23.06,24,
+SkyFlakes Crackers 10s,PH-SNA-0013,45.0,34.0,"Crackers, 10 packs",4804042424192,Snacks,P&G Distributors PH,48,10,Active,VATable (12%),37.07,24,
+Rebisco Chocolate 10s,PH-SNA-0014,45.0,33.0,"Chocolate sandwich biscuits, 10 packs",4808812490554,Snacks,Coca-Cola FEMSA Distributor,160,20,Active,VATable (12%),37.93,6,
+Fita Crackers 10s,PH-SNA-0015,52.0,39.0,"Crackers, 10 packs",4807109319097,Snacks,Monde Nissin Distributor,48,20,Active,VATable (12%),44.43,12,
+Oishi Prawn Crackers 60g,PH-SNA-0016,22.0,16.0,"Prawn crackers, 60g",4803331292740,Snacks,Gaisano Wholesale,116,10,Active,VATable (12%),18.3,6,
+Tortillos Nacho Cheese 100g,PH-SNA-0017,30.0,22.0,"Corn chips, nacho cheese, 100g",4806686655451,Snacks,San Miguel Food Supply,97,5,Active,VATable (12%),24.0,24,
+Lucky Me Pancit Canton Calamansi,PH-GRO-0018,17.0,12.0,"Instant noodles, calamansi flavor, 60g",,Grocery,Coca-Cola FEMSA Distributor,205,10,Active,VATable (12%),13.69,24,
+Lucky Me Pancit Canton Chilimansi,PH-GRO-0019,17.0,12.0,"Instant noodles, chilimansi flavor, 60g",,Grocery,Local Produce Supplier,78,15,Active,VATable (12%),13.87,12,
+Nissin Cup Noodles Seafood 70g,PH-GRO-0020,30.0,22.0,"Cup noodles, seafood flavor, 70g",,Grocery,Coca-Cola FEMSA Distributor,95,5,Active,VATable (12%),24.65,12,
+Knorr Chicken Cube 10g,PH-GRO-0021,12.0,9.0,"Seasoning cube, chicken, 10g",,Grocery,Local Produce Supplier,67,5,Active,VATable (12%),9.76,6,
+Datu Puti Soy Sauce 1L,PH-GRO-0022,65.0,50.0,"Soy sauce, 1L bottle",4805349079948,Grocery,SM Retail Supply,36,5,Active,VATable (12%),52.94,12,2027-02-01
+Datu Puti Vinegar 1L,PH-GRO-0023,45.0,35.0,"Cane vinegar, 1L bottle",4806449469844,Grocery,Puregold Price Club Supply,154,5,Active,VATable (12%),36.78,12,2028-01-12
+Silver Swan Soy Sauce 1L,PH-GRO-0024,70.0,54.0,"Soy sauce, 1L bottle",4807971964128,Grocery,Local Produce Supplier,107,10,Active,VATable (12%),62.11,12,2026-11-22
+Jasmine Rice 5kg,PH-GRO-0025,300.0,265.0,"Premium rice, 5kg sack",4807489117047,Grocery,Coca-Cola FEMSA Distributor,33,5,Active,VATable (12%),257.59,6,2028-07-30
+Argentina Corned Beef 150g,PH-GRO-0026,45.0,34.0,"Corned beef, 150g can",4808565806947,Grocery,Gaisano Wholesale,52,10,Active,VATable (12%),38.06,12,2028-06-19
+San Marino Corned Tuna 150g,PH-GRO-0027,45.0,35.0,"Corned tuna, 150g can",4801047955607,Grocery,S&R Wholesale Trading,175,20,Active,VATable (12%),39.57,24,2028-07-26
+Century Tuna Flakes in Oil 155g,PH-GRO-0028,42.0,32.0,"Canned tuna flakes, 155g",4807759685238,Grocery,S&R Wholesale Trading,113,20,Active,VATable (12%),35.87,24,2026-12-12
+555 Sardines Tomato Sauce 155g,PH-GRO-0029,25.0,18.0,"Sardines in tomato sauce, 155g",4808671726887,Grocery,San Miguel Food Supply,87,15,Active,VATable (12%),20.58,12,2026-04-22
+Ligo Sardines Tomato Sauce 155g,PH-GRO-0030,28.0,20.0,"Sardines in tomato sauce, 155g",4801809820082,Grocery,Puregold Price Club Supply,74,5,Active,VATable (12%),22.84,6,2026-04-24
+Joy Dishwashing Liquid Kalamansi 485mL,PH-HOU-0031,85.0,66.0,"Dishwashing liquid, 485mL",4805451637609,Household,S&R Wholesale Trading,43,15,Active,VATable (12%),74.96,24,
+Safeguard Bar Soap Pure White 90g,PH-PER-0032,45.0,34.0,"Bath soap bar, 90g",4800188642384,Personal Care,Puregold Price Club Supply,31,10,Active,VATable (12%),35.2,6,
+Colgate Toothpaste MaxFresh 100mL,PH-PER-0033,95.0,74.0,"Toothpaste, 100mL",4805701869491,Personal Care,Nestlé Philippines Distributor,232,10,Active,VATable (12%),74.67,24,
+Head & Shoulders Shampoo 12mL Sachet,PH-PER-0034,8.0,6.0,"Anti-dandruff shampoo sachet, 12mL",,Personal Care,P&G Distributors PH,40,10,Active,VATable (12%),6.96,24,
+Palmolive Shampoo 12mL Sachet,PH-PER-0035,8.0,6.0,"Shampoo sachet, 12mL",,Personal Care,Monde Nissin Distributor,199,20,Active,VATable (12%),6.58,12,
+Downy Fabric Conditioner Sunrise Fresh 25mL,PH-HOU-0036,8.0,6.0,"Fabric conditioner sachet, 25mL",,Household,Local Produce Supplier,195,15,Active,VATable (12%),6.26,6,
+Ariel Powder Detergent 70g,PH-HOU-0037,15.0,11.0,"Laundry detergent powder, 70g",,Household,SM Retail Supply,170,10,Active,VATable (12%),12.7,12,
+Surf Powder Detergent 70g,PH-HOU-0038,14.0,10.0,"Laundry detergent powder, 70g",,Household,Mercury Drug Wholesale,67,20,Active,VATable (12%),11.41,12,
+Tide Powder Detergent 70g,PH-HOU-0039,16.0,12.0,"Laundry detergent powder, 70g",,Household,Monde Nissin Distributor,72,5,Active,VATable (12%),13.97,6,
+Zonrox Bleach Regular 500mL,PH-HOU-0040,45.0,34.0,"Household bleach, 500mL",4805844405174,Household,Unilever Trading,106,15,Active,VATable (12%),39.2,24,
+Scotch-Brite Sponge,PH-HOU-0041,25.0,18.0,"Cleaning sponge, 1 pc",,Household,San Miguel Food Supply,204,5,Active,VATable (12%),21.96,24,
+Biogesic Paracetamol 500mg (10 tabs),PH-OTC-0042,50.0,40.0,"Pain reliever, 10 tablets",,OTC,Coca-Cola FEMSA Distributor,105,20,Active,VATable (12%),43.09,24,
+Kopiko Brown Coffee Candy 24s,PH-SNA-0043,60.0,45.0,"Coffee candy, 24 pieces",4804646675655,Snacks,Puregold Price Club Supply,224,15,Active,VATable (12%),49.43,12,
+Magnolia Fresh Milk 1L,PH-DAI-0044,105.0,86.0,"Fresh milk, 1L",4808408123057,Dairy,Nestlé Philippines Distributor,158,10,Active,VATable (12%),84.62,12,2026-04-04
+Magnolia Cheese Eden 165g,PH-DAI-0045,85.0,70.0,"Processed cheese, 165g",4802933986255,Dairy,Monde Nissin Distributor,42,10,Active,VATable (12%),70.67,24,2026-03-12
+Gardenia Classic White Bread 600g,PH-GRO-0046,78.0,62.0,"Sliced white bread, 600g loaf",4809210916646,Grocery,P&G Distributors PH,182,20,Active,VATable (12%),68.84,6,2026-03-26
+Gardenia Pandesal 400g,PH-GRO-0047,70.0,56.0,"Soft pandesal, 400g pack",4800541291181,Grocery,Gaisano Wholesale,107,5,Active,VATable (12%),58.44,24,2026-04-09
+Banana (Lakatan) per kg,PH-PRO-0048,75.0,55.0,"Fresh bananas, sold per kilogram",,Produce,Puregold Price Club Supply,51,5,Active,VATable (12%),61.44,12,2026-03-20
+Tomato per kg,PH-PRO-0049,110.0,85.0,"Fresh tomatoes, sold per kilogram",,Produce,Monde Nissin Distributor,138,15,Active,VATable (12%),85.85,6,2026-04-04
+Onion Red per kg,PH-PRO-0050,130.0,105.0,"Red onions, sold per kilogram",,Produce,P&G Distributors PH,165,10,Active,VATable (12%),106.03,12,2026-06-07

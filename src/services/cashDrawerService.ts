@@ -67,27 +67,36 @@ class CashDrawerService {
       throw new Error('Drawer session not found')
     }
 
-    // Get cash sales for this shift (completed transactions with cash payments)
+    // Get cash sales for this shift (completed transactions with cash payments, excluding returns)
     const cashSalesResult = await db.getOne<{ total: number }>(
       `SELECT COALESCE(SUM(tp.amount), 0) as total
        FROM transaction_payments tp
        INNER JOIN transactions t ON t.id = tp.transaction_id
-       WHERE t.shift_id = ? AND t.status = 'completed' AND tp.payment_method = 'cash'`,
+       WHERE t.shift_id = ? AND t.status = 'completed' AND tp.payment_method = 'cash'
+         AND t.total_amount >= 0`,
       [session.shift_id]
     )
     const cashSales = cashSalesResult?.total || 0
 
     // Get cash refunds for this shift
-    // Voided transactions don't generate cash refunds in this system,
-    // but we account for any future refund mechanism
+    // Return transactions have negative total_amount and no payment records,
+    // so we sum the absolute value of their total_amount as cash given back
     const cashRefundsResult = await db.getOne<{ total: number }>(
-      `SELECT COALESCE(SUM(tp.amount), 0) as total
-       FROM transaction_payments tp
-       INNER JOIN transactions t ON t.id = tp.transaction_id
-       WHERE t.shift_id = ? AND t.status = 'refunded' AND tp.payment_method = 'cash'`,
+      `SELECT COALESCE(SUM(ABS(t.total_amount)), 0) as total
+       FROM transactions t
+       WHERE t.shift_id = ? AND t.status = 'completed' AND t.total_amount < 0`,
       [session.shift_id]
     )
     const cashRefunds = cashRefundsResult?.total || 0
+
+    // Get individual return transaction details
+    const refundDetails = await db.query<{ or_number: string; total_amount: number; created_at: string }>(
+      `SELECT or_number, total_amount, created_at
+       FROM transactions
+       WHERE shift_id = ? AND status = 'completed' AND total_amount < 0
+       ORDER BY created_at ASC`,
+      [session.shift_id]
+    )
 
     // Get total drops
     const totalDrops = await drawerOperationRepository.getDropsTotal(sessionId)
@@ -101,6 +110,11 @@ class CashDrawerService {
       openingAmount: session.opening_amount,
       cashSales,
       cashRefunds,
+      refundDetails: refundDetails.map(r => ({
+        orNumber: r.or_number,
+        amount: Math.abs(r.total_amount),
+        createdAt: r.created_at
+      })),
       totalDrops,
       totalPaidIns,
       expectedCash

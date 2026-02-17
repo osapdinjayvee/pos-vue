@@ -197,6 +197,11 @@ class DatabaseService {
       await this.recordMigration('021_slideshow_display')
     }
 
+    if (!migrations.includes('022_fix_utc_timestamps')) {
+      await this.runFixUtcTimestampsMigration()
+      await this.recordMigration('022_fix_utc_timestamps')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
@@ -2051,6 +2056,103 @@ class DatabaseService {
     console.log('[Migration] 021_slideshow_display completed')
   }
 
+  /**
+   * Migration 022: Convert existing UTC timestamps (ending with 'Z') to local time.
+   * POS operates in local business timezone; UTC timestamps cause date(created_at)
+   * to return wrong dates for transactions before 8 AM local (UTC+8).
+   */
+  private async runFixUtcTimestampsMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    // Detect local timezone offset dynamically
+    const offsetMinutes = new Date().getTimezoneOffset()
+    const offsetHours = -offsetMinutes / 60
+    const offsetStr = offsetHours >= 0 ? `+${offsetHours} hours` : `${offsetHours} hours`
+
+    // All tables and their timestamp columns
+    const tableColumns: [string, string[]][] = [
+      ['transactions', ['created_at', 'updated_at', 'synced_at']],
+      ['transaction_items', ['created_at']],
+      ['transaction_payments', ['created_at']],
+      ['products', ['created_at', 'updated_at']],
+      ['categories', ['created_at', 'updated_at']],
+      ['suppliers', ['created_at', 'updated_at', 'synced_at']],
+      ['product_variants', ['created_at', 'updated_at', 'synced_at']],
+      ['batches', ['created_at', 'synced_at']],
+      ['stock_movements', ['created_at', 'synced_at']],
+      ['stock_alerts', ['created_at', 'updated_at', 'acknowledged_at']],
+      ['price_history', ['created_at']],
+      ['customers', ['created_at', 'updated_at', 'synced_at']],
+      ['orders', ['created_at', 'updated_at', 'completed_at', 'synced_at']],
+      ['order_items', ['created_at']],
+      ['payments', ['processed_at', 'created_at', 'synced_at']],
+      ['payment_methods', ['created_at', 'updated_at']],
+      ['discounts', ['created_at', 'updated_at']],
+      ['discount_scopes', ['created_at']],
+      ['users', ['last_login_at', 'created_at', 'updated_at', 'synced_at']],
+      ['roles', ['created_at', 'updated_at']],
+      ['permissions', ['created_at']],
+      ['user_roles', ['assigned_at']],
+      ['shifts', ['started_at', 'ended_at', 'created_at', 'updated_at', 'synced_at']],
+      ['auth_logs', ['created_at', 'synced_at']],
+      ['z_counters', ['updated_at']],
+      ['x_counters', ['updated_at']],
+      ['z_readings', ['generated_at', 'synced_at']],
+      ['x_readings', ['generated_at', 'synced_at']],
+      ['sales_aggregates', ['created_at']],
+      ['sync_queue', ['created_at', 'last_attempt']],
+      ['sync_log', ['synced_at']],
+      ['conflict_log', ['created_at', 'resolved_at']],
+      ['membership_tiers', ['created_at', 'updated_at']],
+      ['loyalty_transactions', ['created_at', 'synced_at']],
+      ['loyalty_config', ['created_at', 'updated_at']],
+      ['sales_hourly', ['created_at']],
+      ['product_daily', ['created_at']],
+      ['saved_reports', ['created_at', 'updated_at']],
+      ['drawer_sessions', ['opened_at', 'closed_at', 'synced_at']],
+      ['drawer_operations', ['created_at']],
+      ['sync_health', ['last_heartbeat', 'last_upload', 'last_download', 'updated_at']],
+      ['or_allocations', ['allocated_at', 'exhausted_at']],
+      ['eis_config', ['created_at', 'updated_at']],
+      ['eis_submissions', ['last_attempt', 'submitted_at', 'created_at']],
+      ['eis_batches', ['submitted_at', 'completed_at']],
+      ['or_series', ['created_at', 'updated_at']],
+      ['voids', ['created_at', 'synced_at']],
+      ['refunds', ['created_at', 'synced_at']],
+      ['refund_items', ['created_at']],
+      ['business_config', ['created_at', 'updated_at']],
+      ['tax_config', ['created_at', 'updated_at']],
+      ['receipt_config', ['created_at', 'updated_at']],
+      ['payment_config', ['created_at', 'updated_at']],
+      ['system_config', ['created_at', 'updated_at']],
+      ['onboarding_progress', ['license_verified_at', 'activated_at', 'created_at', 'updated_at']],
+      ['terms_documents', ['published_at', 'fetched_at']],
+      ['terms_acceptances', ['accepted_at', 'synced_at']],
+      ['slideshow_images', ['created_at']],
+    ]
+
+    for (const [table, columns] of tableColumns) {
+      // Check if table exists before updating
+      const exists = await this.adapter.getOne<{ name: string }>(
+        `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+        [table]
+      )
+      if (!exists) continue
+
+      for (const col of columns) {
+        try {
+          await this.adapter.execute(
+            `UPDATE ${table} SET ${col} = strftime('%Y-%m-%dT%H:%M:%f', ${col}, '${offsetStr}') WHERE ${col} LIKE '%Z'`
+          )
+        } catch {
+          // Column may not exist in older schemas, skip
+        }
+      }
+    }
+
+    console.log(`[Migration] 022_fix_utc_timestamps completed (offset: ${offsetStr})`)
+  }
+
   // =====================
   // Public Query Methods
   // =====================
@@ -2111,10 +2213,19 @@ class DatabaseService {
   }
 
   /**
-   * Get current timestamp in ISO format
+   * Get current timestamp in local ISO format (no Z suffix).
+   * POS operates in local business timezone, not UTC.
    */
   getCurrentTimestamp(): string {
-    return new Date().toISOString()
+    const d = new Date()
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    const seconds = String(d.getSeconds()).padStart(2, '0')
+    const ms = String(d.getMilliseconds()).padStart(3, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}`
   }
 
   /**

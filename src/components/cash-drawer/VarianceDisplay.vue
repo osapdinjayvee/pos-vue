@@ -36,6 +36,11 @@ const varianceLabel = computed(() => {
 const formatCurrency = (amount: number) => {
   return `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
+
+const formatTime = (dateStr: string) => {
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
 </script>
 
 <template>
@@ -90,6 +95,18 @@ const formatCurrency = (amount: number) => {
           <div class="breakdown-item negative">
             <span class="breakdown-label">- Cash Refunds</span>
             <span class="breakdown-value">{{ formatCurrency(breakdown.cashRefunds) }}</span>
+          </div>
+
+          <div v-if="breakdown.refundDetails && breakdown.refundDetails.length > 0" class="refund-details">
+            <div
+              v-for="(refund, idx) in breakdown.refundDetails"
+              :key="idx"
+              class="refund-detail-item"
+            >
+              <span class="refund-or">{{ refund.orNumber }}</span>
+              <span class="refund-amount">-{{ formatCurrency(refund.amount) }}</span>
+              <span class="refund-time">{{ formatTime(refund.createdAt) }}</span>
+            </div>
           </div>
 
           <div class="breakdown-item negative">
@@ -219,6 +236,44 @@ const formatCurrency = (amount: number) => {
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-color);
+}
+
+.refund-details {
+  margin-left: 1.5rem;
+  padding: 0.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.refund-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  padding: 0.25rem 0.5rem;
+  background: var(--surface-50);
+  border-radius: 4px;
+}
+
+.refund-or {
+  font-weight: 600;
+  color: var(--red-600);
+  min-width: 100px;
+}
+
+.refund-amount {
+  font-weight: 600;
+  color: var(--red-600);
+  min-width: 80px;
+  text-align: right;
+}
+
+.refund-time {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
 }
 
 @media (max-width: 768px) {

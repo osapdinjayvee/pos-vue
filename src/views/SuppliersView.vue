@@ -13,6 +13,9 @@ import SupplierForm from '@/components/inventory/SupplierForm.vue'
 import { supplierRepository } from '@/repositories/supplierRepository'
 import type { Supplier } from '@/types/inventory'
 import type { SupplierFormData } from '@/components/inventory/SupplierForm.vue'
+import CsvImportDialog from '@/components/import/CsvImportDialog.vue'
+import { supplierImportConfig } from '@/config/csvImportConfigs'
+import type { ImportResult } from '@/services/csvImportService'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -23,10 +26,24 @@ const editingSupplier = ref<Supplier | null>(null)
 const formLoading = ref(false)
 
 const supplierListRef = ref<InstanceType<typeof SupplierList> | null>(null)
+const showImportDialog = ref(false)
 
 function handleAddSupplier() {
   editingSupplier.value = null
   showSupplierForm.value = true
+}
+
+const handleImportComplete = async (result: ImportResult) => {
+  const total = result.created + result.updated
+  if (total > 0) {
+    toast.add({
+      severity: 'success',
+      summary: 'Import Complete',
+      detail: `${result.created} created, ${result.updated} updated${result.errors > 0 ? `, ${result.errors} failed` : ''}`,
+      life: 4000
+    })
+    supplierListRef.value?.loadSuppliers?.()
+  }
 }
 
 function handleEditSupplier(supplier: Supplier) {
@@ -142,6 +159,7 @@ function handleViewProducts(supplier: Supplier) {
           <InputIcon class="pi pi-search" />
           <InputText v-model="searchQuery" placeholder="Search suppliers..." />
         </IconField>
+        <Button icon="pi pi-upload" severity="secondary" outlined @click="showImportDialog = true" v-tooltip.bottom="'Import CSV'" />
         <Button label="Add Supplier" icon="pi pi-plus" @click="handleAddSupplier" />
       </div>
     </div>
@@ -162,6 +180,13 @@ function handleViewProducts(supplier: Supplier) {
       :supplier="editingSupplier"
       :loading="formLoading"
       @save="handleSaveSupplier"
+    />
+
+    <!-- CSV Import Dialog -->
+    <CsvImportDialog
+      v-model:visible="showImportDialog"
+      :config="supplierImportConfig"
+      @import-complete="handleImportComplete"
     />
   </div>
 </template>

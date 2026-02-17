@@ -11,6 +11,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import { customReportService } from '@/services/customReportService'
 import type { ReportConfig, ReportDimension, ReportMeasure } from '@/types/analytics'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 
 const props = defineProps<{
   config?: ReportConfig | null
@@ -74,10 +75,10 @@ const canSave = computed(() => {
 
 function buildConfig(): ReportConfig {
   const dateFrom = dateRange.value[0]
-    ? dateRange.value[0].toISOString().split('T')[0]
+    ? toLocalDateStr(dateRange.value[0])
     : ''
   const dateTo = dateRange.value[1]
-    ? dateRange.value[1].toISOString().split('T')[0]
+    ? toLocalDateStr(dateRange.value[1])
     : ''
 
   return {
