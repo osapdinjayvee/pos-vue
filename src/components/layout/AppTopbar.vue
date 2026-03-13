@@ -53,6 +53,14 @@ const breadcrumbItems = computed(() => {
     ]
   }
 
+  // Handle supplier sub-routes
+  if (path.match(/^\/suppliers\/[^/]+\/products$/)) {
+    return [
+      { label: 'Suppliers', route: '/suppliers' },
+      { label: 'Products' }
+    ]
+  }
+
   // Handle discount sub-routes
   if (path === '/discounts/new') {
     return [
@@ -239,8 +247,8 @@ function handleLock() {
       </div>
       <Menu ref="shiftMenuRef" :model="shiftMenuItems" popup />
 
-      <!-- Sync Status -->
-      <SyncStatus />
+      <!-- Sync Status (hidden for now) -->
+      <!-- <SyncStatus /> -->
 
       <!-- Theme Toggle -->
       <Button
@@ -251,14 +259,14 @@ function handleLock() {
         v-tooltip.bottom="isDark ? 'Light Mode' : 'Dark Mode'"
       />
 
-      <!-- Notifications -->
-      <Button
+      <!-- Notifications (hidden for now) -->
+      <!-- <Button
         icon="pi pi-bell"
         text
         rounded
         badge="3"
         badgeSeverity="danger"
-      />
+      /> -->
 
       <!-- User Menu -->
       <Button

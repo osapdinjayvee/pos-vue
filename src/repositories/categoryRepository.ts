@@ -27,6 +27,18 @@ class CategoryRepository extends BaseRepository<Category> {
   protected tableName = 'categories'
   protected idPrefix = 'cat'
 
+  async findAllWithProductCount(options?: { orderBy?: string; orderDir?: string }): Promise<Category[]> {
+    const orderBy = options?.orderBy || 'display_order'
+    const orderDir = options?.orderDir || 'ASC'
+    return await db.query<Category>(
+      `SELECT c.*, COALESCE(pc.cnt, 0) as product_count
+       FROM categories c
+       LEFT JOIN (SELECT category_id, COUNT(*) as cnt FROM products GROUP BY category_id) pc
+         ON pc.category_id = c.id
+       ORDER BY c.${orderBy} ${orderDir}`
+    )
+  }
+
   async findAllActive(): Promise<Category[]> {
     return await db.query<Category>(
       'SELECT * FROM categories WHERE is_active = 1 ORDER BY display_order ASC, name ASC'

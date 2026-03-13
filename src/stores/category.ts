@@ -31,7 +31,7 @@ export const useCategoryStore = defineStore('category', () => {
     isLoading.value = true
     error.value = null
     try {
-      categories.value = await categoryRepository.findAll({
+      categories.value = await categoryRepository.findAllWithProductCount({
         orderBy: 'display_order',
         orderDir: 'ASC'
       })

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -17,6 +18,7 @@ import CsvImportDialog from '@/components/import/CsvImportDialog.vue'
 import { supplierImportConfig } from '@/config/csvImportConfigs'
 import type { ImportResult } from '@/services/csvImportService'
 
+const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 
@@ -132,13 +134,7 @@ function handleDeleteSupplier(supplier: Supplier) {
 }
 
 function handleViewProducts(supplier: Supplier) {
-  // Navigate to products filtered by supplier
-  toast.add({
-    severity: 'info',
-    summary: 'View Products',
-    detail: `Viewing products from ${supplier.name}`,
-    life: 2000
-  })
+  router.push({ name: 'supplier-products', params: { id: supplier.id } })
 }
 </script>
 
@@ -188,6 +184,7 @@ function handleViewProducts(supplier: Supplier) {
       :config="supplierImportConfig"
       @import-complete="handleImportComplete"
     />
+
   </div>
 </template>
 

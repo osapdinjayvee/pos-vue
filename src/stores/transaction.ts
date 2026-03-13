@@ -164,9 +164,10 @@ export const useTransactionStore = defineStore('transaction', () => {
   }
 
   async function loadRecentTransactions(limit: number = 20): Promise<void> {
+    const { toLocalTimestamp } = await import('@/utils/dateHelpers')
     const transactions = await transactionService.getTransactionsByDateRange(
-      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      new Date().toISOString()
+      toLocalTimestamp(new Date(Date.now() - 24 * 60 * 60 * 1000)),
+      toLocalTimestamp()
     )
     recentTransactions.value = transactions.slice(0, limit)
   }

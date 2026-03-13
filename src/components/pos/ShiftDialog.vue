@@ -412,14 +412,25 @@ function handleCancel() {
 
           <!-- RIGHT COLUMN: Opening Cash Input -->
           <div class="flex flex-col gap-4">
-            <!-- CASH TOTAL DISPLAY -->
+            <!-- CASH TOTAL INPUT -->
             <div class="rounded-xl border border-neutral-200 bg-white p-4">
               <label class="text-xs font-semibold text-neutral-500 uppercase tracking-wide block mb-2">
                 Opening Cash Amount
               </label>
-              <div class="rounded-xl bg-neutral-100 border-2 border-neutral-200 px-4 py-3 text-center">
-                <span class="text-3xl font-extrabold tabular-nums text-neutral-900">{{ fmt(cashAmount) }}</span>
-              </div>
+              <InputNumber
+                v-model="cashAmount"
+                :min="0"
+                :min-fraction-digits="2"
+                :max-fraction-digits="2"
+                mode="currency"
+                currency="PHP"
+                locale="en-PH"
+                placeholder="0.00"
+                :disabled="isSubmitting"
+                class="w-full"
+                inputClass="!text-3xl !font-extrabold !text-center !py-3 tabular-nums"
+                @keydown.enter="handleConfirm"
+              />
             </div>
 
             <!-- DENOMINATION BUTTONS -->
@@ -445,27 +456,6 @@ function handleCancel() {
                   Clear
                 </button>
               </div>
-            </div>
-
-            <!-- MANUAL OVERRIDE -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-4">
-              <label class="text-xs font-semibold text-neutral-500 uppercase tracking-wide block mb-2">
-                Or enter manually
-              </label>
-              <InputNumber
-                v-model="cashAmount"
-                :min="0"
-                :min-fraction-digits="2"
-                :max-fraction-digits="2"
-                mode="currency"
-                currency="PHP"
-                locale="en-PH"
-                placeholder="0.00"
-                :disabled="isSubmitting"
-                class="w-full"
-                :pt="{ input: { class: 'w-full text-sm' } }"
-                @keydown.enter="handleConfirm"
-              />
             </div>
 
             <!-- ERROR -->
@@ -631,14 +621,25 @@ function handleCancel() {
 
           <!-- RIGHT COLUMN: Closing Cash & Variance -->
           <div class="flex flex-col gap-4">
-            <!-- CASH TOTAL DISPLAY -->
+            <!-- CASH TOTAL INPUT -->
             <div class="rounded-xl border border-neutral-200 bg-white p-4">
               <label class="text-xs font-semibold text-neutral-500 uppercase tracking-wide block mb-2">
                 Closing Cash Count
               </label>
-              <div class="rounded-xl bg-neutral-100 border-2 border-neutral-200 px-4 py-3 text-center">
-                <span class="text-3xl font-extrabold tabular-nums text-neutral-900">{{ fmt(cashAmount) }}</span>
-              </div>
+              <InputNumber
+                v-model="cashAmount"
+                :min="0"
+                :min-fraction-digits="2"
+                :max-fraction-digits="2"
+                mode="currency"
+                currency="PHP"
+                locale="en-PH"
+                placeholder="0.00"
+                :disabled="isSubmitting"
+                class="w-full"
+                inputClass="!text-3xl !font-extrabold !text-center !py-3 tabular-nums"
+                @keydown.enter="handleConfirm"
+              />
 
               <!-- Variance display -->
               <div v-if="cashAmount > 0" class="mt-3 rounded-lg p-3"
@@ -711,27 +712,6 @@ function handleCancel() {
                   Clear
                 </button>
               </div>
-            </div>
-
-            <!-- MANUAL OVERRIDE -->
-            <div class="rounded-xl border border-neutral-200 bg-white p-4">
-              <label class="text-xs font-semibold text-neutral-500 uppercase tracking-wide block mb-2">
-                Or enter manually
-              </label>
-              <InputNumber
-                v-model="cashAmount"
-                :min="0"
-                :min-fraction-digits="2"
-                :max-fraction-digits="2"
-                mode="currency"
-                currency="PHP"
-                locale="en-PH"
-                placeholder="0.00"
-                :disabled="isSubmitting"
-                class="w-full"
-                :pt="{ input: { class: 'w-full text-sm' } }"
-                @keydown.enter="handleConfirm"
-              />
             </div>
 
             <!-- VARIANCE REASON -->

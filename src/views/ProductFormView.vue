@@ -119,15 +119,11 @@ const categoryOptions = computed(() => categoryStore.categoryOptions)
 const supplierOptions = computed(() => supplierStore.supplierOptions)
 
 onMounted(async () => {
-  // Fetch categories if not loaded
-  if (categoryStore.categories.length === 0) {
-    await categoryStore.fetchAll()
-  }
-
-  // Fetch suppliers if not loaded
-  if (supplierStore.suppliers.length === 0) {
-    await supplierStore.fetchActive()
-  }
+  // Always fetch fresh categories and suppliers
+  await Promise.all([
+    categoryStore.fetchAll(),
+    supplierStore.fetchActive()
+  ])
 
   if (isEditMode.value) {
     const productId = route.params.id as string
@@ -224,9 +220,11 @@ const onSave = async () => {
 
   isSaving.value = true
 
-  // Prepare data with date converted to string
+  // Prepare data with date converted to string and empty FKs as null
   const formData = {
     ...form.value,
+    supplier_id: form.value.supplier_id || null,
+    category_id: form.value.category_id || null,
     expiration_date: formatDateForDb(form.value.expiration_date)
   }
 

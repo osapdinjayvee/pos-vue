@@ -37,6 +37,37 @@ class TransactionRepository extends BaseRepository<Transaction> {
     )
   }
 
+  async findByLocalDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
+    // Fetch a broad range (±1 day) from SQL, then filter in JS using local dates.
+    // This handles both UTC (Z suffix) and local timestamps correctly.
+    const dayBefore = this.shiftDate(startDate, -1)
+    const dayAfter = this.shiftDate(endDate, 1)
+    const candidates = await db.query<Transaction>(
+      `SELECT * FROM ${this.tableName}
+       WHERE substr(created_at, 1, 10) >= ? AND substr(created_at, 1, 10) <= ?
+       ORDER BY created_at DESC`,
+      [dayBefore, dayAfter]
+    )
+    return candidates.filter(t => {
+      const localDate = this.toLocalDate(t.created_at)
+      return localDate >= startDate && localDate <= endDate
+    })
+  }
+
+  private toLocalDate(dateStr: string): string {
+    if (dateStr.endsWith('Z')) {
+      const d = new Date(dateStr)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    return dateStr.substring(0, 10)
+  }
+
+  private shiftDate(dateStr: string, days: number): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    d.setDate(d.getDate() + days)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
   async findByUser(userId: string, options?: QueryOptions): Promise<Transaction[]> {
     let sql = `SELECT * FROM ${this.tableName} WHERE user_id = ?`
 

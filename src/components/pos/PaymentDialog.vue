@@ -148,9 +148,7 @@ const canComplete = computed(() => {
     return cashTendered.value >= remainingAmount.value
   }
 
-  if (selectedMethod.value !== 'cash') {
-    return referenceNumber.value.trim().length > 0
-  }
+  return referenceNumber.value.trim().length > 0
 
   return true
 })
@@ -469,9 +467,16 @@ function getMethodLabel(method: PaymentMethod): string {
           <!-- Cash Payment -->
           <div v-if="selectedMethod === 'cash'">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Cash Tendered</label>
-            <div class="cash-tendered-display">
-              <span class="cash-tendered-value">{{ vatService.formatCurrency(cashTendered) }}</span>
-            </div>
+            <InputNumber
+              v-model="cashTendered"
+              mode="currency"
+              currency="PHP"
+              locale="en-PH"
+              :min="0"
+              class="w-full cash-tendered-input"
+              inputClass="!text-4xl !font-extrabold !text-center !py-4 tabular-nums"
+              placeholder="Enter amount"
+            />
 
             <!-- Denomination Buttons -->
             <div class="grid grid-cols-4 gap-2.5 mt-4">
@@ -565,19 +570,4 @@ function getMethodLabel(method: PaymentMethod): string {
 </template>
 
 <style scoped>
-.cash-tendered-display {
-  background: var(--p-surface-100);
-  border: 2px solid var(--p-surface-200);
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  text-align: center;
-}
-
-.cash-tendered-value {
-  font-size: 2.5rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--p-text-color);
-  letter-spacing: -0.02em;
-}
 </style>

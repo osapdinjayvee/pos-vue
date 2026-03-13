@@ -69,7 +69,7 @@ function isReturnTransaction(tx: Transaction): boolean {
 function parseReturnNotes(notes: string): { originalOR: string; reason: string; approvedBy: string } | null {
   const match = notes?.match(/^RETURN from OR# (.+?) \| Reason: (.+?) \| Approved by: (.+)$/)
   if (!match) return null
-  return { originalOR: match[1], reason: match[2], approvedBy: match[3] }
+  return { originalOR: match[1]!, reason: match[2]!, approvedBy: match[3]! }
 }
 
 // Filtered transactions
@@ -117,9 +117,11 @@ async function loadTransactions() {
   isLoading.value = true
   try {
     const date = filterDate.value
-    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0).toISOString()
-    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59).toISOString()
-    transactions.value = await transactionRepository.findByDateRange(startOfDay, endOfDay)
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const localDate = `${y}-${m}-${d}`
+    transactions.value = await transactionRepository.findByLocalDateRange(localDate, localDate)
   } catch {
     transactions.value = []
   } finally {
@@ -222,13 +224,24 @@ function formatCurrency(value: number): string {
   return vatService.formatCurrency(value)
 }
 
+function parseLocalDate(dateStr: string): Date {
+  // Local timestamps (no Z suffix) must not be parsed by new Date() which treats them as UTC
+  if (dateStr.endsWith('Z')) return new Date(dateStr)
+  // Parse as local: "2026-03-13T14:30:00" → new Date(2026, 2, 13, 14, 30, 0)
+  const [datePart, timePart] = dateStr.split('T')
+  if (!timePart) return new Date(dateStr)
+  const [y, m, d] = datePart!.split('-').map(Number)
+  const [h, min, s] = timePart.split(':').map(n => parseInt(n!))
+  return new Date(y!, m! - 1, d!, h!, min!, s || 0)
+}
+
 function formatTime(dateStr: string): string {
-  const d = new Date(dateStr)
+  const d = parseLocalDate(dateStr)
   return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
 function formatDateTime(dateStr: string): string {
-  const d = new Date(dateStr)
+  const d = parseLocalDate(dateStr)
   return d.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
 }
 

@@ -84,9 +84,19 @@ function openItemDetail(item: CartItem) {
   showItemDetail.value = true
 }
 
-function applyItemQty() {
+async function applyItemQty() {
   if (!selectedItem.value) return
   if (editQty.value < 1) editQty.value = 1
+
+  // Check stock before applying new quantity
+  const item = selectedItem.value
+  const product = await productStore.fetchById(item.productId)
+  if (product && editQty.value > product.stock) {
+    showOutOfStockDialog(`Only ${product.stock} unit(s) of "${item.productName}" available.`)
+    editQty.value = product.stock > 0 ? product.stock : 1
+    return
+  }
+
   cartStore.updateItemQuantity(selectedItem.value.id, editQty.value)
   showItemDetail.value = false
 }
@@ -218,8 +228,8 @@ watch(customerId, (val) => {
 function parseQtyPrefix(value: string): { qty: number; code: string } {
   const m = value.match(/^(\d+)[*@/](.+)$/)
   if (m) {
-    const qty = parseInt(m[1], 10)
-    return { qty: qty > 0 ? qty : 1, code: m[2].trim() }
+    const qty = parseInt(m[1]!, 10)
+    return { qty: qty > 0 ? qty : 1, code: m[2]!.trim() }
   }
   return { qty: 1, code: value }
 }
@@ -250,12 +260,43 @@ async function handleBarcodeInput(value: string) {
   showProductBrowse.value = true
 }
 
+// Out of stock dialog
+const showStockDialog = ref(false)
+const stockDialogMessage = ref('')
+let stockDialogTimer: ReturnType<typeof setTimeout> | null = null
+
+function showOutOfStockDialog(message: string) {
+  stockDialogMessage.value = message
+  showStockDialog.value = true
+  if (stockDialogTimer) clearTimeout(stockDialogTimer)
+  stockDialogTimer = setTimeout(() => { showStockDialog.value = false }, 3000)
+}
+
+// Get quantity of a product already in the cart
+function getCartQuantity(productId: string, variantId?: string): number {
+  return cartStore.items
+    .filter(i => i.productId === productId && i.variantId === (variantId || undefined))
+    .reduce((sum, i) => sum + i.quantity, 0)
+}
+
 function addToCart(product: Product, variant?: ProductVariant, quantity: number = 1) {
   if (!hasOpenShift.value) {
     toast.add({ severity: 'warn', summary: 'No Active Shift', detail: 'Please start a shift before adding products', life: 3000 })
     handleStartShift()
     return
   }
+
+  // Block selling products with zero or insufficient stock
+  const availableStock = product.stock - getCartQuantity(product.id, variant?.id)
+  if (availableStock <= 0) {
+    showOutOfStockDialog(`"${product.name}" has no available stock.`)
+    return
+  }
+  if (quantity > availableStock) {
+    showOutOfStockDialog(`Only ${availableStock} unit(s) of "${product.name}" available.`)
+    return
+  }
+
   cartStore.addItem(product, variant, quantity)
 
   const itemId = cartStore.items[cartStore.items.length - 1]?.id
@@ -296,11 +337,11 @@ async function checkPromoDiscounts(product: Product, itemId: string) {
     // If exactly 1 auto-apply discount -> apply silently
     const autoApply = eligible.filter(e => e.isAutoApply)
     if (autoApply.length === 1 && eligible.length === 1) {
-      cartStore.setItemPromoDiscount(itemId, autoApply[0])
+      cartStore.setItemPromoDiscount(itemId, autoApply[0]!)
       toast.add({
         severity: 'info',
         summary: 'Discount Applied',
-        detail: `${autoApply[0].discount.name} applied automatically`,
+        detail: `${autoApply[0]!.discount.name} applied automatically`,
         life: 3000
       })
       return
@@ -355,7 +396,15 @@ function playBeep() {
 }
 
 // Cart item actions
-function handleIncrement(item: CartItem) {
+async function handleIncrement(item: CartItem) {
+  const product = await productStore.fetchById(item.productId)
+  if (product) {
+    const inCart = getCartQuantity(item.productId, item.variantId)
+    if (inCart >= product.stock) {
+      showOutOfStockDialog(`Only ${product.stock} unit(s) of "${item.productName}" available.`)
+      return
+    }
+  }
   cartStore.incrementItemQuantity(item.id)
 }
 
@@ -400,7 +449,24 @@ function handleActionTile(action: string) {
       holdRecallMode.value = 'recall'
       showHoldRecall.value = true
       break
-    case 'void': showVoidDialog.value = true; break
+    case 'void':
+      if (!hasTransaction.value) {
+        toast.add({ severity: 'warn', summary: 'No Transaction', detail: 'No items in cart to void', life: 3000 })
+        return
+      }
+      confirm.require({
+        message: 'Are you sure you want to void the current transaction? All items in the cart will be removed.',
+        header: 'Void Transaction',
+        icon: 'pi pi-ban',
+        acceptClass: '!bg-red-600 !border-red-600',
+        acceptLabel: 'Void',
+        rejectLabel: 'Cancel',
+        accept: () => {
+          cartStore.clearCart()
+          toast.add({ severity: 'success', summary: 'Transaction Voided', detail: 'Cart has been cleared', life: 3000 })
+        }
+      })
+      break
     case 'price-check':
       showPriceCheck.value = true
       break
@@ -643,7 +709,7 @@ function handleManagerAuthorized(supervisorId: string) {
 async function handleOpenDrawer() {
   const { doNoSale } = useCashDrawer()
   const hwResult = await drawerHardwareService.openDrawer()
-  await doNoSale(authStore.userId || 'cashier')
+  await doNoSale(authStore.currentUser?.id || 'cashier')
   if (hwResult.success) {
     toast.add({ severity: 'success', summary: 'Drawer Opened', life: 2000 })
   } else {
@@ -749,6 +815,10 @@ function focusBarcodeInput() {
   barcodeInputRef.value?.focus()
 }
 
+function handlePrint() {
+  window.print()
+}
+
 function formatCurrency(value: number): string {
   return vatService.formatCurrency(value)
 }
@@ -805,7 +875,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-screen w-screen flex flex-col bg-neutral-100 overflow-hidden">
+  <div class="h-full w-full flex flex-col bg-neutral-100 overflow-hidden">
     <Toast />
     <ConfirmDialog />
 
@@ -990,7 +1060,7 @@ onUnmounted(() => {
 
     <VoidDialog
       :visible="showVoidDialog"
-      :transaction="null"
+      :transaction="transactionStore.lastCompletedTransaction"
       @update:visible="showVoidDialog = $event"
       @voided="handleVoided"
       @cancel="showVoidDialog = false"
@@ -1218,7 +1288,7 @@ onUnmounted(() => {
         </div>
         <div class="shrink-0 px-4 py-3 border-t border-neutral-200 bg-white flex items-center gap-3 max-w-3xl mx-auto w-full">
           <Button label="Close" severity="secondary" outlined @click="showXReadingResult = false" class="flex-1 !h-14 !text-base !font-bold" />
-          <Button label="Print" icon="pi pi-print" @click="window.print()" class="flex-1 !h-14 !text-base !font-bold" />
+          <Button label="Print" icon="pi pi-print" @click="handlePrint()" class="flex-1 !h-14 !text-base !font-bold" />
         </div>
       </div>
     </Dialog>
@@ -1253,7 +1323,7 @@ onUnmounted(() => {
         </div>
         <div class="shrink-0 px-4 py-3 border-t border-neutral-200 bg-white flex items-center gap-3 max-w-3xl mx-auto w-full">
           <Button label="Close" severity="secondary" outlined @click="showZReadingResult = false" class="flex-1 !h-14 !text-base !font-bold" />
-          <Button label="Print" icon="pi pi-print" @click="window.print()" class="flex-1 !h-14 !text-base !font-bold" />
+          <Button label="Print" icon="pi pi-print" @click="handlePrint()" class="flex-1 !h-14 !text-base !font-bold" />
         </div>
       </div>
     </Dialog>
@@ -1297,6 +1367,14 @@ onUnmounted(() => {
           <Button label="Generate Z-Reading" icon="pi pi-file-export" severity="warn" :loading="isGeneratingReading" @click="confirmZReading" class="flex-1 !h-12" />
         </div>
       </template>
+    </Dialog>
+
+    <!-- Out of Stock Dialog -->
+    <Dialog v-model:visible="showStockDialog" header="Out of Stock" :modal="true" :closable="true" :style="{ width: '360px' }">
+      <div class="flex items-center gap-3">
+        <i class="pi pi-exclamation-triangle text-4xl text-red-500"></i>
+        <p class="text-lg">{{ stockDialogMessage }}</p>
+      </div>
     </Dialog>
   </div>
 </template>

@@ -31,11 +31,20 @@ class InventoryAnalyticsService {
       toLocalDateStr(today)
     )
 
-    // Total inventory value from products table
+    // Total inventory value using Weighted Average Cost from receive movements
     let valueSql = `
-      SELECT COALESCE(SUM(stock * cost), 0) as total_value
-      FROM products
-      WHERE status = 'active'
+      SELECT COALESCE(SUM(p.stock * COALESCE(
+        (SELECT sm.unit_cost
+         FROM stock_movements sm
+         JOIN product_variants pv ON pv.id = sm.variant_id
+         WHERE pv.product_id = p.id
+           AND sm.movement_type = 'receive'
+           AND sm.unit_cost IS NOT NULL
+         ORDER BY sm.created_at DESC LIMIT 1),
+        p.cost
+      )), 0) as total_value
+      FROM products p
+      WHERE p.status = 'active'
     `
     const valueParams: any[] = []
 

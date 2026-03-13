@@ -17,6 +17,7 @@ import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { transactionRepository } from '@/repositories/transactionRepository'
+import { toLocalDateStr } from '@/utils/dateHelpers'
 import { transactionItemRepository } from '@/repositories/transactionItemRepository'
 import { paymentRepository } from '@/repositories/paymentRepository'
 import { useTransactionStore } from '@/stores/transaction'
@@ -30,8 +31,10 @@ const toast = useToast()
 const confirm = useConfirm()
 const transactionStore = useTransactionStore()
 
-// Date range filter
-const dateRange = ref<Date[]>([new Date(), new Date()])
+// Date range filter — use start of today (midnight) to avoid timezone display issues
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+const dateRange = ref<Date[]>([new Date(today), new Date(today)])
 const searchQuery = ref('')
 const statusFilter = ref<string>('all')
 
@@ -108,9 +111,9 @@ async function loadTransactions() {
   try {
     const [start, end] = dateRange.value
     if (!start || !end) return
-    const startOfDay = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0).toISOString()
-    const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59).toISOString()
-    transactions.value = await transactionRepository.findByDateRange(startOfDay, endOfDay)
+    const startDate = toLocalDateStr(start)
+    const endDate = toLocalDateStr(end)
+    transactions.value = await transactionRepository.findByLocalDateRange(startDate, endDate)
     // Clear caches
     detailCache.value = {}
     expandedRows.value = {}
@@ -146,7 +149,26 @@ function formatCurrency(value: number): string {
 }
 
 function formatDateTime(dateStr: string): string {
-  const d = new Date(dateStr)
+  // If timestamp has Z suffix, new Date() correctly parses as UTC and
+  // toLocaleString converts to local. If no Z, parse manually to avoid
+  // new Date() treating it as UTC.
+  if (dateStr.endsWith('Z')) {
+    return new Date(dateStr).toLocaleString('en-PH', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    })
+  }
+  const [datePart, timePart] = dateStr.split('T')
+  if (!datePart) return dateStr
+  const [year, month, day] = datePart.split('-').map(Number)
+  let hours = 0, minutes = 0, seconds = 0
+  if (timePart) {
+    const parts = timePart.replace(/\.\d+$/, '').split(':').map(Number)
+    hours = parts[0] || 0
+    minutes = parts[1] || 0
+    seconds = parts[2] || 0
+  }
+  const d = new Date(year!, month! - 1, day!, hours, minutes, seconds)
   return d.toLocaleString('en-PH', {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true

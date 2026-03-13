@@ -31,13 +31,22 @@ async function loadStats() {
     }>(
       `SELECT
         COUNT(*) as total_products,
-        COALESCE(SUM(stock), 0) as total_units,
-        COALESCE(SUM(stock * cost), 0) as inventory_value,
-        COALESCE(SUM(stock * price), 0) as retail_value,
-        COALESCE(SUM(CASE WHEN stock > 0 AND stock <= low_stock_threshold THEN 1 ELSE 0 END), 0) as low_stock,
-        COALESCE(SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END), 0) as out_of_stock
-       FROM products
-       WHERE status != 'inactive'`
+        COALESCE(SUM(p.stock), 0) as total_units,
+        COALESCE(SUM(p.stock * COALESCE(
+          (SELECT sm.unit_cost
+           FROM stock_movements sm
+           JOIN product_variants pv ON pv.id = sm.variant_id
+           WHERE pv.product_id = p.id
+             AND sm.movement_type = 'receive'
+             AND sm.unit_cost IS NOT NULL
+           ORDER BY sm.created_at DESC LIMIT 1),
+          p.cost
+        )), 0) as inventory_value,
+        COALESCE(SUM(p.stock * p.price), 0) as retail_value,
+        COALESCE(SUM(CASE WHEN p.stock > 0 AND p.stock <= p.low_stock_threshold THEN 1 ELSE 0 END), 0) as low_stock,
+        COALESCE(SUM(CASE WHEN p.stock = 0 THEN 1 ELSE 0 END), 0) as out_of_stock
+       FROM products p
+       WHERE p.status != 'inactive'`
     )
 
     if (result) {

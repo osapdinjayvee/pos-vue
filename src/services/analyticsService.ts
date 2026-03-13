@@ -32,10 +32,9 @@ class AnalyticsService {
    * - Void and refund counts tracked separately
    */
   async getMetricsForPeriod(dateFrom: string, dateTo: string, branchId?: string): Promise<TodayMetrics> {
-    let sql = `
+    let txSql = `
       SELECT
         COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN total_amount ELSE 0 END), 0) as gross_sales,
-        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN total_amount - discount_total ELSE 0 END), 0) as net_sales,
         COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN 1 ELSE 0 END), 0) as transaction_count,
         COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
         COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount < 0 THEN 1 ELSE 0 END), 0) as refund_count
@@ -43,31 +42,56 @@ class AnalyticsService {
       WHERE date(created_at) >= ? AND date(created_at) <= ?
         AND status IN ('completed', 'voided')
     `
+    // Net income: (selling price - latest cost) * quantity for completed sales
+    let netIncomeSql = `
+      SELECT COALESCE(SUM(
+        (ti.unit_price - COALESCE(
+          (SELECT sm.unit_cost
+           FROM stock_movements sm
+           JOIN product_variants pv ON pv.id = sm.variant_id
+           WHERE pv.product_id = ti.product_id
+             AND sm.movement_type = 'receive'
+             AND sm.unit_cost IS NOT NULL
+           ORDER BY sm.created_at DESC LIMIT 1),
+          p.cost
+        )) * ti.quantity
+      ), 0) as net_income
+      FROM transaction_items ti
+      INNER JOIN transactions t ON t.id = ti.transaction_id
+      INNER JOIN products p ON p.id = ti.product_id
+      WHERE t.status = 'completed' AND t.total_amount >= 0
+        AND date(t.created_at) >= ? AND date(t.created_at) <= ?
+    `
     const params: any[] = [dateFrom, dateTo]
+    const netParams: any[] = [dateFrom, dateTo]
 
     if (branchId) {
-      sql += ' AND branch_id = ?'
+      txSql += ' AND branch_id = ?'
+      netIncomeSql += ' AND t.branch_id = ?'
       params.push(branchId)
+      netParams.push(branchId)
     }
 
-    const result = await db.getOne<{
-      gross_sales: number
-      net_sales: number
-      transaction_count: number
-      void_count: number
-      refund_count: number
-    }>(sql, params)
+    const [txResult, netResult] = await Promise.all([
+      db.getOne<{
+        gross_sales: number
+        transaction_count: number
+        void_count: number
+        refund_count: number
+      }>(txSql, params),
+      db.getOne<{ net_income: number }>(netIncomeSql, netParams)
+    ])
 
-    const grossSales = result?.gross_sales || 0
-    const txCount = result?.transaction_count || 0
+    const grossSales = txResult?.gross_sales || 0
+    const txCount = txResult?.transaction_count || 0
 
     return {
       grossSales,
-      netSales: result?.net_sales || 0,
+      netSales: netResult?.net_income || 0,
       transactionCount: txCount,
       averageTicket: txCount > 0 ? grossSales / txCount : 0,
-      voidCount: result?.void_count || 0,
-      refundCount: result?.refund_count || 0,
+      voidCount: txResult?.void_count || 0,
+      refundCount: txResult?.refund_count || 0,
       lastUpdated: new Date().toISOString()
     }
   }
