@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.pos.app',
-  appName: 'POS App',
+  appName: 'Zoomin POS',
   webDir: 'dist',
 
   plugins: {
@@ -23,6 +23,10 @@ const config: CapacitorConfig = {
         biometricTitle: 'Biometric login for POS',
         biometricSubTitle: 'Log in using biometric authentication'
       }
+    },
+
+    CapacitorHttp: {
+      enabled: true
     },
 
     SplashScreen: {

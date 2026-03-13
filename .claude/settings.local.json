@@ -38,7 +38,16 @@
       "Bash(wsl ls:*)",
       "Bash(wsl find:*)",
       "Bash(wsl --list:*)",
-      "Bash(wsl:*)"
+      "Bash(wsl:*)",
+      "Bash(powershell -Command \"wsl -d Ubuntu find /home/kyn/sites/pos-app/app/Http/Controllers -type f -name ''*.php''\")",
+      "Bash(powershell -Command \"wsl -d Ubuntu cat /home/kyn/sites/pos-app/app/Http/Controllers/Api/LicenseController.php\")",
+      "Bash(powershell -Command:*)",
+      "Bash(curl:*)",
+      "Bash(ipconfig:*)",
+      "Bash(node -e:*)",
+      "Bash(npx cap:*)",
+      "Bash(npm ls:*)",
+      "Bash(cd \"C:\\\\Users\\\\jayve\\\\OneDrive\\\\Desktop\\\\POS\\\\pos-app\" && node -e \"\nconst initSqlJs = require\\('sql.js'\\);\nconst fs = require\\('fs'\\);\nconst path = require\\('path'\\);\n\n// Find the database file\nconst dbFiles = ['pos.db', 'database.db', 'app.db'];\nconst possiblePaths = ['.', './data', './db'];\n\nasync function main\\(\\) {\n  // Check if sql.js is available\n  try {\n    const SQL = await initSqlJs\\(\\);\n    console.log\\('sql.js loaded'\\);\n  } catch\\(e\\) {\n    console.log\\('sql.js not available:', e.message\\);\n  }\n}\nmain\\(\\);\n\" 2>&1 | head -5)"
     ]
   }
 }

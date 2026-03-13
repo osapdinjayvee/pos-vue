@@ -1,6 +1,6 @@
 {
   "name": "pos-app",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -27,6 +27,7 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/core": "^8.0.2",
     "@capacitor/network": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.1",
     "@primeuix/themes": "^2.0.3",
     "@vueuse/core": "^14.2.0",
     "axios": "^1.13.4",
