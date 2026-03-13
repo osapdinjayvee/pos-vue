@@ -5,6 +5,7 @@ import StepPanels from 'primevue/steppanels'
 import StepPanel from 'primevue/steppanel'
 import ProgressSpinner from 'primevue/progressspinner'
 import WelcomeStep from '@/components/onboarding/WelcomeStep.vue'
+import ServerSetupStep from '@/components/onboarding/ServerSetupStep.vue'
 import LicenseStep from '@/components/onboarding/LicenseStep.vue'
 import BusinessStep from '@/components/onboarding/BusinessStep.vue'
 import AdminStep from '@/components/onboarding/AdminStep.vue'
@@ -25,7 +26,7 @@ const stepOrder: OnboardingStep[] = ONBOARDING_STEPS
 function getNextStep(current: string): string | null {
   const idx = stepOrder.indexOf(current as OnboardingStep)
   if (idx >= 0 && idx < stepOrder.length - 1) {
-    return stepOrder[idx + 1]
+    return stepOrder[idx + 1] ?? null
   }
   return null
 }
@@ -33,7 +34,7 @@ function getNextStep(current: string): string | null {
 function getPrevStep(current: string): string | null {
   const idx = stepOrder.indexOf(current as OnboardingStep)
   if (idx > 0) {
-    return stepOrder[idx - 1]
+    return stepOrder[idx - 1] ?? null
   }
   return null
 }
@@ -74,8 +75,16 @@ watch(() => onboarding.currentStep.value, (newStep) => {
           <!-- Welcome -->
           <StepPanel v-slot="{ activateCallback }" value="welcome">
             <WelcomeStep
-              @next="activateCallback('license')"
+              @next="activateCallback('server')"
               @back="() => {}"
+            />
+          </StepPanel>
+
+          <!-- Server Setup -->
+          <StepPanel v-slot="{ activateCallback }" value="server">
+            <ServerSetupStep
+              @next="activateCallback('license')"
+              @back="activateCallback('welcome')"
             />
           </StepPanel>
 
@@ -83,7 +92,7 @@ watch(() => onboarding.currentStep.value, (newStep) => {
           <StepPanel v-slot="{ activateCallback }" value="license">
             <LicenseStep
               @next="activateCallback('business')"
-              @back="activateCallback('welcome')"
+              @back="activateCallback('server')"
             />
           </StepPanel>
 

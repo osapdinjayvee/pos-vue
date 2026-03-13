@@ -89,7 +89,11 @@ async function handleSave(data: RoleInput, isNew: boolean) {
         return
       }
 
-      await roleRepository.create(data)
+      await roleRepository.create({
+        ...data,
+        permissions: JSON.stringify(data.permissions),
+        is_default: data.is_default ? 1 : 0
+      } as any)
 
       toast.add({
         severity: 'success',
@@ -100,7 +104,11 @@ async function handleSave(data: RoleInput, isNew: boolean) {
     } else {
       if (!selectedRole.value) return
 
-      await roleRepository.update(selectedRole.value.id, data)
+      await roleRepository.update(selectedRole.value.id, {
+        ...data,
+        permissions: JSON.stringify(data.permissions),
+        is_default: data.is_default ? 1 : 0
+      } as any)
 
       toast.add({
         severity: 'success',

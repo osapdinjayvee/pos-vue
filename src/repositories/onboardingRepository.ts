@@ -34,6 +34,30 @@ class OnboardingRepository {
     )
   }
 
+  async setServerUrl(url: string): Promise<void> {
+    const now = db.getCurrentTimestamp()
+    await db.execute(
+      `UPDATE ${this.tableName} SET server_url = ?, updated_at = ? WHERE id = 'default'`,
+      [url, now]
+    )
+  }
+
+  async setDeviceRegistered(deviceUid: string, registeredAt: string): Promise<void> {
+    const now = db.getCurrentTimestamp()
+    await db.execute(
+      `UPDATE ${this.tableName} SET device_uid = ?, device_registered_at = ?, updated_at = ? WHERE id = 'default'`,
+      [deviceUid, registeredAt, now]
+    )
+  }
+
+  async updateHeartbeatStatus(status: string, expiryDate?: string | null): Promise<void> {
+    const now = db.getCurrentTimestamp()
+    await db.execute(
+      `UPDATE ${this.tableName} SET heartbeat_status = ?, heartbeat_last_at = ?, license_expiry_date = ?, updated_at = ? WHERE id = 'default'`,
+      [status, now, expiryDate ?? null, now]
+    )
+  }
+
   async isCompleted(): Promise<boolean> {
     const progress = await this.getProgress()
     return progress?.is_completed === 1

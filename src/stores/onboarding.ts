@@ -14,6 +14,8 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   const currentStepIndex = computed(() => ONBOARDING_STEPS.indexOf(currentStep.value))
   const isComplete = computed(() => progress.value?.is_completed === 1)
   const isLicenseVerified = computed(() => !!progress.value?.license_verified_at)
+  const serverUrl = computed(() => progress.value?.server_url || null)
+  const heartbeatStatus = computed(() => progress.value?.heartbeat_status || 'unknown')
 
   // Actions
   async function load(): Promise<void> {
@@ -35,6 +37,12 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     }
   }
 
+  function setServerUrl(url: string): void {
+    if (progress.value) {
+      progress.value = { ...progress.value, server_url: url }
+    }
+  }
+
   function setLicenseVerified(key: string, type: string): void {
     if (progress.value) {
       progress.value = {
@@ -43,6 +51,18 @@ export const useOnboardingStore = defineStore('onboarding', () => {
         license_type: type,
         license_verified_at: new Date().toISOString()
       }
+    }
+  }
+
+  function setDeviceRegistered(deviceUid: string, registeredAt: string): void {
+    if (progress.value) {
+      progress.value = { ...progress.value, device_uid: deviceUid, device_registered_at: registeredAt }
+    }
+  }
+
+  function setHeartbeatStatus(status: string): void {
+    if (progress.value) {
+      progress.value = { ...progress.value, heartbeat_status: status, heartbeat_last_at: new Date().toISOString() }
     }
   }
 
@@ -60,9 +80,14 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     currentStepIndex,
     isComplete,
     isLicenseVerified,
+    serverUrl,
+    heartbeatStatus,
     load,
     setStep,
+    setServerUrl,
     setLicenseVerified,
+    setDeviceRegistered,
+    setHeartbeatStatus,
     markComplete
   }
 })

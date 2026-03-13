@@ -1,23 +1,24 @@
 import { httpClient } from '@/services/httpClient'
 import { termsRepository } from '@/repositories/termsRepository'
 import { syncQueueRepository } from '@/repositories/syncQueueRepository'
-import type { TermsDocument, TermsActiveResponse } from '@/types/onboarding'
+import type { TermsDocument, LegalDocumentResponse } from '@/types/onboarding'
+
+function mapLegalDoc(data: LegalDocumentResponse, docType: string): TermsDocument {
+  return {
+    id: `${docType}-${data.version}`,
+    version: data.version,
+    title: data.title,
+    content_html: data.content,
+    published_at: data.effective_date,
+    fetched_at: new Date().toISOString()
+  }
+}
 
 class TermsService {
   async fetchActive(): Promise<TermsDocument | null> {
     try {
-      const response = await httpClient.get<TermsActiveResponse>('/terms/active')
-      const data = response.data
-
-      const doc: TermsDocument = {
-        id: data.id,
-        version: data.version,
-        title: data.title,
-        content_html: data.content_html,
-        published_at: data.published_at,
-        fetched_at: new Date().toISOString()
-      }
-
+      const response = await httpClient.get<LegalDocumentResponse>('/legal/terms-and-conditions')
+      const doc = mapLegalDoc(response.data, 'terms')
       await termsRepository.saveDocument(doc)
       return doc
     } catch (err: any) {
@@ -26,8 +27,24 @@ class TermsService {
     }
   }
 
+  async fetchPrivacyPolicy(): Promise<TermsDocument | null> {
+    try {
+      const response = await httpClient.get<LegalDocumentResponse>('/legal/privacy-policy')
+      const doc = mapLegalDoc(response.data, 'privacy')
+      await termsRepository.saveDocument(doc)
+      return doc
+    } catch (err: any) {
+      console.error('[TermsService] Failed to fetch privacy policy:', err.message)
+      return null
+    }
+  }
+
   async getCached(): Promise<TermsDocument | null> {
     return await termsRepository.getCachedActive()
+  }
+
+  async getCachedPrivacy(): Promise<TermsDocument | null> {
+    return await termsRepository.getCachedByType('privacy')
   }
 
   async accept(termsId: string, version: string, userId: string): Promise<boolean> {

@@ -4,6 +4,7 @@ import { RouterView } from 'vue-router'
 import { useDatabase } from '@/composables/useDatabase'
 import { useSync } from '@/composables/useSync'
 import { useSettingsStore } from '@/stores/settings'
+import { Capacitor } from '@capacitor/core'
 import ProgressSpinner from 'primevue/progressspinner'
 import Toast from 'primevue/toast'
 
@@ -14,15 +15,39 @@ const showApp = ref(false)
 
 onMounted(async () => {
   try {
+    // Configure status bar for native platforms
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { StatusBar, Style } = await import('@capacitor/status-bar')
+        await StatusBar.setOverlaysWebView({ overlay: false })
+        await StatusBar.setStyle({ style: Style.Light })
+        await StatusBar.setBackgroundColor({ color: '#ffffff' })
+      } catch (e) {
+        console.warn('StatusBar plugin not available:', e)
+      }
+    }
+
     await initialize()
     await settingsStore.initialize()
 
-    // Sync onboarding flag from DB to localStorage (non-blocking)
+    // Sync onboarding flag from DB to localStorage + restore API URL + start heartbeat
     try {
       const { onboardingRepository } = await import('@/repositories/onboardingRepository')
       const progress = await onboardingRepository.getProgress()
       if (progress?.is_completed === 1) {
         localStorage.setItem('pos_onboarding_complete', 'true')
+
+        // Restore server URL from DB
+        if (progress.server_url) {
+          const { setApiBaseUrl } = await import('@/config/sync')
+          setApiBaseUrl(progress.server_url)
+        }
+
+        // Start license heartbeat loop
+        if (progress.license_key) {
+          const { licenseHeartbeatService } = await import('@/services/licenseHeartbeatService')
+          licenseHeartbeatService.startHeartbeatLoop(progress.license_key, progress.device_uid)
+        }
       } else {
         localStorage.removeItem('pos_onboarding_complete')
       }

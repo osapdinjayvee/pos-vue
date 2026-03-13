@@ -105,7 +105,13 @@ async function enqueueTransaction(transactionId: string, skipDateCheck: boolean 
     transaction_id: transactionId,
     or_number: transaction.or_number,
     payload: JSON.stringify(payload),
-    status: 'pending'
+    status: 'pending',
+    bir_reference: null,
+    batch_id: null,
+    attempts: 0,
+    last_attempt: null,
+    last_error: null,
+    submitted_at: null
   })
 }
 
@@ -133,7 +139,13 @@ async function enqueueVoid(transactionId: string): Promise<EISSubmission | null>
     transaction_id: transactionId,
     or_number: transaction.or_number,
     payload: JSON.stringify(payload),
-    status: 'pending'
+    status: 'pending',
+    bir_reference: null,
+    batch_id: null,
+    attempts: 0,
+    last_attempt: null,
+    last_error: null,
+    submitted_at: null
   })
 }
 
@@ -161,7 +173,13 @@ async function enqueueRefund(transactionId: string): Promise<EISSubmission | nul
     transaction_id: transactionId,
     or_number: transaction.or_number,
     payload: JSON.stringify(payload),
-    status: 'pending'
+    status: 'pending',
+    bir_reference: null,
+    batch_id: null,
+    attempts: 0,
+    last_attempt: null,
+    last_error: null,
+    submitted_at: null
   })
 }
 
@@ -210,7 +228,7 @@ async function backfillHistorical(
   let enqueued = 0
 
   for (let i = 0; i < rows.length; i++) {
-    const result = await enqueueTransaction(rows[i].id, true)
+    const result = await enqueueTransaction(rows[i]!.id, true)
     if (result) enqueued++
     if (onProgress) onProgress(i + 1, rows.length)
   }

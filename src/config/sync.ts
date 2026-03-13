@@ -5,9 +5,31 @@
 
 import type { SyncConfig } from '@/types/sync'
 
+const API_URL_STORAGE_KEY = 'pos_api_base_url'
+
+/**
+ * Get the configured API base URL.
+ * Priority: localStorage > env var > default
+ */
+export function getApiBaseUrl(): string {
+  return localStorage.getItem(API_URL_STORAGE_KEY)
+    || import.meta.env.VITE_API_BASE_URL
+    || (import.meta.env.DEV ? '/api' : 'http://localhost:8000/api')
+}
+
+/**
+ * Set the API base URL (persisted to localStorage)
+ */
+export function setApiBaseUrl(url: string): void {
+  const trimmed = url.replace(/\/+$/, '') // strip trailing slashes
+  localStorage.setItem(API_URL_STORAGE_KEY, trimmed)
+  // Update the live config so new requests pick it up immediately
+  DEFAULT_SYNC_CONFIG.apiBaseUrl = trimmed
+}
+
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   /** Base URL for the sync API */
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  apiBaseUrl: getApiBaseUrl(),
 
   /** Sync interval in milliseconds (default: 30 seconds) */
   syncInterval: 30_000,

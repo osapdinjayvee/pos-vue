@@ -59,10 +59,11 @@ async function handleVerify() {
       verifySuccess.value = 'License verified successfully'
       licenseType.value = result.license_type
     } else {
-      verifyError.value = result.error || 'Invalid license key'
+      verifyError.value = result.error || 'License verification returned invalid'
     }
   } catch (err: any) {
-    verifyError.value = err.message || 'Failed to verify license'
+    const detail = err.response?.data?.error || err.code || ''
+    verifyError.value = `${err.message || 'Failed to verify license'}${detail ? ' (' + detail + ')' : ''}`
   } finally {
     isVerifying.value = false
   }

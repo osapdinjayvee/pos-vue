@@ -1,6 +1,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(true)
 const isMobileMenuOpen = ref(false)
 const isTablet = ref(false)
 const isMobile = ref(false)

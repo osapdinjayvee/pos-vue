@@ -43,7 +43,7 @@ function onRowSelect(event: { data: CashierMetrics }) {
       removableSort
       :sortField="'totalSales'"
       :sortOrder="-1"
-      tableStyle="min-width: 50rem"
+      tableStyle="width: 100%"
     >
       <Column header="#" style="width: 3rem;">
         <template #body="{ index }">

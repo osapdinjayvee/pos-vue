@@ -323,14 +323,14 @@ async function handleRequestORRange() {
           icon="pi pi-bolt"
           severity="secondary"
           :loading="isBulkSyncing"
-          :disabled="!isOnline.value || isBulkSyncing"
+          :disabled="!isOnline || isBulkSyncing"
           @click="handleBulkSync"
         />
         <Button
           label="Sync Now"
           icon="pi pi-sync"
-          :loading="isSyncing.value"
-          :disabled="!isOnline.value || isBulkSyncing"
+          :loading="isSyncing"
+          :disabled="!isOnline || isBulkSyncing"
           @click="handleManualSync"
         />
       </div>
@@ -341,14 +341,14 @@ async function handleRequestORRange() {
       v-if="isResuming"
       :resumePoint="resumePoint"
       :remaining="resumeRemaining"
-      :lastSyncAt="lastSyncAt.value"
+      :lastSyncAt="lastSyncAt"
       @dismiss="handleDismissResume"
     />
 
     <!-- Bulk sync progress (replaces basic SyncProgress when active) -->
     <BulkSyncProgressComponent
       v-if="showBulkProgress"
-      :progress="bulkProgress!"
+      :progress="(bulkProgress as any)"
       :isActive="isBulkSyncing"
     />
 
@@ -357,7 +357,7 @@ async function handleRequestORRange() {
       v-else
       :synced="syncedCount"
       :total="totalCount"
-      :isSyncing="isSyncing.value"
+      :isSyncing="isSyncing"
       :errors="errorCount"
     />
 
@@ -378,7 +378,7 @@ async function handleRequestORRange() {
     </Message>
 
     <InventoryReconciliationAlert
-      :discrepancies="inventoryDiscrepancies"
+      :discrepancies="(inventoryDiscrepancies as any)"
       :visible="showInventoryAlert"
       @dismiss="handleInventoryDismiss"
       @review="handleInventoryReview"
@@ -443,7 +443,7 @@ async function handleRequestORRange() {
               size="small"
               severity="secondary"
               :loading="isRequestingORRange"
-              :disabled="!isOnline.value"
+              :disabled="!isOnline"
               @click="handleRequestORRange"
             />
           </div>

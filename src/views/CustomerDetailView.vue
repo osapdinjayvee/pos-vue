@@ -2,7 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
-import TabView from 'primevue/tabview'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
@@ -119,49 +122,56 @@ onMounted(() => {
 
       <!-- Tabs -->
       <div class="detail-tabs">
-        <TabView>
-          <TabPanel header="History">
-            <CustomerHistory
-              :customerId="customerId"
-              @view-transaction="(id) => router.push({ name: 'transaction-detail', params: { id } })"
-            />
-          </TabPanel>
-          <TabPanel header="Loyalty">
-            <div class="loyalty-tab">
-              <LoyaltyPointsDisplay :customerId="customerId" />
-              <TierProgress
-                v-if="customerDetail.tier"
-                :currentSpend="customerDetail.customer.lifetime_spend || 0"
-                :currentTier="customerDetail.tier"
-                :nextTier="customerDetail.nextTier"
+        <Tabs value="history">
+          <TabList>
+            <Tab value="history">History</Tab>
+            <Tab value="loyalty">Loyalty</Tab>
+            <Tab value="info">Info</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel value="history">
+              <CustomerHistory
+                :customerId="customerId"
+                @view-transaction="(id) => router.push({ name: 'transaction-detail', params: { id } })"
               />
-              <PointsHistory :customerId="customerId" />
-            </div>
-          </TabPanel>
-          <TabPanel header="Info">
-            <div class="info-tab">
-              <div v-if="customerDetail.customer.address" class="info-section">
-                <h4>Address</h4>
-                <p>{{ customerDetail.customer.address }}</p>
-                <p v-if="customerDetail.customer.city">{{ customerDetail.customer.city }}, {{ customerDetail.customer.postal_code || '' }}</p>
-                <p>{{ customerDetail.customer.country }}</p>
+            </TabPanel>
+            <TabPanel value="loyalty">
+              <div class="loyalty-tab">
+                <LoyaltyPointsDisplay :customerId="customerId" />
+                <TierProgress
+                  v-if="customerDetail.tier"
+                  :currentSpend="customerDetail.customer.lifetime_spend || 0"
+                  :currentTier="customerDetail.tier"
+                  :nextTier="customerDetail.nextTier"
+                />
+                <PointsHistory :customerId="customerId" />
               </div>
-              <div v-if="customerDetail.customer.tax_id" class="info-section">
-                <h4>Tax ID</h4>
-                <p>{{ customerDetail.customer.tax_id }}</p>
+            </TabPanel>
+            <TabPanel value="info">
+              <div class="info-tab">
+                <div v-if="customerDetail.customer.address" class="info-section">
+                  <h4>Address</h4>
+                  <p>{{ customerDetail.customer.address }}</p>
+                  <p v-if="customerDetail.customer.city">{{ customerDetail.customer.city }}, {{ customerDetail.customer.postal_code || '' }}</p>
+                  <p>{{ customerDetail.customer.country }}</p>
+                </div>
+                <div v-if="customerDetail.customer.tax_id" class="info-section">
+                  <h4>Tax ID</h4>
+                  <p>{{ customerDetail.customer.tax_id }}</p>
+                </div>
+                <div v-if="customerDetail.customer.notes" class="info-section">
+                  <h4>Notes</h4>
+                  <p>{{ customerDetail.customer.notes }}</p>
+                </div>
+                <div class="info-section">
+                  <h4>Credit</h4>
+                  <p>Credit Limit: ₱{{ customerDetail.customer.credit_limit.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
+                  <p>Current Balance: ₱{{ customerDetail.customer.current_balance.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
+                </div>
               </div>
-              <div v-if="customerDetail.customer.notes" class="info-section">
-                <h4>Notes</h4>
-                <p>{{ customerDetail.customer.notes }}</p>
-              </div>
-              <div class="info-section">
-                <h4>Credit</h4>
-                <p>Credit Limit: ₱{{ customerDetail.customer.credit_limit.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
-                <p>Current Balance: ₱{{ customerDetail.customer.current_balance.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
-              </div>
-            </div>
-          </TabPanel>
-        </TabView>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </div>
     </template>
 

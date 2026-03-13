@@ -56,20 +56,29 @@ class OnboardingService {
       throw new Error('At least one cashier is required')
     }
 
+    // Pre-hash all PINs before opening the transaction to avoid async yields
+    // inside the transaction (bcrypt is async and can allow fire-and-forget
+    // DB writes to interfere with the active transaction on Capacitor SQLite)
+    const hashedCashiers = await Promise.all(
+      cashiers.map(async (cashier) => ({
+        ...cashier,
+        pinHash: await hashPin(cashier.pin)
+      }))
+    )
+
     await db.transaction(async (ctx) => {
       // Remove previously created onboarding cashiers before re-inserting
       await ctx.execute(`DELETE FROM user_roles WHERE user_id != 'user-admin'`)
       await ctx.execute(`DELETE FROM users WHERE id != 'user-admin'`)
 
-      for (const cashier of cashiers) {
-        const pinHash = await hashPin(cashier.pin)
+      for (const cashier of hashedCashiers) {
         const id = db.generateId('usr')
         const now = db.getCurrentTimestamp()
 
         await ctx.execute(
           `INSERT INTO users (id, username, pin_hash, first_name, last_name, branch_id, is_active, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, 'branch-main', 1, ?, ?)`,
-          [id, cashier.username.toLowerCase(), pinHash, cashier.firstName, cashier.lastName, now, now]
+          [id, cashier.username.toLowerCase(), cashier.pinHash, cashier.firstName, cashier.lastName, now, now]
         )
 
         // Assign cashier role

@@ -62,9 +62,9 @@ const weekdayOptions = [
 ]
 
 function parseTimeString(timeStr: string): Date {
-  const [hours, minutes] = timeStr.split(':').map(Number)
+  const parts = timeStr.split(':').map(Number)
   const d = new Date()
-  d.setHours(hours, minutes, 0, 0)
+  d.setHours(parts[0] ?? 0, parts[1] ?? 0, 0, 0)
   return d
 }
 

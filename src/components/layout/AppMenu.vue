@@ -101,8 +101,8 @@ const rawGroups: MenuGroup[] = [
       { label: 'Users', icon: 'pi pi-user', route: '/users', permission: PERMISSIONS.USERS_VIEW },
       { label: 'Roles', icon: 'pi pi-shield', route: '/roles', permission: PERMISSIONS.USERS_EDIT },
       { label: 'Branches', icon: 'pi pi-building', route: '/branches', permission: PERMISSIONS.USERS_EDIT },
-      { label: 'Sync Queue', icon: 'pi pi-cloud-upload', route: '/sync-queue', permission: [PERMISSIONS.REPORTS_XREADING, PERMISSIONS.REPORTS_SALES] },
-      { label: 'Sync Health', icon: 'pi pi-heart', route: '/sync-health', permission: PERMISSIONS.USERS_EDIT },
+      // { label: 'Sync Queue', icon: 'pi pi-cloud-upload', route: '/sync-queue', permission: [PERMISSIONS.REPORTS_XREADING, PERMISSIONS.REPORTS_SALES] },
+      // { label: 'Sync Health', icon: 'pi pi-heart', route: '/sync-health', permission: PERMISSIONS.USERS_EDIT },
       { label: 'Settings', icon: 'pi pi-cog', route: '/settings', permission: PERMISSIONS.SETTINGS_VIEW }
     ]
   }
@@ -183,7 +183,7 @@ onMounted(expandActiveGroup)
             <span class="nav-group-header__label">{{ item.label }}</span>
             <i
               class="pi pi-chevron-right nav-group-header__chevron"
-              :class="{ 'nav-group-header__chevron--open': expandedKeys[item.key] }"
+              :class="{ 'nav-group-header__chevron--open': item.key && expandedKeys[item.key] }"
             ></i>
           </a>
           <!-- Child link (has route) -->

@@ -18,7 +18,10 @@ class LicenseService {
 
       return data
     } catch (err: any) {
-      const message = err.response?.data?.error || err.message || 'License verification failed'
+      console.error('[LicenseService] verify failed:', err)
+      const serverMsg = err.response?.data?.error
+      const errCode = err.code ? ` [${err.code}]` : ''
+      const message = serverMsg || `${err.message || 'License verification failed'}${errCode}`
       return {
         valid: false,
         license_type: '',

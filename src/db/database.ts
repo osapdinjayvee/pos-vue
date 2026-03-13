@@ -202,6 +202,11 @@ class DatabaseService {
       await this.recordMigration('022_fix_utc_timestamps')
     }
 
+    if (!migrations.includes('023_device_registration')) {
+      await this.runDeviceRegistrationMigration()
+      await this.recordMigration('023_device_registration')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
@@ -2151,6 +2156,35 @@ class DatabaseService {
     }
 
     console.log(`[Migration] 022_fix_utc_timestamps completed (offset: ${offsetStr})`)
+  }
+
+  /**
+   * Migration 023: Device registration columns on onboarding_progress
+   */
+  private async runDeviceRegistrationMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    // Add columns to onboarding_progress for server URL, device UID, and heartbeat tracking
+    const columns = [
+      { name: 'server_url', def: 'TEXT' },
+      { name: 'device_uid', def: 'TEXT' },
+      { name: 'device_registered_at', def: 'TEXT' },
+      { name: 'heartbeat_status', def: "TEXT DEFAULT 'unknown'" },
+      { name: 'heartbeat_last_at', def: 'TEXT' },
+      { name: 'license_expiry_date', def: 'TEXT' }
+    ]
+
+    for (const col of columns) {
+      try {
+        await this.adapter.execute(
+          `ALTER TABLE onboarding_progress ADD COLUMN ${col.name} ${col.def}`
+        )
+      } catch {
+        // Column may already exist
+      }
+    }
+
+    console.log('[Migration] 023_device_registration completed')
   }
 
   // =====================

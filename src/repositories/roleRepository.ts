@@ -217,7 +217,7 @@ class PermissionRepository extends BaseRepository<Permission> {
       if (!grouped[permission.category]) {
         grouped[permission.category] = []
       }
-      grouped[permission.category].push(permission)
+      grouped[permission.category]!.push(permission)
     }
 
     return grouped

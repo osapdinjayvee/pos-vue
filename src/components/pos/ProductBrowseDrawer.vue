@@ -25,7 +25,7 @@ const searchResults = ref<Product[]>([])
 const allProducts = ref<Product[]>([])
 const isSearching = ref(false)
 const isLoading = ref(false)
-const searchInputRef = ref<InstanceType<typeof InputText> | null>(null)
+const searchInputRef = ref<any>(null)
 
 let searchTimeout: number | null = null
 

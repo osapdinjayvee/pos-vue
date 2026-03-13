@@ -169,7 +169,7 @@ function handleStatsFilter(filter: string) {
     <!-- Conflict Detail Dialog with Recommendation + Apply Recommended -->
     <ConflictDetailDialog
       v-model:visible="showDetail"
-      :detail="selectedConflict"
+      :detail="(selectedConflict as any)"
       @resolve="handleResolution"
     />
   </div>

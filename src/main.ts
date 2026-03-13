@@ -47,4 +47,7 @@ app.use(ConfirmationService)
 app.use(ToastService)
 app.directive('tooltip', Tooltip)
 
+// Set document title from env
+document.title = import.meta.env.VITE_APP_NAME || 'Zoomin POS'
+
 app.mount('#app')

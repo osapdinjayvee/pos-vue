@@ -1,27 +1,34 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
+import logoImg from '@/assets/img/logo.png'
 
 const emit = defineEmits<{
   next: []
   back: []
 }>()
+
+const appName = import.meta.env.VITE_APP_NAME || 'Zoomin POS'
 </script>
 
 <template>
   <div class="flex flex-col h-screen px-4">
     <div class="flex-1 flex flex-col items-center justify-center text-center gap-6 overflow-y-auto pb-24">
-      <div class="w-40 h-40 rounded-full bg-primary/10 flex items-center justify-center">
-        <i class="pi pi-shop text-primary" style="font-size: 5rem"></i>
+      <div class="w-40 h-40 rounded-full bg-primary/10 flex items-center justify-center p-6">
+        <img :src="logoImg" alt="Logo" class="w-full h-full object-contain" />
       </div>
 
       <div class="flex flex-col gap-2">
-        <h2 class="text-3xl font-bold text-surface-900">Welcome to POS System</h2>
+        <h2 class="text-3xl font-bold text-surface-900">Welcome to {{ appName }}</h2>
         <p class="text-surface-500 text-lg max-w-md">
           Let's get your point-of-sale system set up. This wizard will guide you through:
         </p>
       </div>
 
       <div class="flex flex-col gap-3 text-left max-w-sm w-full">
+        <div class="flex items-center gap-3 p-3 rounded-lg bg-surface-100">
+          <i class="pi pi-server text-primary text-lg"></i>
+          <span class="text-surface-700">Server connection</span>
+        </div>
         <div class="flex items-center gap-3 p-3 rounded-lg bg-surface-100">
           <i class="pi pi-key text-primary text-lg"></i>
           <span class="text-surface-700">License verification</span>

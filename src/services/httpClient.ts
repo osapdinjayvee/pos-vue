@@ -1,15 +1,15 @@
 /**
  * HTTP Client
- * Platform-aware HTTP client:
- * - Web/Electron: Axios with interceptors for auth, timeout, and retry
- * - Capacitor native: CapacitorHttp (bypasses CORS, uses native networking)
+ * Uses Axios with interceptors for auth, dynamic base URL, timeout, and retry.
  *
- * Both expose the same Axios-compatible interface: .get(), .post(), .put(), .patch(), .delete()
+ * On Capacitor 6+, the native runtime automatically patches fetch/XMLHttpRequest
+ * to use native HTTP (bypassing CORS). Axios uses XHR under the hood, so it
+ * works natively on all platforms without a separate CapacitorHttp client.
  */
 
 import axios from 'axios'
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
-import { DEFAULT_SYNC_CONFIG, getRetryDelay } from '@/config/sync'
+import { DEFAULT_SYNC_CONFIG, getRetryDelay, getApiBaseUrl } from '@/config/sync'
 import { detectPlatform } from '@/db/platform'
 
 interface RetryConfig extends InternalAxiosRequestConfig {
@@ -37,123 +37,34 @@ interface HttpClient {
   delete<T = any>(url: string, config?: any): Promise<HttpResponse<T>>
 }
 
-// ─── Auth helpers (shared across both implementations) ───
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
-
-  const token = localStorage.getItem('auth_token')
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  const terminalId = localStorage.getItem('terminal_id') || 'POS-001'
-  headers['X-Terminal-ID'] = terminalId
-
-  return headers
-}
-
-// ─── Capacitor native HTTP client ───
-
-function createCapacitorHttpClient(): HttpClient {
-  // Lazy import — only resolved on native platforms
-  const getCapacitorHttp = async () => {
-    const { CapacitorHttp } = await import('@capacitor/core')
-    return CapacitorHttp
-  }
-
-  const baseUrl = DEFAULT_SYNC_CONFIG.apiBaseUrl
-
-  async function request<T>(
-    method: string,
-    url: string,
-    data?: any,
-    retryCount = 0
-  ): Promise<HttpResponse<T>> {
-    const CapHttp = await getCapacitorHttp()
-    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`
-
-    try {
-      const response = await CapHttp.request({
-        method,
-        url: fullUrl,
-        headers: getAuthHeaders(),
-        data: data ?? undefined,
-        connectTimeout: DEFAULT_SYNC_CONFIG.requestTimeout,
-        readTimeout: DEFAULT_SYNC_CONFIG.requestTimeout
-      })
-
-      // Throw on server errors (5xx) and retryable 4xx
-      if (response.status >= 500 || response.status === 408 || response.status === 429) {
-        const maxRetries = DEFAULT_SYNC_CONFIG.maxRetries
-        if (retryCount < maxRetries) {
-          const delay = getRetryDelay(retryCount)
-          console.log(
-            `[HttpClient:Capacitor] Retry ${retryCount + 1}/${maxRetries} after ${delay}ms for ${url}`
-          )
-          await new Promise((resolve) => setTimeout(resolve, delay))
-          return request<T>(method, url, data, retryCount + 1)
-        }
-      }
-
-      // Throw on non-retryable client errors
-      if (response.status >= 400) {
-        const err: any = new Error(`HTTP ${response.status}`)
-        err.response = { status: response.status, data: response.data }
-        throw err
-      }
-
-      return {
-        data: response.data as T,
-        status: response.status,
-        headers: response.headers
-      }
-    } catch (err: any) {
-      // If already wrapped with .response, re-throw
-      if (err.response) throw err
-
-      // Network-level error — retry if applicable
-      const maxRetries = DEFAULT_SYNC_CONFIG.maxRetries
-      if (retryCount < maxRetries) {
-        const delay = getRetryDelay(retryCount)
-        console.log(
-          `[HttpClient:Capacitor] Network error, retry ${retryCount + 1}/${maxRetries} after ${delay}ms for ${url}`
-        )
-        await new Promise((resolve) => setTimeout(resolve, delay))
-        return request<T>(method, url, data, retryCount + 1)
-      }
-
-      throw err
-    }
-  }
-
-  return {
-    get: <T>(url: string) => request<T>('GET', url),
-    post: <T>(url: string, data?: any) => request<T>('POST', url, data),
-    put: <T>(url: string, data?: any) => request<T>('PUT', url, data),
-    patch: <T>(url: string, data?: any) => request<T>('PATCH', url, data),
-    delete: <T>(url: string) => request<T>('DELETE', url)
-  }
-}
-
-// ─── Web/Electron Axios client ───
+// ─── Axios client (works on all platforms) ───
 
 function createAxiosHttpClient(): HttpClient {
+  // On Capacitor, use fetch adapter — Capacitor patches window.fetch for native HTTP
+  // but does NOT reliably patch XMLHttpRequest (Axios default)
+  const platform = detectPlatform()
+  const usesFetchAdapter = platform === 'capacitor'
+
   const client: AxiosInstance = axios.create({
     baseURL: DEFAULT_SYNC_CONFIG.apiBaseUrl,
     timeout: DEFAULT_SYNC_CONFIG.requestTimeout,
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json'
-    }
+    },
+    ...(usesFetchAdapter ? { adapter: 'fetch' } : {})
   })
 
-  // Request interceptor: inject auth token
+  if (usesFetchAdapter) {
+    console.log('[HttpClient] Using Axios with fetch adapter (Capacitor native HTTP)')
+  }
+
+  // Request interceptor: inject auth token + dynamic base URL
   client.interceptors.request.use(
     (config) => {
+      // Override baseURL per-request so config changes take effect immediately
+      config.baseURL = getApiBaseUrl()
+
       const token = localStorage.getItem('auth_token')
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
@@ -196,7 +107,7 @@ function createAxiosHttpClient(): HttpClient {
 
       const delay = getRetryDelay(config._retryCount - 1)
       console.log(
-        `[HttpClient:Axios] Retry ${config._retryCount}/${config._maxRetries} after ${delay}ms for ${config.url}`
+        `[HttpClient] Retry ${config._retryCount}/${config._maxRetries} after ${delay}ms for ${config.url}`
       )
 
       await new Promise((resolve) => setTimeout(resolve, delay))
@@ -207,21 +118,7 @@ function createAxiosHttpClient(): HttpClient {
   return client as unknown as HttpClient
 }
 
-// ─── Factory: pick implementation based on platform ───
-
-function createHttpClient(): HttpClient {
-  const platform = detectPlatform()
-
-  if (platform === 'capacitor') {
-    console.log('[HttpClient] Using CapacitorHttp (native networking)')
-    return createCapacitorHttpClient()
-  }
-
-  console.log('[HttpClient] Using Axios (web/electron)')
-  return createAxiosHttpClient()
-}
-
-export const httpClient = createHttpClient()
+export const httpClient = createAxiosHttpClient()
 
 /**
  * Update the auth token (call after login/refresh)

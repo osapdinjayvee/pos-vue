@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import Message from 'primevue/message'
+import ProgressSpinner from 'primevue/progressspinner'
+import OnboardingConnectivityBanner from './OnboardingConnectivityBanner.vue'
 import { useOnboarding } from '@/composables/useOnboarding'
+import { connectivityService } from '@/services/connectivityService'
+import type { TermsDocument } from '@/types/onboarding'
 
 const emit = defineEmits<{
   next: []
@@ -12,39 +16,53 @@ const emit = defineEmits<{
 
 const onboarding = useOnboarding()
 
+const privacy = ref<TermsDocument | null>(null)
 const isAgreed = ref(false)
+const isFetching = ref(false)
 const isAccepting = ref(false)
+const fetchError = ref<string | null>(null)
 const acceptError = ref<string | null>(null)
 
-const privacyContent = `
-<p>We are committed to protecting your personal data in accordance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong> of the Philippines.</p>
+const canAccept = computed(() => isAgreed.value && privacy.value !== null)
 
-<h4 class="mt-3 mb-1 font-semibold">Information We Collect</h4>
-<ul class="list-disc pl-5 space-y-1">
-  <li>Business registration details (name, TIN, address)</li>
-  <li>User account information (name, username, PIN)</li>
-  <li>Transaction records and sales data</li>
-  <li>Customer information (if CRM features are used)</li>
-  <li>Inventory and product data</li>
-</ul>
+onMounted(async () => {
+  await loadPrivacy()
+})
 
-<h4 class="mt-3 mb-1 font-semibold">How We Use Your Data</h4>
-<ul class="list-disc pl-5 space-y-1">
-  <li>Processing point-of-sale transactions</li>
-  <li>Generating BIR-compliant reports and receipts</li>
-  <li>Synchronizing data between devices (when online)</li>
-  <li>Submitting electronic invoicing/receipts to BIR EIS</li>
-</ul>
+async function loadPrivacy() {
+  isFetching.value = true
+  fetchError.value = null
 
-<h4 class="mt-3 mb-1 font-semibold">Data Storage & Security</h4>
-<p>Your data is stored locally on your device and encrypted during transmission. We employ industry-standard security measures to protect your information.</p>
-
-<h4 class="mt-3 mb-1 font-semibold">Your Rights</h4>
-<p>Under RA 10173, you have the right to access, correct, and request deletion of your personal data. Contact your system administrator for data-related requests.</p>
-`
+  try {
+    if (connectivityService.isOnline.value) {
+      const fetched = await onboarding.fetchPrivacyPolicy()
+      if (fetched) {
+        privacy.value = fetched
+      } else {
+        const cached = await onboarding.getCachedPrivacy()
+        if (cached) {
+          privacy.value = cached
+        } else {
+          throw new Error('Failed to load privacy policy from server and no cached version available.')
+        }
+      }
+    } else {
+      const cached = await onboarding.getCachedPrivacy()
+      if (cached) {
+        privacy.value = cached
+      } else {
+        throw new Error('No internet connection and no cached privacy policy available.')
+      }
+    }
+  } catch (err: any) {
+    fetchError.value = err.message || 'Failed to load privacy policy'
+  } finally {
+    isFetching.value = false
+  }
+}
 
 async function handleAccept() {
-  if (!isAgreed.value) return
+  if (!canAccept.value || !privacy.value) return
 
   isAccepting.value = true
   acceptError.value = null
@@ -69,47 +87,70 @@ async function handleAccept() {
     </div>
 
     <!-- Scrollable content -->
-    <div class="flex-1 overflow-y-auto pb-24">
-      <div class="flex flex-col items-center gap-5 w-full">
-        <Message v-if="acceptError" severity="error" :closable="false" icon="pi pi-times-circle" class="w-full max-w-md">
-          {{ acceptError }}
-        </Message>
+    <div class="flex-1 overflow-y-auto pb-28">
+      <OnboardingConnectivityBanner />
 
-        <div
-          class="border border-surface-200 rounded-lg p-4 bg-surface-0 overflow-y-auto max-h-80 text-sm text-surface-700 leading-relaxed w-full"
-          v-html="privacyContent"
-        ></div>
-
-        <!-- Agreement Checkbox -->
-        <div class="flex items-start gap-3 pt-2 w-full">
-          <Checkbox
-            v-model="isAgreed"
-            :binary="true"
-            inputId="privacy-agree"
+      <Message v-if="fetchError" severity="error" :closable="false" icon="pi pi-times-circle" class="w-full mb-3">
+        <div class="flex flex-col gap-2">
+          <span>{{ fetchError }}</span>
+          <Button
+            label="Retry"
+            icon="pi pi-refresh"
+            size="small"
+            severity="danger"
+            outlined
+            @click="loadPrivacy"
           />
-          <label for="privacy-agree" class="text-surface-700 cursor-pointer leading-snug">
-            I have read and agree to the Privacy Policy
-          </label>
         </div>
+      </Message>
+
+      <Message v-if="acceptError" severity="error" :closable="false" icon="pi pi-times-circle" class="w-full mb-3">
+        {{ acceptError }}
+      </Message>
+
+      <!-- Loading State -->
+      <div v-if="isFetching" class="flex flex-col items-center justify-center py-12 gap-4">
+        <ProgressSpinner style="width: 50px; height: 50px" />
+        <p class="text-surface-500">Loading privacy policy...</p>
       </div>
+
+      <!-- Privacy Content -->
+      <div
+        v-else-if="privacy"
+        class="border border-surface-200 rounded-lg p-4 bg-surface-0 text-sm text-surface-700 leading-relaxed"
+        v-html="privacy.content_html"
+      ></div>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 bg-surface-50 flex justify-between px-4 py-4">
-      <Button
-        label="Back"
-        text
-        icon="pi pi-arrow-left"
-        @click="emit('back')"
-      />
-      <Button
-        label="Accept & Continue"
-        icon="pi pi-check"
-        iconPos="right"
-        class="!h-14 !text-base !font-bold"
-        :disabled="!isAgreed || isAccepting"
-        :loading="isAccepting"
-        @click="handleAccept"
-      />
+    <!-- Fixed bottom bar with checkbox + buttons -->
+    <div class="fixed bottom-0 left-0 right-0 bg-surface-50 border-t border-surface-200 px-4 py-3">
+      <div v-if="privacy && !isFetching" class="flex items-start gap-3 mb-3">
+        <Checkbox
+          v-model="isAgreed"
+          :binary="true"
+          inputId="privacy-agree"
+        />
+        <label for="privacy-agree" class="text-surface-700 cursor-pointer leading-snug text-sm">
+          I have read and agree to the Privacy Policy
+        </label>
+      </div>
+      <div class="flex justify-between">
+        <Button
+          label="Back"
+          text
+          icon="pi pi-arrow-left"
+          @click="emit('back')"
+        />
+        <Button
+          label="Accept & Continue"
+          icon="pi pi-check"
+          iconPos="right"
+          class="!h-14 !text-base !font-bold"
+          :disabled="!canAccept || isAccepting"
+          :loading="isAccepting"
+          @click="handleAccept"
+        />
+      </div>
     </div>
   </div>
 </template>

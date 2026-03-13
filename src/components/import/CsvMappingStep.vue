@@ -64,7 +64,7 @@ const updateMapping = (index: number, value: string | null) => {
       }
     })
   }
-  mapping.value[index].entityField = value
+  if (mapping.value[index]) mapping.value[index].entityField = value
 }
 
 const handleNext = () => {

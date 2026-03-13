@@ -154,8 +154,8 @@ async function getResumePoint(): Promise<{ entityId: string; syncedAt: string } 
   if (logs.length === 0) return null
 
   return {
-    entityId: logs[0].entity_id,
-    syncedAt: logs[0].synced_at
+    entityId: logs[0]!.entity_id,
+    syncedAt: logs[0]!.synced_at
   }
 }
 

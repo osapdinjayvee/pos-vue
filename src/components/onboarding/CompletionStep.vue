@@ -43,7 +43,7 @@ async function handleLaunch() {
       <div class="flex flex-col gap-2">
         <h2 class="text-3xl font-bold text-surface-900">Setup Complete!</h2>
         <p class="text-surface-500 text-lg max-w-md">
-          Your POS system is ready to use. All configurations have been saved successfully.
+          Your system is ready to use. All configurations have been saved successfully.
         </p>
       </div>
 

@@ -3,21 +3,21 @@
  * Provides shift management functionality for components
  */
 
-import { computed, ref } from 'vue'
+import { computed, ref, type ComputedRef } from 'vue'
 import { useShiftStore } from '@/stores/shift'
 import { useAuthStore } from '@/stores/auth'
 import type { ShiftStartInput, ShiftCloseInput, DisplayShift } from '@/types/user'
 
 export interface UseShiftReturn {
   // State
-  currentShift: ReturnType<typeof computed<DisplayShift | null>>
-  hasOpenShift: ReturnType<typeof computed<boolean>>
-  isLoading: ReturnType<typeof computed<boolean>>
-  error: ReturnType<typeof computed<string | null>>
+  currentShift: ComputedRef<DisplayShift | null>
+  hasOpenShift: ComputedRef<boolean>
+  isLoading: ComputedRef<boolean>
+  error: ComputedRef<string | null>
 
   // Shift info
-  shiftDuration: ReturnType<typeof computed<string>>
-  openingCash: ReturnType<typeof computed<number>>
+  shiftDuration: ComputedRef<string>
+  openingCash: ComputedRef<number>
 
   // Actions
   startShift: (openingCash: number) => Promise<{ success: boolean; error?: string }>

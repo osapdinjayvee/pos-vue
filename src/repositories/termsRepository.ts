@@ -12,7 +12,14 @@ class TermsRepository {
 
   async getCachedActive(): Promise<TermsDocument | null> {
     return await db.getOne<TermsDocument>(
-      `SELECT * FROM terms_documents ORDER BY published_at DESC LIMIT 1`
+      `SELECT * FROM terms_documents WHERE id LIKE 'terms-%' ORDER BY published_at DESC LIMIT 1`
+    )
+  }
+
+  async getCachedByType(docType: string): Promise<TermsDocument | null> {
+    return await db.getOne<TermsDocument>(
+      `SELECT * FROM terms_documents WHERE id LIKE ? ORDER BY published_at DESC LIMIT 1`,
+      [`${docType}-%`]
     )
   }
 

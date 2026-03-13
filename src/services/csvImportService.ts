@@ -104,7 +104,7 @@ class CsvImportService {
     const results: ValidatedRow[] = []
 
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]
+      const row = rows[i]!
       const errors: string[] = []
       const data: Record<string, any> = {}
 

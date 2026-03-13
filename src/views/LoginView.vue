@@ -4,10 +4,15 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import LoginForm from '@/components/auth/LoginForm.vue'
 import { useAuth } from '@/composables/useAuth'
+import logoImg from '@/assets/img/logo.png'
+import logoWhiteImg from '@/assets/img/logo-white.png'
 
 const router = useRouter()
 const toast = useToast()
 const { login, isAuthenticated, initializeAuth } = useAuth()
+
+const appName = import.meta.env.VITE_APP_NAME || 'Zoomin POS'
+const appVersion = __APP_VERSION__
 
 const isLoading = ref(false)
 const terminalId = ref('POS-001')
@@ -65,9 +70,9 @@ onMounted(() => {
     <div class="branding-panel">
       <div class="branding-content">
         <div class="logo">
-          <i class="pi pi-shopping-cart"></i>
+          <img :src="logoWhiteImg" alt="Logo" class="logo-image" />
         </div>
-        <h1 class="app-name">POS Terminal</h1>
+        <h1 class="app-name">{{ appName }}</h1>
         <p class="tagline">Streamline your business operations with our modern point of sale system</p>
 
         <div class="features">
@@ -91,7 +96,7 @@ onMounted(() => {
       </div>
 
       <div class="branding-footer">
-        <p>&copy; 2026 POS System</p>
+        <p>&copy; {{ new Date().getFullYear() }} {{ appName }}</p>
       </div>
     </div>
 
@@ -100,10 +105,8 @@ onMounted(() => {
       <div class="form-container">
         <!-- Mobile Logo (hidden on desktop) -->
         <div class="mobile-logo">
-          <div class="logo-small">
-            <i class="pi pi-shopping-cart"></i>
-          </div>
-          <h2>POS Terminal</h2>
+          <img :src="logoImg" alt="Logo" class="mobile-logo-image" />
+          <h2>{{ appName }}</h2>
         </div>
 
         <LoginForm
@@ -113,7 +116,7 @@ onMounted(() => {
         />
 
         <div class="form-footer">
-          <p class="version">v1.0.0</p>
+          <p class="version">v{{ appVersion }}</p>
         </div>
       </div>
     </div>
@@ -183,11 +186,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   margin-bottom: 1.5rem;
+  padding: 0.5rem;
 }
 
-.branding-panel .logo i {
-  font-size: 2.5rem;
-  color: white;
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .app-name {
@@ -284,20 +289,11 @@ onMounted(() => {
   margin-bottom: 2rem;
 }
 
-.logo-small {
+.mobile-logo-image {
   width: 64px;
   height: 64px;
-  border-radius: 16px;
-  background: var(--p-primary-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: contain;
   margin-bottom: 0.75rem;
-}
-
-.logo-small i {
-  font-size: 2rem;
-  color: white;
 }
 
 .mobile-logo h2 {
@@ -345,10 +341,6 @@ onMounted(() => {
     height: 64px;
     border-radius: 16px;
   }
-
-  .branding-panel .logo i {
-    font-size: 2rem;
-  }
 }
 
 /* Mobile */
@@ -385,14 +377,9 @@ onMounted(() => {
     font-size: 1.25rem;
   }
 
-  .logo-small {
+  .mobile-logo-image {
     width: 56px;
     height: 56px;
-    border-radius: 14px;
-  }
-
-  .logo-small i {
-    font-size: 1.75rem;
   }
 }
 </style>

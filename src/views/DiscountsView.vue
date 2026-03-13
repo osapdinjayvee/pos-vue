@@ -191,7 +191,7 @@ const getWeekdayLabels = (discount: PromoDiscount): string[] => {
   try {
     const days = JSON.parse(discount.weekdays) as number[]
     const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    return days.map(d => labels[d]).filter(Boolean)
+    return days.map(d => labels[d]).filter((s): s is string => Boolean(s))
   } catch {
     return []
   }

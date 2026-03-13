@@ -17,7 +17,7 @@ const username = ref('')
 const pin = ref('')
 const step = ref<'username' | 'pin'>('username')
 
-const usernameInputRef = ref<InstanceType<typeof InputText> | null>(null)
+const usernameInputRef = ref<any>(null)
 const pinPadRef = ref<InstanceType<typeof PinPad> | null>(null)
 
 const canSubmit = computed(() => {

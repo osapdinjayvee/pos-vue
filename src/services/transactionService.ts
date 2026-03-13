@@ -189,7 +189,7 @@ class TransactionService {
         try {
           // Parse points from reference (format: "500 pts")
           const ptsMatch = pointsPayment.referenceNumber?.match(/^(\d+)\s*pts?$/i)
-          const redeemedPoints = ptsMatch ? parseInt(ptsMatch[1], 10) : 0
+          const redeemedPoints = ptsMatch?.[1] ? parseInt(ptsMatch[1], 10) : 0
           if (redeemedPoints > 0) {
             await loyaltyService.redeemPoints(data.customerId, redeemedPoints, transaction.id)
           }

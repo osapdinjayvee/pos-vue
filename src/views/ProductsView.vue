@@ -77,6 +77,15 @@ onMounted(async () => {
   ])
 })
 
+// Reload with archived products when archived filter is selected
+watch(() => filters.value.status, async (status) => {
+  if (status === 'archived') {
+    await productStore.fetchAll({ includeArchived: true } as any)
+  } else {
+    await productStore.fetchAll()
+  }
+})
+
 // Watch for store errors
 watch(() => productStore.error, (error) => {
   if (error) {
@@ -100,7 +109,8 @@ const statusOptions = [
   { label: 'All Status', value: null },
   { label: 'Active', value: 'active' },
   { label: 'Inactive', value: 'inactive' },
-  { label: 'Out of Stock', value: 'out-of-stock' }
+  { label: 'Out of Stock', value: 'out-of-stock' },
+  { label: 'Archived', value: 'archived' }
 ]
 
 const salesPeriodOptions = [
@@ -251,6 +261,8 @@ const getStatusSeverity = (status: ProductStatus) => {
       return 'warn'
     case 'out-of-stock':
       return 'danger'
+    case 'archived':
+      return 'secondary'
     default:
       return 'info'
   }
@@ -264,6 +276,8 @@ const getStatusLabel = (status: ProductStatus) => {
       return 'Inactive'
     case 'out-of-stock':
       return 'Out of Stock'
+    case 'archived':
+      return 'Archived'
     default:
       return status
   }
@@ -317,9 +331,78 @@ const confirmDelete = (product: DisplayProduct) => {
           life: 3000
         })
         selectedProducts.value = selectedProducts.value.filter(p => p.id !== product.id)
+      } else {
+        // Delete failed (likely FK constraint) — offer archive instead
+        confirm.require({
+          message: `"${product.name}" cannot be deleted because it has sales history. Would you like to archive it instead? Archived products are hidden from the product list and POS but preserved for reports.`,
+          header: 'Archive Product?',
+          icon: 'pi pi-inbox',
+          rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
+            outlined: true
+          },
+          acceptProps: {
+            label: 'Archive',
+            severity: 'warn'
+          },
+          accept: async () => {
+            const archived = await productStore.archive(product.id)
+            if (archived) {
+              toast.add({
+                severity: 'success',
+                summary: 'Archived',
+                detail: `"${product.name}" has been archived`,
+                life: 3000
+              })
+              selectedProducts.value = selectedProducts.value.filter(p => p.id !== product.id)
+            }
+          }
+        })
       }
     }
   })
+}
+
+const confirmArchive = (product: DisplayProduct) => {
+  confirm.require({
+    message: `Archive "${product.name}"? It will be hidden from the product list and POS but preserved for reports.`,
+    header: 'Archive Product',
+    icon: 'pi pi-inbox',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'Archive',
+      severity: 'warn'
+    },
+    accept: async () => {
+      const success = await productStore.archive(product.id)
+      if (success) {
+        toast.add({
+          severity: 'success',
+          summary: 'Archived',
+          detail: `"${product.name}" has been archived`,
+          life: 3000
+        })
+        selectedProducts.value = selectedProducts.value.filter(p => p.id !== product.id)
+      }
+    }
+  })
+}
+
+const handleRestore = async (product: DisplayProduct) => {
+  const success = await productStore.unarchive(product.id)
+  if (success) {
+    toast.add({
+      severity: 'success',
+      summary: 'Restored',
+      detail: `"${product.name}" has been restored`,
+      life: 3000
+    })
+  }
 }
 
 const confirmBulkDelete = () => {
@@ -660,25 +743,45 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
               </template>
             </Column>
 
-            <Column header="Actions" style="min-width: 120px">
+            <Column header="Actions" style="min-width: 150px">
               <template #body="{ data }">
                 <div class="table-actions">
-                  <Button
-                    icon="pi pi-pencil"
-                    text
-                    rounded
-                    severity="secondary"
-                    @click.stop="navigateToEdit(data)"
-                    v-tooltip.top="'Edit'"
-                  />
-                  <Button
-                    icon="pi pi-trash"
-                    text
-                    rounded
-                    severity="danger"
-                    @click.stop="confirmDelete(data)"
-                    v-tooltip.top="'Delete'"
-                  />
+                  <template v-if="data.status === 'archived'">
+                    <Button
+                      icon="pi pi-replay"
+                      text
+                      rounded
+                      severity="success"
+                      @click.stop="handleRestore(data)"
+                      v-tooltip.top="'Restore'"
+                    />
+                  </template>
+                  <template v-else>
+                    <Button
+                      icon="pi pi-pencil"
+                      text
+                      rounded
+                      severity="secondary"
+                      @click.stop="navigateToEdit(data)"
+                      v-tooltip.top="'Edit'"
+                    />
+                    <Button
+                      icon="pi pi-inbox"
+                      text
+                      rounded
+                      severity="warn"
+                      @click.stop="confirmArchive(data)"
+                      v-tooltip.top="'Archive'"
+                    />
+                    <Button
+                      icon="pi pi-trash"
+                      text
+                      rounded
+                      severity="danger"
+                      @click.stop="confirmDelete(data)"
+                      v-tooltip.top="'Delete'"
+                    />
+                  </template>
                 </div>
               </template>
             </Column>

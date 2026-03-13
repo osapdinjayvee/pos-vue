@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { vatService } from '@/services/vatService'
+import logoImg from '@/assets/img/logo.png'
+
+const appName = import.meta.env.VITE_APP_NAME || 'Zoomin POS'
 
 const props = defineProps<{
   hasTransaction: boolean
@@ -24,9 +27,9 @@ function fmt(n: number): string {
     <template v-if="!hasTransaction">
       <div class="idle-display">
         <div class="idle-icon">
-          <i class="pi pi-shop"></i>
+          <img :src="logoImg" alt="Logo" class="idle-logo-img" />
         </div>
-        <div class="idle-title">{{ storeName || 'POS Terminal' }}</div>
+        <div class="idle-title">{{ storeName || appName }}</div>
         <div v-if="branchName" class="idle-detail">{{ branchName }}</div>
         <div class="idle-meta">
           <span v-if="terminalId"><i class="pi pi-desktop"></i> {{ terminalId }}</span>
@@ -80,9 +83,10 @@ function fmt(n: number): string {
   margin: 0 auto 1rem;
 }
 
-.idle-icon i {
-  font-size: 1.5rem;
-  color: var(--p-primary-color);
+.idle-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .idle-title {

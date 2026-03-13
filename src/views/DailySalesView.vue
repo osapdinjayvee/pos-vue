@@ -270,6 +270,10 @@ function handleExportCSV() {
   })
 }
 
+function handlePrint() {
+  window.print()
+}
+
 function goBack() {
   router.push('/reports')
 }
@@ -307,7 +311,7 @@ function goBack() {
           icon="pi pi-print"
           severity="secondary"
           outlined
-          @click="window.print()"
+          @click="handlePrint()"
         />
       </div>
     </div>
@@ -555,7 +559,7 @@ function goBack() {
 
 .report-sections {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
 }

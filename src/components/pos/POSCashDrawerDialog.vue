@@ -20,7 +20,7 @@ const actions = [
 
 function handleAction(id: typeof actions[number]['id']) {
   emit('update:visible', false)
-  emit(id)
+  ;(emit as any)(id)
 }
 </script>
 

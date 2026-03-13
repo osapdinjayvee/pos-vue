@@ -6,6 +6,7 @@
 // Onboarding step identifiers (enforced order)
 export type OnboardingStep =
   | 'welcome'
+  | 'server'
   | 'license'
   | 'business'
   | 'admin'
@@ -16,6 +17,7 @@ export type OnboardingStep =
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   'welcome',
+  'server',
   'license',
   'business',
   'admin',
@@ -34,6 +36,12 @@ export interface OnboardingProgress {
   license_type: string | null
   license_verified_at: string | null
   activated_at: string | null
+  server_url: string | null
+  device_uid: string | null
+  device_registered_at: string | null
+  heartbeat_status: string | null
+  heartbeat_last_at: string | null
+  license_expiry_date: string | null
   created_at: string
   updated_at: string
 }
@@ -65,16 +73,36 @@ export interface LicenseVerifyResponse {
   license_type: string
   business_name?: string
   expiry_date?: string
+  max_terminals?: number | null
+  active_device_count?: number
   error?: string
 }
 
-// API response: active terms document
-export interface TermsActiveResponse {
-  id: string
-  version: string
+// API response: device registration
+export interface DeviceRegisterResponse {
+  success: boolean
+  device_id?: number
+  registered_at?: string
+  error?: string
+  max_terminals?: number
+  active_count?: number
+}
+
+// API response: license heartbeat
+export interface HeartbeatResponse {
+  status: 'active' | 'expired' | 'revoked'
+  expiry_date?: string | null
+  plan?: string | null
+}
+
+// API response: legal document from server (/legal/terms-and-conditions, /legal/privacy-policy)
+export interface LegalDocumentResponse {
   title: string
-  content_html: string
-  published_at: string
+  type: string
+  version: string
+  content: string
+  file_url: string | null
+  effective_date: string
 }
 
 // Payload for activation completion POST

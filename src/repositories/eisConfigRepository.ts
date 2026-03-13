@@ -1,4 +1,4 @@
-import { BaseRepository } from './BaseRepository'
+import { BaseRepository } from './baseRepository'
 import db from '@/db/database'
 import type { EISConfig } from '@/types/eis'
 

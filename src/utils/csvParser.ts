@@ -38,10 +38,10 @@ export function parseCsv(content: string, options: CsvParseOptions = {}): CsvPar
   let dataRows: string[][]
 
   if (hasHeaders) {
-    headers = nonEmpty[0].map(h => h.trim())
+    headers = nonEmpty[0]!.map(h => h.trim())
     dataRows = nonEmpty.slice(1)
   } else {
-    headers = nonEmpty[0].map((_, i) => `Column ${i + 1}`)
+    headers = nonEmpty[0]!.map((_, i) => `Column ${i + 1}`)
     dataRows = nonEmpty
   }
 

@@ -291,9 +291,9 @@ class CashDrawerService {
   private enqueueSyncItem(entityType: string, entityId: string): void {
     import('@/services/syncService').then(({ default: syncService }) => {
       syncService.enqueueItem({
-        entity_type: entityType,
+        entity_type: entityType as any,
         entity_id: entityId,
-        operation: 'upsert',
+        operation: 'create' as any,
         payload: JSON.stringify({ id: entityId })
       }).catch((e: Error) =>
         console.error('[CashDrawerService] Sync enqueue failed:', e)

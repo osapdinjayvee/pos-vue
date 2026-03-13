@@ -32,7 +32,7 @@ export interface DisplayProduct {
   category_id?: string
   stock: number
   low_stock_threshold?: number
-  status: 'active' | 'inactive' | 'out-of-stock'
+  status: 'active' | 'inactive' | 'out-of-stock' | 'archived'
   tax_type?: string
   sold: number
   revenue: number

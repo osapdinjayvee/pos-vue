@@ -42,7 +42,7 @@ export const useProductStore = defineStore('product', () => {
   )
 
   // Actions
-  async function fetchAll(options?: QueryOptions) {
+  async function fetchAll(options?: QueryOptions & { includeArchived?: boolean }) {
     isLoading.value = true
     error.value = null
     try {
@@ -302,6 +302,28 @@ export const useProductStore = defineStore('product', () => {
     }
   }
 
+  async function archive(id: string): Promise<boolean> {
+    try {
+      await productRepository.bulkUpdateStatus([id], 'archived')
+      products.value = products.value.filter(p => p.id !== id)
+      return true
+    } catch (e: any) {
+      error.value = e.message || 'Failed to archive product'
+      return false
+    }
+  }
+
+  async function unarchive(id: string): Promise<boolean> {
+    try {
+      await productRepository.bulkUpdateStatus([id], 'active')
+      await fetchAll()
+      return true
+    } catch (e: any) {
+      error.value = e.message || 'Failed to restore product'
+      return false
+    }
+  }
+
   async function bulkDelete(ids: string[]): Promise<boolean> {
     isLoading.value = true
     error.value = null
@@ -442,6 +464,8 @@ export const useProductStore = defineStore('product', () => {
     create,
     update,
     remove,
+    archive,
+    unarchive,
     bulkDelete,
     bulkUpdateStatus,
     updateStock,

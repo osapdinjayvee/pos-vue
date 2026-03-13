@@ -80,7 +80,7 @@ async function deduplicateCustomers(): Promise<DeduplicationResult> {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     })
 
-    const primary = sorted[0]
+    const primary = sorted[0]!
     const duplicates = sorted.slice(1)
 
     for (const duplicate of duplicates) {

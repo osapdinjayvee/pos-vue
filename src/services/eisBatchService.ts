@@ -21,7 +21,7 @@ let downtimeBackoffMultiplier = 1
  */
 function getRetryDelay(attempts: number): number {
   const index = Math.min(attempts, RETRY_DELAYS.length - 1)
-  return RETRY_DELAYS[index]
+  return RETRY_DELAYS[index] ?? RETRY_DELAYS[RETRY_DELAYS.length - 1] ?? 30000
 }
 
 /**

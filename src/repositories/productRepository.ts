@@ -5,7 +5,7 @@ import type { QueryOptions as BaseQueryOptions } from './baseRepository'
 
 export type QueryOptions = BaseQueryOptions
 
-export type ProductStatus = 'active' | 'inactive' | 'out-of-stock'
+export type ProductStatus = 'active' | 'inactive' | 'out-of-stock' | 'archived'
 export type TaxType = 'vatable' | 'vat_exempt' | 'zero_rated'
 
 export interface Product {
@@ -78,13 +78,17 @@ class ProductRepository extends BaseRepository<Product> {
   protected tableName = 'products'
   protected idPrefix = 'prod'
 
-  async findAllWithCategory(options?: QueryOptions): Promise<Product[]> {
+  async findAllWithCategory(options?: QueryOptions & { includeArchived?: boolean }): Promise<Product[]> {
     let sql = `
       SELECT p.*, c.name as category_name, s.name as supplier_name
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN suppliers s ON p.supplier_id = s.id
     `
+
+    if (!options?.includeArchived) {
+      sql += ` WHERE p.status != 'archived'`
+    }
 
     if (options?.orderBy) {
       sql += ` ORDER BY p.${options.orderBy} ${options.orderDir || 'ASC'}`
@@ -133,7 +137,8 @@ class ProductRepository extends BaseRepository<Product> {
       `SELECT p.*, c.name as category_name
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
-       WHERE p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ? OR c.name LIKE ?
+       WHERE p.status != 'archived'
+         AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ? OR c.name LIKE ?)
        ORDER BY p.name ASC`,
       [searchTerm, searchTerm, searchTerm, searchTerm]
     )

@@ -176,5 +176,5 @@ export function requiresSupervisorApproval(
   }
 
   // Check if this is a supervisor-required permission
-  return SUPERVISOR_REQUIRED_PERMISSIONS.includes(permission as PermissionCode)
+  return (SUPERVISOR_REQUIRED_PERMISSIONS as readonly string[]).includes(permission)
 }

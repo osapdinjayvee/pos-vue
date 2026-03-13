@@ -6,7 +6,7 @@
  */
 
 import { ref, readonly } from 'vue'
-import { DEFAULT_SYNC_CONFIG } from '@/config/sync'
+import { getApiBaseUrl } from '@/config/sync'
 import { detectPlatform } from '@/db/platform'
 
 const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
@@ -121,34 +121,17 @@ async function checkConnectivity(): Promise<boolean> {
     }
   }
 
-  // Active ping check
+  // Active ping check (fetch works natively on all platforms — Capacitor patches it)
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)
 
-    // On Capacitor, use CapacitorHttp for the ping to avoid CORS
-    let online = false
-    if (platform === 'capacitor') {
-      try {
-        const { CapacitorHttp } = await import('@capacitor/core')
-        const response = await CapacitorHttp.request({
-          method: 'GET',
-          url: `${DEFAULT_SYNC_CONFIG.apiBaseUrl}/ping`,
-          connectTimeout: 5000,
-          readTimeout: 5000
-        })
-        online = response.status >= 200 && response.status < 400
-      } catch {
-        online = false
-      }
-    } else {
-      const response = await fetch(`${DEFAULT_SYNC_CONFIG.apiBaseUrl}/ping`, {
-        method: 'GET',
-        signal: controller.signal
-      })
-      clearTimeout(timeout)
-      online = response.ok
-    }
+    const response = await fetch(`${getApiBaseUrl()}/ping`, {
+      method: 'GET',
+      signal: controller.signal
+    })
+    clearTimeout(timeout)
+    const online = response.ok
 
     lastCheckedAt.value = new Date().toISOString()
 
@@ -161,9 +144,7 @@ async function checkConnectivity(): Promise<boolean> {
     return online
   } catch {
     lastCheckedAt.value = new Date().toISOString()
-    // Network error - might be offline or server down
     if (platform === 'capacitor') {
-      // On Capacitor, native status is more reliable than assuming online
       return isOnline.value
     }
     isOnline.value = navigator.onLine

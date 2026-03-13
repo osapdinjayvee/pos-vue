@@ -95,7 +95,7 @@ async function getActiveAllocation(
 
   if (allocations.length === 0) return null
 
-  const alloc = allocations[0]
+  const alloc = allocations[0]!
   const total = alloc.end_number - alloc.start_number + 1
   const used = alloc.current_number - alloc.start_number
   const remaining = total - used

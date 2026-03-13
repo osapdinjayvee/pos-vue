@@ -176,8 +176,11 @@ export const useUserStore = defineStore('user', () => {
       // Update in local state
       const index = users.value.findIndex((u) => u.id === userId)
       if (index !== -1) {
-        users.value[index] = { ...users.value[index], isActive: false }
-        users.value = [...users.value]
+        const user = users.value[index]
+        if (user) {
+          users.value[index] = { ...user, isActive: false }
+          users.value = [...users.value]
+        }
       }
 
       return { success: true }
@@ -200,8 +203,11 @@ export const useUserStore = defineStore('user', () => {
       // Update in local state
       const index = users.value.findIndex((u) => u.id === userId)
       if (index !== -1) {
-        users.value[index] = { ...users.value[index], isActive: true }
-        users.value = [...users.value]
+        const user = users.value[index]
+        if (user) {
+          users.value[index] = { ...user, isActive: true }
+          users.value = [...users.value]
+        }
       }
 
       return { success: true }
@@ -222,7 +228,8 @@ export const useUserStore = defineStore('user', () => {
     error.value = null
 
     try {
-      await userRepository.update(userId, { pin: newPin })
+      const pinHash = await hashPin(newPin)
+      await userRepository.update(userId, { pin_hash: pinHash } as Partial<User>)
       return { success: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reset PIN'

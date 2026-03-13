@@ -46,7 +46,7 @@ function formatCurrency(amount: number): string {
       <div class="header-actions">
         <BranchSelector
           :modelValue="selectedBranchId"
-          :branches="branches"
+          :branches="[...branches]"
           @update:modelValue="handleBranchChange"
         />
         <Button

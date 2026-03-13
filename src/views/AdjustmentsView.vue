@@ -18,6 +18,7 @@ import { useProductStore } from '@/stores/product'
 import { useInventory } from '@/composables/useInventory'
 import { formatCurrency } from '@/utils/format'
 import type { DisplayStockMovement } from '@/types/inventory'
+import BulkAdjustmentDialog from '@/components/inventory/BulkAdjustmentDialog.vue'
 
 const toast = useToast()
 const productStore = useProductStore()
@@ -41,6 +42,9 @@ const adjustmentReason = ref<string>('')
 const adjustmentQuantity = ref<number>(1)
 const adjustmentCost = ref<number | null>(null)
 const adjustmentNotes = ref('')
+
+// Bulk adjustment dialog
+const showBulkDialog = ref(false)
 
 // Options
 const adjustmentTypeOptions = [
@@ -285,6 +289,29 @@ async function handleCreateAdjustment() {
     })
   }
 }
+
+async function handleBulkCompleted(result: { success: number; failed: number }) {
+  if (result.success > 0) {
+    toast.add({
+      severity: 'success',
+      summary: 'Bulk Adjustment Complete',
+      detail: `${result.success} product${result.success !== 1 ? 's' : ''} adjusted successfully${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+      life: 4000
+    })
+    await Promise.all([
+      productStore.fetchAll(),
+      loadMovements()
+    ])
+  }
+  if (result.failed > 0 && result.success === 0) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `All ${result.failed} adjustments failed`,
+      life: 5000
+    })
+  }
+}
 </script>
 
 <template>
@@ -317,6 +344,13 @@ async function handleCreateAdjustment() {
 
       <template #end>
         <div class="toolbar-end">
+          <Button
+            label="Bulk Adjustment"
+            icon="pi pi-list"
+            severity="secondary"
+            outlined
+            @click="showBulkDialog = true"
+          />
           <Button
             label="Create Adjustment"
             icon="pi pi-plus"
@@ -404,6 +438,13 @@ async function handleCreateAdjustment() {
         </Column>
       </DataTable>
     </div>
+
+    <!-- Bulk Adjustment Dialog -->
+    <BulkAdjustmentDialog
+      v-model:visible="showBulkDialog"
+      :products="productStore.products"
+      @completed="handleBulkCompleted"
+    />
 
     <!-- Create Adjustment Dialog -->
     <Dialog

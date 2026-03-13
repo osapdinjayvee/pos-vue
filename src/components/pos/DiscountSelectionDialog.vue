@@ -33,7 +33,7 @@ function formatCurrency(amount: number): string {
 
 function handleApply() {
   if (selectedIndex.value >= 0 && selectedIndex.value < props.eligibleDiscounts.length) {
-    emit('select', props.eligibleDiscounts[selectedIndex.value])
+    emit('select', props.eligibleDiscounts[selectedIndex.value] ?? null)
   } else {
     emit('select', null)
   }

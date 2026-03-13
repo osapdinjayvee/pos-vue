@@ -19,7 +19,8 @@ class CapacitorTransactionContext implements TransactionContext {
   constructor(private db: SQLiteDBConnection) {}
 
   async execute(sql: string, params: any[] = []): Promise<QueryResult> {
-    const result = await this.db.run(sql, params)
+    // transaction=false to avoid auto-wrapping (we're already inside a transaction)
+    const result = await this.db.run(sql, params, false)
     const rowsAffected = result.changes?.changes ?? 0
     return {
       rowsAffected,
@@ -101,7 +102,15 @@ export class CapacitorAdapter implements DatabaseAdapter {
   async execute(sql: string, params: any[] = []): Promise<QueryResult> {
     if (!this.db) throw new Error('Database not initialized')
 
-    const result = await this.db.run(sql, params)
+    // Use execute() for DDL/non-parameterized, run() for parameterized DML
+    // transaction=false: SQLite provides implicit transactions for individual statements;
+    // explicit transactions are managed by the transaction() method
+    let result
+    if (params.length === 0) {
+      result = await this.db.execute(sql, false)
+    } else {
+      result = await this.db.run(sql, params, false)
+    }
     const rowsAffected = result.changes?.changes ?? 0
     return {
       rowsAffected,
@@ -125,15 +134,15 @@ export class CapacitorAdapter implements DatabaseAdapter {
   async transaction<T>(fn: (ctx: TransactionContext) => Promise<T>): Promise<T> {
     if (!this.db) throw new Error('Database not initialized')
 
-    await this.db.execute('BEGIN TRANSACTION')
+    await this.db.beginTransaction()
 
     try {
       const ctx = new CapacitorTransactionContext(this.db)
       const result = await fn(ctx)
-      await this.db.execute('COMMIT')
+      await this.db.commitTransaction()
       return result
     } catch (error) {
-      await this.db.execute('ROLLBACK')
+      await this.db.rollbackTransaction()
       throw error
     }
   }
@@ -145,11 +154,12 @@ export class CapacitorAdapter implements DatabaseAdapter {
 
     const results: QueryResult[] = []
 
-    await this.db.execute('BEGIN TRANSACTION')
+    await this.db.beginTransaction()
 
     try {
       for (const stmt of statements) {
-        const result = await this.db.run(stmt.sql, stmt.params || [])
+        // transaction=false to avoid auto-wrapping (we're already inside a transaction)
+        const result = await this.db.run(stmt.sql, stmt.params || [], false)
         const rowsAffected = result.changes?.changes ?? 0
         results.push({
           rowsAffected,
@@ -158,10 +168,10 @@ export class CapacitorAdapter implements DatabaseAdapter {
         })
       }
 
-      await this.db.execute('COMMIT')
+      await this.db.commitTransaction()
       return results
     } catch (error) {
-      await this.db.execute('ROLLBACK')
+      await this.db.rollbackTransaction()
       throw error
     }
   }

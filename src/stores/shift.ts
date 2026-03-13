@@ -102,7 +102,7 @@ export const useShiftStore = defineStore('shift', () => {
     error.value = null
 
     try {
-      await shiftRepository.forceCloseShift(currentShift.value.id, supervisorId)
+      await shiftRepository.forceCloseShift(currentShift.value.id, supervisorId, 'Force closed by supervisor')
       currentShift.value = null
       clearState()
 

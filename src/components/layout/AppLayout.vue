@@ -4,6 +4,7 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import AppSidebar from './AppSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
+import LicenseWarningBanner from './LicenseWarningBanner.vue'
 import OpeningCount from '@/components/cash-drawer/OpeningCount.vue'
 import ClosingCount from '@/components/cash-drawer/ClosingCount.vue'
 import { useLayout } from '@/composables/useLayout'
@@ -77,6 +78,7 @@ onUnmounted(() => {
       @click="closeMobileMenu"
     ></div>
     <div class="layout-main" :class="{ 'sidebar-collapsed': isCollapsed }">
+      <LicenseWarningBanner />
       <AppTopbar
         @start-shift="handleStartShift"
         @close-shift="handleCloseShift"
