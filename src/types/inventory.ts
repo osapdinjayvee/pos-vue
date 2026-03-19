@@ -164,6 +164,8 @@ export interface DisplayStockMovement {
   variantId: string
   variantName: string
   productName: string
+  sku: string
+  barcode: string
   batchId: string | null
   batchNumber: string | null
   quantity: number
@@ -291,7 +293,7 @@ export function toDisplayBatch(batch: Batch, currentQuantity: number = 0, suppli
 }
 
 export function toDisplayStockMovement(
-  movement: StockMovement,
+  movement: StockMovement & { sku?: string; barcode?: string; product_barcode?: string },
   variantName: string = '',
   productName: string = '',
   batchNumber: string | null = null
@@ -301,6 +303,8 @@ export function toDisplayStockMovement(
     variantId: movement.variant_id,
     variantName,
     productName,
+    sku: (movement as any).sku || '',
+    barcode: (movement as any).barcode || (movement as any).product_barcode || '',
     batchId: movement.batch_id,
     batchNumber,
     quantity: movement.quantity,

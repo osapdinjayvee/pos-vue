@@ -207,6 +207,11 @@ class DatabaseService {
       await this.recordMigration('023_device_registration')
     }
 
+    if (!migrations.includes('024_credit_ledger')) {
+      await this.runCreditLedgerMigration()
+      await this.recordMigration('024_credit_ledger')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
@@ -230,6 +235,48 @@ class DatabaseService {
         await this.runSalesMigration()
         await this.runTransactionPaymentsMigration()
         return
+      }
+    }
+
+    // Verify transaction_payments has correct schema (payment_method column + wide CHECK constraint)
+    const txPayCols = await this.adapter.query<{ name: string }>(
+      `PRAGMA table_info(transaction_payments)`
+    )
+    const txPayColNames = new Set(txPayCols.map(c => c.name))
+    // Check the CREATE TABLE DDL for stale CHECK constraint missing 'credit'
+    const txPayDDL = await this.adapter.getOne<{ sql: string }>(
+      `SELECT sql FROM sqlite_master WHERE type='table' AND name='transaction_payments'`
+    )
+    const needsRecreate = !txPayColNames.has('payment_method')
+      || (txPayDDL?.sql && !txPayDDL.sql.includes("'credit'"))
+
+    if (needsRecreate) {
+      console.warn('[DatabaseService] transaction_payments has stale schema — recreating with updated CHECK')
+      // Backup existing data, handling both 'method' and 'payment_method' column names
+      const hasMethodCol = txPayColNames.has('method')
+      const hasPaymentMethodCol = txPayColNames.has('payment_method')
+      let existingData: any[] = []
+      try {
+        if (hasPaymentMethodCol) {
+          existingData = await this.adapter.query<any>(`SELECT * FROM transaction_payments`)
+        } else if (hasMethodCol) {
+          existingData = await this.adapter.query<any>(
+            `SELECT id, transaction_id, method as payment_method, amount, tendered, change_amount, reference_number, card_type, last_four_digits, approval_code, status, created_at FROM transaction_payments`
+          )
+        }
+      } catch { existingData = [] }
+
+      await this.adapter.execute(`DROP TABLE IF EXISTS transaction_payments`)
+      await this.runTransactionPaymentsMigration()
+
+      for (const p of existingData) {
+        try {
+          await this.adapter.execute(
+            `INSERT OR IGNORE INTO transaction_payments (id, transaction_id, payment_method, amount, tendered, change_amount, reference_number, card_type, last_four_digits, approval_code, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [p.id, p.transaction_id, p.payment_method, p.amount, p.tendered, p.change_amount, p.reference_number, p.card_type, p.last_four_digits || null, p.approval_code || null, p.status || 'completed', p.created_at]
+          )
+        } catch { /* skip rows that fail constraint */ }
       }
     }
 
@@ -1935,7 +1982,7 @@ class DatabaseService {
       CREATE TABLE IF NOT EXISTS transaction_payments (
         id TEXT PRIMARY KEY,
         transaction_id TEXT NOT NULL,
-        payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'card', 'gcash', 'maya', 'other_ewallet', 'points')),
+        payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'card', 'gcash', 'maya', 'other_ewallet', 'points', 'grab_pay', 'bank_transfer', 'check', 'credit')),
         amount REAL NOT NULL,
         tendered REAL,
         change_amount REAL DEFAULT 0,
@@ -2185,6 +2232,77 @@ class DatabaseService {
     }
 
     console.log('[Migration] 023_device_registration completed')
+  }
+
+  private async runCreditLedgerMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    // Create credit_ledger table
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS credit_ledger (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('charge', 'payment')),
+        amount REAL NOT NULL,
+        running_balance REAL NOT NULL,
+        transaction_id TEXT,
+        reference_number TEXT,
+        payment_method TEXT,
+        notes TEXT,
+        processed_by TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
+      )
+    `)
+
+    // Add credit_enabled to payment_config
+    try {
+      await this.adapter.execute(
+        `ALTER TABLE payment_config ADD COLUMN credit_enabled INTEGER NOT NULL DEFAULT 0`
+      )
+    } catch {
+      // Column may already exist
+    }
+
+    // Recreate transaction_payments with updated CHECK constraint to include credit
+    // First check if the table exists and get its data
+    const existingPayments = await this.adapter.query<any>(
+      `SELECT * FROM transaction_payments`
+    ).catch(() => [])
+
+    await this.adapter.execute(`DROP TABLE IF EXISTS transaction_payments`)
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS transaction_payments (
+        id TEXT PRIMARY KEY,
+        transaction_id TEXT NOT NULL,
+        payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'card', 'gcash', 'maya', 'other_ewallet', 'points', 'grab_pay', 'bank_transfer', 'check', 'credit')),
+        amount REAL NOT NULL,
+        tendered REAL,
+        change_amount REAL DEFAULT 0,
+        reference_number TEXT,
+        card_type TEXT,
+        last_four_digits TEXT,
+        approval_code TEXT,
+        status TEXT DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed', 'refunded', 'void')),
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+      )
+    `)
+
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_txpay_transaction ON transaction_payments(transaction_id)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_txpay_method ON transaction_payments(payment_method)')
+    await this.adapter.execute('CREATE INDEX IF NOT EXISTS idx_txpay_created ON transaction_payments(created_at)')
+
+    // Re-insert existing data
+    for (const p of existingPayments) {
+      await this.adapter.execute(
+        `INSERT INTO transaction_payments (id, transaction_id, payment_method, amount, tendered, change_amount, reference_number, card_type, last_four_digits, approval_code, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [p.id, p.transaction_id, p.payment_method, p.amount, p.tendered, p.change_amount, p.reference_number, p.card_type, p.last_four_digits, p.approval_code, p.status || 'completed', p.created_at]
+      )
+    }
+
+    console.log('[Migration] 024_credit_ledger completed')
   }
 
   // =====================

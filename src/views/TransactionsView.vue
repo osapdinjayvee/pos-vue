@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -27,6 +28,7 @@ import type { Transaction, TransactionItem } from '@/types/transaction'
 import type { Payment } from '@/types/payment'
 import ReturnDialog from '@/components/pos/ReturnDialog.vue'
 
+const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const transactionStore = useTransactionStore()
@@ -390,7 +392,7 @@ onMounted(() => {
                 text
                 rounded
                 severity="secondary"
-                @click="expandedRows = { ...expandedRows, [data.id]: true }"
+                @click="router.push({ name: 'transaction-detail', params: { id: data.id } })"
                 v-tooltip.top="'View Details'"
               />
               <Button

@@ -15,7 +15,10 @@ import LoyaltyPointsDisplay from '@/components/crm/LoyaltyPointsDisplay.vue'
 import PointsHistory from '@/components/crm/PointsHistory.vue'
 import TierProgress from '@/components/crm/TierProgress.vue'
 import CustomerForm from '@/components/customers/CustomerForm.vue'
+import CreditLedger from '@/components/crm/CreditLedger.vue'
+import CreditPaymentDialog from '@/components/crm/CreditPaymentDialog.vue'
 import { useCustomers } from '@/composables/useCustomers'
+import { creditService } from '@/services/creditService'
 import { toDisplayCustomer } from '@/types/order'
 import type { CustomerInput } from '@/types/order'
 
@@ -27,6 +30,43 @@ const { fetchCustomerDetail, customerDetail, detailLoading, updateCustomer } = u
 const customerId = computed(() => route.params.id as string)
 const showEditForm = ref(false)
 const editLoading = ref(false)
+const showCreditPayment = ref(false)
+const creditLedgerRef = ref<InstanceType<typeof CreditLedger> | null>(null)
+
+const creditLimit = computed(() => customerDetail.value?.customer.credit_limit ?? 0)
+const currentBalance = computed(() => customerDetail.value?.customer.current_balance ?? 0)
+const availableCredit = computed(() => Math.max(0, creditLimit.value - currentBalance.value))
+
+async function handleCreditPayment(data: { amount: number; paymentMethod: string; referenceNumber?: string; notes?: string }) {
+  try {
+    // Use a placeholder userId — in production this would come from auth
+    const { useAuthStore } = await import('@/stores/auth')
+    const authStore = useAuthStore()
+    await creditService.receivePayment({
+      customerId: customerId.value,
+      amount: data.amount,
+      paymentMethod: data.paymentMethod,
+      referenceNumber: data.referenceNumber,
+      notes: data.notes
+    }, authStore.currentUser?.id || 'system')
+    toast.add({
+      severity: 'success',
+      summary: 'Payment Received',
+      detail: `₱${data.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })} payment recorded`,
+      life: 3000
+    })
+    showCreditPayment.value = false
+    await loadDetail()
+    creditLedgerRef.value?.refresh()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error instanceof Error ? error.message : 'Failed to process payment',
+      life: 5000
+    })
+  }
+}
 
 const displayCustomer = computed(() => {
   if (!customerDetail.value) return null
@@ -126,14 +166,12 @@ onMounted(() => {
           <TabList>
             <Tab value="history">History</Tab>
             <Tab value="loyalty">Loyalty</Tab>
+            <Tab value="credit">Credit</Tab>
             <Tab value="info">Info</Tab>
           </TabList>
           <TabPanels>
             <TabPanel value="history">
-              <CustomerHistory
-                :customerId="customerId"
-                @view-transaction="(id) => router.push({ name: 'transaction-detail', params: { id } })"
-              />
+              <CustomerHistory :customerId="customerId" />
             </TabPanel>
             <TabPanel value="loyalty">
               <div class="loyalty-tab">
@@ -145,6 +183,38 @@ onMounted(() => {
                   :nextTier="customerDetail.nextTier"
                 />
                 <PointsHistory :customerId="customerId" />
+              </div>
+            </TabPanel>
+            <TabPanel value="credit">
+              <div class="credit-tab">
+                <!-- Credit Stats -->
+                <div class="credit-stats">
+                  <div class="stat-card">
+                    <div class="stat-label">Credit Limit</div>
+                    <div class="stat-value">₱{{ creditLimit.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</div>
+                  </div>
+                  <div class="stat-card stat-danger">
+                    <div class="stat-label">Outstanding Balance</div>
+                    <div class="stat-value">₱{{ currentBalance.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</div>
+                  </div>
+                  <div class="stat-card stat-success">
+                    <div class="stat-label">Available Credit</div>
+                    <div class="stat-value">₱{{ availableCredit.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</div>
+                  </div>
+                </div>
+
+                <!-- Receive Payment Button -->
+                <div v-if="currentBalance > 0" class="mb-4">
+                  <Button
+                    icon="pi pi-money-bill"
+                    label="Receive Payment"
+                    severity="success"
+                    @click="showCreditPayment = true"
+                  />
+                </div>
+
+                <!-- Credit Ledger -->
+                <CreditLedger ref="creditLedgerRef" :customerId="customerId" />
               </div>
             </TabPanel>
             <TabPanel value="info">
@@ -182,6 +252,14 @@ onMounted(() => {
       :customer="customerDetail.customer"
       :loading="editLoading"
       @save="handleSaveCustomer"
+    />
+
+    <!-- Credit Payment Dialog -->
+    <CreditPaymentDialog
+      v-if="customerDetail"
+      v-model:visible="showCreditPayment"
+      :customer="customerDetail.customer"
+      @submit="handleCreditPayment"
     />
   </div>
 </template>
@@ -244,6 +322,60 @@ onMounted(() => {
 .info-section p {
   margin: 0 0 0.25rem;
   color: var(--p-text-color);
+}
+
+.credit-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.credit-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card {
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--p-surface-50);
+  border: 1px solid var(--p-surface-200);
+}
+
+.stat-card.stat-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.stat-card.stat-success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: var(--p-text-muted-color);
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--p-text-color);
+}
+
+.stat-danger .stat-value {
+  color: #dc2626;
+}
+
+.stat-success .stat-value {
+  color: #16a34a;
 }
 
 @media (max-width: 767.98px) {

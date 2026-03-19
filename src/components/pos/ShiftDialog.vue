@@ -14,7 +14,9 @@ import { useCashDrawer } from '@/composables/useCashDrawer'
 import { useReports } from '@/composables/useReports'
 import { useAuthStore } from '@/stores/auth'
 import { transactionRepository } from '@/repositories/transactionRepository'
+import { paymentRepository } from '@/repositories/paymentRepository'
 import { vatService } from '@/services/vatService'
+import { PaymentMethodLabels } from '@/types/payment'
 import type { Transaction } from '@/types/transaction'
 import type { DisplayXReading } from '@/types/xReading'
 import type { DisplayZReading } from '@/types/zReading'
@@ -68,6 +70,7 @@ function clearCashAmount() {
 // Shift summary data
 const shiftTransactions = ref<Transaction[]>([])
 const isLoadingSummary = ref(false)
+const paymentBreakdown = ref<Array<{ method: string; label: string; total: number; count: number }>>([])
 
 // X/Z Reading dialog state
 const showXReadingDialog = ref(false)

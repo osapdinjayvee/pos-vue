@@ -61,6 +61,14 @@ const breadcrumbItems = computed(() => {
     ]
   }
 
+  // Handle transaction detail
+  if (path.match(/^\/orders\/[^/]+$/)) {
+    return [
+      { label: 'Transactions', route: '/orders' },
+      { label: 'Transaction Detail' }
+    ]
+  }
+
   // Handle discount sub-routes
   if (path === '/discounts/new') {
     return [

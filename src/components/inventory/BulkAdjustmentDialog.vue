@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
+import AutoComplete from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
@@ -31,6 +32,10 @@ const entries = ref<BulkEntry[]>([])
 const adjustmentType = ref<string>('receive')
 const adjustmentReason = ref<string>('')
 const notes = ref('')
+
+// Search state
+const searchQuery = ref('')
+const filteredProducts = ref<Product[]>([])
 
 const adjustmentTypeOptions = [
   { label: 'Receive Stock', value: 'receive', icon: 'pi pi-plus' },
@@ -81,6 +86,8 @@ const dialogVisible = computed({
   set: (value) => emit('update:visible', value)
 })
 
+const addedProductIds = computed(() => new Set(entries.value.map(e => e.product.id)))
+
 const totalUnits = computed(() =>
   entries.value.reduce((sum, e) => sum + (e.quantity || 0), 0)
 )
@@ -98,14 +105,12 @@ const showCostColumn = computed(() => adjustmentType.value === 'receive')
 // Reset on open
 watch(() => props.visible, (visible) => {
   if (visible) {
-    entries.value = props.products.map(p => ({
-      product: p,
-      quantity: 0,
-      unitCost: p.cost || null
-    }))
+    entries.value = []
     adjustmentType.value = 'receive'
     adjustmentReason.value = ''
     notes.value = ''
+    searchQuery.value = ''
+    filteredProducts.value = []
   }
 })
 
@@ -113,6 +118,54 @@ watch(() => props.visible, (visible) => {
 watch(adjustmentType, () => {
   adjustmentReason.value = ''
 })
+
+function searchProducts(event: { query: string }) {
+  const query = event.query.toLowerCase().trim()
+  if (!query) {
+    filteredProducts.value = props.products
+      .filter(p => !addedProductIds.value.has(p.id))
+      .slice(0, 20)
+    return
+  }
+  filteredProducts.value = props.products
+    .filter(p =>
+      !addedProductIds.value.has(p.id) && (
+        p.name.toLowerCase().includes(query) ||
+        (p.sku && p.sku.toLowerCase().includes(query)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(query))
+      )
+    )
+    .slice(0, 20)
+}
+
+function onProductSelect(event: { value: Product }) {
+  const product = event.value
+  if (!product || !product.id) return
+  if (addedProductIds.value.has(product.id)) return
+
+  entries.value.push({
+    product,
+    quantity: 1,
+    unitCost: product.cost || null
+  })
+  // Clear search after adding
+  searchQuery.value = ''
+}
+
+function removeEntry(index: number) {
+  entries.value.splice(index, 1)
+}
+
+function addAllProducts() {
+  const remaining = props.products.filter(p => !addedProductIds.value.has(p.id))
+  for (const p of remaining) {
+    entries.value.push({
+      product: p,
+      quantity: 1,
+      unitCost: p.cost || null
+    })
+  }
+}
 
 function setAllQuantities(qty: number) {
   entries.value.forEach(e => { e.quantity = qty })
@@ -261,8 +314,46 @@ async function handleSubmit() {
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="quick-actions">
+      <!-- Search to Add Products -->
+      <div class="search-section">
+        <label>Add Products</label>
+        <div class="search-row">
+          <AutoComplete
+            v-model="searchQuery"
+            :suggestions="filteredProducts"
+            optionLabel="name"
+            placeholder="Search by name, SKU, or barcode..."
+            :disabled="isProcessing"
+            class="flex-1"
+            @complete="searchProducts"
+            @item-select="onProductSelect"
+            forceSelection
+          >
+            <template #option="{ option }">
+              <div class="search-option">
+                <span class="search-option-name">{{ option.name }}</span>
+                <span class="search-option-meta">{{ option.sku }} · Stock: {{ option.stock }}</span>
+              </div>
+            </template>
+            <template #empty>
+              <div class="search-empty">No products found</div>
+            </template>
+          </AutoComplete>
+          <Button
+            label="Add All"
+            icon="pi pi-plus-circle"
+            size="small"
+            severity="secondary"
+            outlined
+            :disabled="isProcessing || addedProductIds.size === products.length"
+            @click="addAllProducts"
+            v-tooltip.top="'Add all products'"
+          />
+        </div>
+      </div>
+
+      <!-- Quick Actions (only show when there are entries) -->
+      <div v-if="entries.length > 0" class="quick-actions">
         <span class="quick-label">Quick set all:</span>
         <Button label="+1" size="small" severity="secondary" outlined @click="setAllQuantities(1)" :disabled="isProcessing" />
         <Button label="+5" size="small" severity="secondary" outlined @click="setAllQuantities(5)" :disabled="isProcessing" />
@@ -273,8 +364,12 @@ async function handleSubmit() {
 
       <!-- Product List -->
       <div class="product-list">
+        <div v-if="entries.length === 0" class="empty-list">
+          <i class="pi pi-search"></i>
+          <p>Search and add products above</p>
+        </div>
         <div
-          v-for="entry in entries"
+          v-for="(entry, index) in entries"
           :key="entry.product.id"
           class="product-row"
           :class="{ 'has-quantity': entry.quantity > 0 }"
@@ -322,6 +417,17 @@ async function handleSubmit() {
                 placeholder="0.00"
               />
             </div>
+            <Button
+              icon="pi pi-times"
+              text
+              rounded
+              severity="danger"
+              size="small"
+              :disabled="isProcessing"
+              @click="removeEntry(index)"
+              v-tooltip.top="'Remove'"
+              class="remove-btn"
+            />
           </div>
         </div>
       </div>
@@ -389,8 +495,44 @@ async function handleSubmit() {
 }
 
 .config-field label,
-.notes-field label {
+.notes-field label,
+.search-section label {
   font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+}
+
+.search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.search-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.25rem 0;
+}
+
+.search-option-name {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.search-option-meta {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.search-empty {
+  padding: 0.5rem 1rem;
   font-size: 0.8125rem;
   color: var(--p-text-muted-color);
 }
@@ -417,6 +559,24 @@ async function handleSubmit() {
   gap: 0.5rem;
   max-height: 40vh;
   overflow-y: auto;
+}
+
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  color: var(--p-text-muted-color);
+  gap: 0.5rem;
+}
+
+.empty-list i {
+  font-size: 1.5rem;
+}
+
+.empty-list p {
+  margin: 0;
+  font-size: 0.875rem;
 }
 
 .product-row {
@@ -483,6 +643,7 @@ async function handleSubmit() {
   display: flex;
   gap: 0.75rem;
   flex-shrink: 0;
+  align-items: center;
 }
 
 .input-group {
@@ -497,6 +658,10 @@ async function handleSubmit() {
   color: var(--p-text-muted-color);
   font-weight: 600;
   letter-spacing: 0.05em;
+}
+
+.remove-btn {
+  margin-top: 0.75rem;
 }
 
 .notes-field {
@@ -549,6 +714,10 @@ async function handleSubmit() {
     flex-direction: column;
   }
 
+  .search-row {
+    flex-direction: column;
+  }
+
   .product-row {
     flex-direction: column;
     align-items: stretch;
@@ -571,6 +740,7 @@ async function handleSubmit() {
 @media (min-width: 577px) {
   :deep(.bulk-adj-dialog-root) {
     width: 40rem;
+    min-width: 36rem;
     max-width: 90vw;
   }
 }

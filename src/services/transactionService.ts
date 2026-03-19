@@ -198,6 +198,18 @@ class TransactionService {
         }
       }
 
+      // 7c. Process credit payment (utang)
+      const creditPayment = data.payments.find(p => p.method === 'credit')
+      if (creditPayment && data.customerId) {
+        try {
+          const { creditService } = await import('@/services/creditService')
+          await creditService.chargeToAccount(data.customerId, creditPayment.amount, transaction.id, data.userId)
+        } catch (e) {
+          console.error('[TransactionService] Credit charge failed:', e)
+          throw e // Credit failure should fail the transaction
+        }
+      }
+
       // 8. Create stock movements (deduct inventory for sales, restore for returns)
       for (const item of data.items) {
         // Resolve variantId — if missing, look up default variant for the product
@@ -223,8 +235,9 @@ class TransactionService {
               'Customer return',
               transaction.id
             )
-            // Update product stock (add back)
+            // Update product stock (add back) and reverse sold/revenue
             await productRepository.updateStock(item.productId, item.quantity)
+            await productRepository.recordReturn(item.productId, item.quantity, Math.abs(item.lineTotal))
           } else {
             // Sale item: create 'sale' movement with negative quantity (deducts stock)
             await stockMovementRepository.recordSale(
@@ -377,6 +390,18 @@ class TransactionService {
         } catch (e) {
           console.error('[TransactionService] Loyalty points reversal failed:', e)
         }
+      }
+
+      // Reverse credit charge if transaction had credit payment
+      try {
+        const payments = await paymentRepository.findByTransaction(transactionId)
+        const hasCreditPayment = payments.some((p: any) => p.method === 'credit')
+        if (hasCreditPayment) {
+          const { creditService } = await import('@/services/creditService')
+          await creditService.reverseCharge(transactionId, supervisorId)
+        }
+      } catch (e) {
+        console.error('[TransactionService] Credit charge reversal failed:', e)
       }
 
       // Enqueue void for cloud sync (non-blocking)

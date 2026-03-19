@@ -1,10 +1,12 @@
 // Cart Store - State management for POS shopping cart
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { vatService } from '@/services/vatService'
 import type { CartItem, CartTotals, TaxType } from '@/types/transaction'
 import type { DiscountType, EligibleDiscount } from '@/types/discount'
 import type { Product, ProductVariant } from '@/types'
+
+const CART_STORAGE_KEY = 'pos_active_cart'
 
 // Cart-specific discount application (simpler than the full DiscountApplication)
 export interface CartDiscount {
@@ -293,6 +295,7 @@ export const useCartStore = defineStore('cart', () => {
     customerId.value = null
     notes.value = ''
     pendingDiscountItemId.value = null
+    clearPersistedCart()
   }
 
   function getCartData() {
@@ -323,6 +326,51 @@ export const useCartStore = defineStore('cart', () => {
   function findItemBySku(sku: string): CartItem | undefined {
     return items.value.find(item => item.sku === sku)
   }
+
+  // --- Auto-persist cart to localStorage ---
+  let skipPersist = false
+
+  function persistCart() {
+    if (skipPersist) return
+    try {
+      const data = {
+        items: items.value,
+        discount: discount.value,
+        customerId: customerId.value,
+        notes: notes.value,
+        savedAt: new Date().toISOString()
+      }
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data))
+    } catch { /* storage full or unavailable */ }
+  }
+
+  function restoreCart() {
+    try {
+      const raw = localStorage.getItem(CART_STORAGE_KEY)
+      if (!raw) return
+      const data = JSON.parse(raw)
+      if (!data.items || data.items.length === 0) return
+
+      skipPersist = true
+      items.value = data.items
+      discount.value = data.discount || null
+      customerId.value = data.customerId || null
+      notes.value = data.notes || ''
+      skipPersist = false
+    } catch {
+      localStorage.removeItem(CART_STORAGE_KEY)
+    }
+  }
+
+  function clearPersistedCart() {
+    localStorage.removeItem(CART_STORAGE_KEY)
+  }
+
+  // Watch for changes and auto-save
+  watch([items, discount, customerId, notes], persistCart, { deep: true })
+
+  // Restore on store creation
+  restoreCart()
 
   return {
     // State

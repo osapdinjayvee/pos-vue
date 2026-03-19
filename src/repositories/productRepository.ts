@@ -281,6 +281,27 @@ class ProductRepository extends BaseRepository<Product> {
         return await this.findById(id)
   }
 
+  async recordReturn(id: string, quantity: number, amount: number): Promise<Product | null> {
+    const product = await this.findById(id)
+    if (!product) return null
+
+    const newSold = Math.max(0, product.sold - quantity)
+    const newRevenue = Math.max(0, product.revenue - amount)
+    const newStatus: ProductStatus = product.stock > 0 && product.status === 'out-of-stock' ? 'active' : product.status
+
+    await db.execute(
+      `UPDATE products SET
+        sold = ?,
+        revenue = ?,
+        status = ?,
+        updated_at = ?
+       WHERE id = ?`,
+      [newSold, newRevenue, newStatus, db.getCurrentTimestamp(), id]
+    )
+
+    return await this.findById(id)
+  }
+
   async bulkUpdateStatus(ids: string[], status: ProductStatus): Promise<void> {
     const placeholders = ids.map(() => '?').join(', ')
     await db.execute(

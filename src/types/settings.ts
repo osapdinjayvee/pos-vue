@@ -172,6 +172,7 @@ export interface PaymentConfig {
   grab_pay_enabled: number
   bank_transfer_enabled: number
   check_enabled: number
+  credit_enabled: number
   created_at?: string
   updated_at?: string
 }
@@ -184,6 +185,7 @@ export interface PaymentConfigInput {
   grab_pay_enabled?: boolean
   bank_transfer_enabled?: boolean
   check_enabled?: boolean
+  credit_enabled?: boolean
 }
 
 // =====================

@@ -235,6 +235,11 @@ const router = createRouter({
           component: () => import('@/views/TransactionsView.vue')
         },
         {
+          path: 'orders/:id',
+          name: 'transaction-detail',
+          component: () => import('@/views/TransactionDetailView.vue')
+        },
+        {
           path: 'discounts',
           name: 'discounts',
           component: () => import('@/views/DiscountsView.vue'),

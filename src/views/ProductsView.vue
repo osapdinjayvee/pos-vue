@@ -35,7 +35,7 @@ const productStore = useProductStore()
 const categoryStore = useCategoryStore()
 
 // Local state
-const viewMode = ref<string>('grid')
+const viewMode = ref<string>('list')
 const searchQuery = ref('')
 const selectedProducts = ref<DisplayProduct[]>([])
 const first = ref(0)

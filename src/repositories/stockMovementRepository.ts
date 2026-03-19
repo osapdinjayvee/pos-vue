@@ -15,7 +15,7 @@ class StockMovementRepository extends BaseRepository<StockMovement> {
 
   async getAllWithDetails(limit: number = 100): Promise<any[]> {
     const sql = `
-      SELECT m.*, v.name as variant_name, v.sku, p.name as product_name, b.batch_number
+      SELECT m.*, v.name as variant_name, v.sku, v.barcode, p.name as product_name, p.barcode as product_barcode, b.batch_number
       FROM ${this.tableName} m
       JOIN product_variants v ON m.variant_id = v.id
       JOIN products p ON v.product_id = p.id
@@ -329,7 +329,7 @@ class StockMovementRepository extends BaseRepository<StockMovement> {
 
   async findWithDetails(variantId: string, options?: QueryOptions): Promise<any[]> {
     let sql = `
-      SELECT m.*, v.name as variant_name, v.sku, p.name as product_name, b.batch_number
+      SELECT m.*, v.name as variant_name, v.sku, v.barcode, p.name as product_name, p.barcode as product_barcode, b.batch_number
       FROM ${this.tableName} m
       JOIN product_variants v ON m.variant_id = v.id
       JOIN products p ON v.product_id = p.id
@@ -378,9 +378,9 @@ class StockMovementRepository extends BaseRepository<StockMovement> {
     }
 
     if (filters.search) {
-      conditions.push('(p.name LIKE ? OR v.name LIKE ? OR v.sku LIKE ? OR m.reason LIKE ?)')
+      conditions.push('(p.name LIKE ? OR v.name LIKE ? OR v.sku LIKE ? OR v.barcode LIKE ? OR p.barcode LIKE ? OR m.reason LIKE ?)')
       const term = `%${filters.search}%`
-      params.push(term, term, term, term)
+      params.push(term, term, term, term, term, term)
     }
 
     if (filters.dateFrom) {

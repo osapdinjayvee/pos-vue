@@ -388,6 +388,46 @@ function onDeleteVariant(variant: DisplayVariant) {
 }
 
 async function onSaveVariant(data: VariantFormData) {
+  // Validate SKU uniqueness
+  const excludeId = editingVariant.value?.id
+  if (data.sku) {
+    // Check against other variants in database
+    const skuTaken = await variantRepository.skuExists(data.sku, excludeId)
+    if (skuTaken) {
+      toast.add({
+        severity: 'error',
+        summary: 'Duplicate SKU',
+        detail: 'A variant with this SKU already exists',
+        life: 5000
+      })
+      return
+    }
+    // Check against pending variants (new product mode)
+    if (!excludeId && pendingVariants.value.some(v => v.sku === data.sku)) {
+      toast.add({
+        severity: 'error',
+        summary: 'Duplicate SKU',
+        detail: 'Another variant already uses this SKU',
+        life: 5000
+      })
+      return
+    }
+  }
+
+  // Validate barcode uniqueness
+  if (data.barcode) {
+    const barcodeTaken = await variantRepository.barcodeExists(data.barcode, excludeId)
+    if (barcodeTaken) {
+      toast.add({
+        severity: 'error',
+        summary: 'Duplicate Barcode',
+        detail: 'A variant with this barcode already exists',
+        life: 5000
+      })
+      return
+    }
+  }
+
   if (isEditMode.value && editingVariant.value) {
     // Update existing variant in database
     try {

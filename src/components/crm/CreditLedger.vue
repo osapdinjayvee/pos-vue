@@ -1,34 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
-import { useCustomers } from '@/composables/useCustomers'
+import { creditLedgerRepository } from '@/repositories/creditLedgerRepository'
 import { transactionService } from '@/services/transactionService'
-import { PaymentMethodLabels } from '@/types/payment'
-import type { OrderStatus } from '@/types/order'
+import type { CreditLedgerEntry } from '@/types/credit'
 import type { Transaction, TransactionItem } from '@/types/transaction'
-
-interface HistoryRow {
-  id: string
-  or_number: string
-  order_number?: string
-  customer_id: string
-  status: OrderStatus
-  total_amount: number
-  total?: number
-  created_at: string
-  item_count: number
-}
+import { PaymentMethodLabels } from '@/types/payment'
 
 const props = defineProps<{
   customerId: string
 }>()
 
-const { fetchCustomerHistory } = useCustomers()
-
-const transactions = ref<HistoryRow[]>([])
+const entries = ref<CreditLedgerEntry[]>([])
 const loading = ref(false)
 
 // Transaction detail dialog
@@ -38,60 +24,16 @@ const detailTransaction = ref<Transaction | null>(null)
 const detailItems = ref<TransactionItem[]>([])
 const detailPayments = ref<any[]>([])
 
-function getStatusSeverity(status: OrderStatus): string {
-  switch (status) {
-    case 'completed':
-      return 'success'
-    case 'void':
-    case 'cancelled':
-      return 'danger'
-    case 'refunded':
-      return 'warn'
-    default:
-      return 'secondary'
+async function load() {
+  loading.value = true
+  try {
+    entries.value = await creditLedgerRepository.findByCustomer(props.customerId, { limit: 50 })
+  } finally {
+    loading.value = false
   }
 }
 
-function getStatusLabel(status: OrderStatus): string {
-  const labels: Record<OrderStatus, string> = {
-    pending: 'Pending',
-    confirmed: 'Confirmed',
-    processing: 'Processing',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    refunded: 'Refunded',
-    void: 'Void'
-  }
-  return labels[status] || status
-}
-
-function formatCurrency(value: number | undefined | null): string {
-  return `\u20B1${(value ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
-}
-
-function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('en-PH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
-
-function formatDateTime(date: string): string {
-  return new Date(date).toLocaleDateString('en-PH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-function getPaymentLabel(method: string): string {
-  return (PaymentMethodLabels as Record<string, string>)[method] || method
-}
-
-async function openDetail(transactionId: string) {
+async function openTransactionDetail(transactionId: string) {
   showDetail.value = true
   detailLoading.value = true
   detailTransaction.value = null
@@ -107,90 +49,80 @@ async function openDetail(transactionId: string) {
   }
 }
 
-async function loadHistory() {
-  loading.value = true
-  try {
-    const rows = await fetchCustomerHistory(props.customerId)
-    transactions.value = rows as HistoryRow[]
-  } catch (e) {
-    console.error('Failed to load customer history:', e)
-    transactions.value = []
-  } finally {
-    loading.value = false
+function handleRowClick(entry: CreditLedgerEntry) {
+  if (entry.transaction_id) {
+    openTransactionDetail(entry.transaction_id)
   }
 }
 
-onMounted(() => {
-  loadHistory()
-})
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
 
-watch(() => props.customerId, () => {
-  loadHistory()
-})
+function formatCurrency(amount: number | undefined | null): string {
+  return `₱${(amount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
-defineExpose({ loadHistory })
+function getPaymentLabel(method: string): string {
+  return (PaymentMethodLabels as Record<string, string>)[method] || method
+}
+
+onMounted(load)
+
+defineExpose({ refresh: load })
 </script>
 
 <template>
-  <div class="customer-history">
-    <DataTable
-      :value="transactions"
-      :loading="loading"
-      dataKey="id"
-      stripedRows
-      paginator
-      :rows="10"
-      :rowsPerPageOptions="[10, 20]"
-      sortField="created_at"
-      :sortOrder="-1"
-      class="history-table"
-    >
-      <Column field="created_at" header="Date" sortable>
-        <template #body="{ data }">
-          <span class="date-cell">{{ formatDate(data.created_at) }}</span>
-        </template>
-      </Column>
-
-      <Column field="or_number" header="OR#" sortable>
-        <template #body="{ data }">
-          <button
-            class="order-number-cell cursor-pointer hover:underline bg-transparent border-0 p-0"
-            @click="openDetail(data.id)"
-          >
-            {{ data.or_number || data.order_number }}
-          </button>
-        </template>
-      </Column>
-
-      <Column field="item_count" header="Items" sortable>
-        <template #body="{ data }">
-          <span class="items-cell">{{ data.item_count }}</span>
-        </template>
-      </Column>
-
-      <Column field="total_amount" header="Total" sortable>
-        <template #body="{ data }">
-          <span class="total-cell">{{ formatCurrency(data.total_amount ?? data.total) }}</span>
-        </template>
-      </Column>
-
-      <Column field="status" header="Status" sortable>
-        <template #body="{ data }">
-          <Tag
-            :value="getStatusLabel(data.status)"
-            :severity="getStatusSeverity(data.status)"
-          />
-        </template>
-      </Column>
-
-      <template #empty>
-        <div class="empty-state">
-          <i class="pi pi-shopping-bag" />
-          <p>No purchases yet</p>
-        </div>
+  <DataTable
+    :value="entries"
+    :loading="loading"
+    stripedRows
+    size="small"
+    :paginator="entries.length > 10"
+    :rows="10"
+    emptyMessage="No credit history yet"
+  >
+    <Column field="created_at" header="Date" :sortable="true" style="min-width: 150px">
+      <template #body="{ data }">
+        {{ formatDate(data.created_at) }}
       </template>
-    </DataTable>
-  </div>
+    </Column>
+    <Column field="type" header="Type" style="min-width: 100px">
+      <template #body="{ data }">
+        <Tag
+          :value="data.type === 'charge' ? 'Charge' : 'Payment'"
+          :severity="data.type === 'charge' ? 'danger' : 'success'"
+        />
+      </template>
+    </Column>
+    <Column field="amount" header="Amount" style="min-width: 100px">
+      <template #body="{ data }">
+        <span :class="data.type === 'charge' ? 'text-red-600' : 'text-green-600'" class="font-semibold">
+          {{ data.type === 'charge' ? '+' : '-' }}{{ formatCurrency(data.amount) }}
+        </span>
+      </template>
+    </Column>
+    <Column field="running_balance" header="Balance" style="min-width: 100px">
+      <template #body="{ data }">
+        {{ formatCurrency(data.running_balance) }}
+      </template>
+    </Column>
+    <Column header="Details" style="min-width: 120px">
+      <template #body="{ data }">
+        <button
+          v-if="data.transaction_id"
+          class="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+          @click="handleRowClick(data)"
+        >
+          View Transaction
+        </button>
+        <span v-else class="text-sm text-surface-400">
+          {{ data.payment_method ? getPaymentLabel(data.payment_method) : '-' }}
+        </span>
+      </template>
+    </Column>
+  </DataTable>
 
   <!-- Transaction Detail Dialog -->
   <Dialog
@@ -216,13 +148,13 @@ defineExpose({ loadHistory })
         </div>
         <div>
           <div class="text-xs text-surface-500 uppercase">Date</div>
-          <div class="font-semibold">{{ formatDateTime(detailTransaction.created_at) }}</div>
+          <div class="font-semibold">{{ formatDate(detailTransaction.created_at) }}</div>
         </div>
         <div>
           <div class="text-xs text-surface-500 uppercase">Status</div>
           <Tag
-            :value="getStatusLabel(detailTransaction.status as OrderStatus)"
-            :severity="getStatusSeverity(detailTransaction.status as OrderStatus)"
+            :value="detailTransaction.status"
+            :severity="detailTransaction.status === 'completed' ? 'success' : detailTransaction.status === 'voided' ? 'danger' : 'secondary'"
           />
         </div>
         <div>
@@ -296,52 +228,3 @@ defineExpose({ loadHistory })
     </div>
   </Dialog>
 </template>
-
-<style scoped>
-.customer-history {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.history-table {
-  font-size: 0.875rem;
-}
-
-.date-cell {
-  color: var(--p-text-color);
-}
-
-.order-number-cell {
-  font-weight: 600;
-  color: var(--p-primary-color);
-}
-
-.items-cell {
-  color: var(--p-text-color);
-  text-align: center;
-}
-
-.total-cell {
-  font-weight: 600;
-  color: var(--p-text-color);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 3rem;
-  color: var(--p-text-muted-color);
-}
-
-.empty-state i {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 1rem;
-}
-</style>

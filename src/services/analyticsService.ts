@@ -35,6 +35,7 @@ class AnalyticsService {
     let txSql = `
       SELECT
         COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN total_amount ELSE 0 END), 0) as gross_sales,
+        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount < 0 THEN total_amount ELSE 0 END), 0) as refund_amount,
         COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN 1 ELSE 0 END), 0) as transaction_count,
         COALESCE(SUM(CASE WHEN status = 'voided' THEN 1 ELSE 0 END), 0) as void_count,
         COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount < 0 THEN 1 ELSE 0 END), 0) as refund_count
@@ -59,7 +60,7 @@ class AnalyticsService {
       FROM transaction_items ti
       INNER JOIN transactions t ON t.id = ti.transaction_id
       INNER JOIN products p ON p.id = ti.product_id
-      WHERE t.status = 'completed' AND t.total_amount >= 0
+      WHERE t.status = 'completed'
         AND date(t.created_at) >= ? AND date(t.created_at) <= ?
     `
     const params: any[] = [dateFrom, dateTo]
@@ -75,6 +76,7 @@ class AnalyticsService {
     const [txResult, netResult] = await Promise.all([
       db.getOne<{
         gross_sales: number
+        refund_amount: number
         transaction_count: number
         void_count: number
         refund_count: number
@@ -83,13 +85,15 @@ class AnalyticsService {
     ])
 
     const grossSales = txResult?.gross_sales || 0
+    const refundAmount = txResult?.refund_amount || 0
+    const adjustedGrossSales = grossSales + refundAmount // refundAmount is negative
     const txCount = txResult?.transaction_count || 0
 
     return {
-      grossSales,
+      grossSales: adjustedGrossSales,
       netSales: netResult?.net_income || 0,
       transactionCount: txCount,
-      averageTicket: txCount > 0 ? grossSales / txCount : 0,
+      averageTicket: txCount > 0 ? adjustedGrossSales / txCount : 0,
       voidCount: txResult?.void_count || 0,
       refundCount: txResult?.refund_count || 0,
       lastUpdated: new Date().toISOString()

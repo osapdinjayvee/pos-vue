@@ -18,7 +18,7 @@ class PaymentConfigRepository extends BaseRepository<PaymentConfig> {
     const values: any[] = []
 
     const boolFields = ['cash_enabled', 'card_enabled', 'gcash_enabled', 'maya_enabled',
-      'grab_pay_enabled', 'bank_transfer_enabled', 'check_enabled'] as const
+      'grab_pay_enabled', 'bank_transfer_enabled', 'check_enabled', 'credit_enabled'] as const
 
     for (const key of boolFields) {
       if (data[key] !== undefined) { fields.push(`${key} = ?`); values.push(data[key] ? 1 : 0) }

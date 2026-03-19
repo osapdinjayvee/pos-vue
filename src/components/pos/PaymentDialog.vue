@@ -15,6 +15,7 @@ import { customerRepository } from '@/repositories/customerRepository'
 import { loyaltyConfigRepository } from '@/repositories/loyaltyConfigRepository'
 import PointsRedemption from '@/components/crm/PointsRedemption.vue'
 import type { PaymentMethod, PaymentEntry } from '@/types/payment'
+import type { CreditValidation } from '@/types/credit'
 
 const props = defineProps<{
   visible: boolean
@@ -65,6 +66,36 @@ const hasRedeemablePoints = ref(false)
 const pointsPaymentApplied = ref(false)
 const pointsPaymentAmount = ref(0)
 const pointsRedeemed = ref(0)
+
+// Credit (utang) state
+const creditEnabled = computed(() => settingsStore.paymentMethods.credit)
+const creditAvailable = ref(0)
+const creditAllowed = ref(false)
+const creditLimitValue = ref(0)
+const hasCustomer = computed(() => !!cartStore.customerId)
+
+async function loadCustomerCredit() {
+  creditAllowed.value = false
+  creditAvailable.value = 0
+  creditLimitValue.value = 0
+  const cid = cartStore.customerId
+  if (!cid || !creditEnabled.value) return
+  try {
+    const customer = await customerRepository.findById(cid)
+    if (!customer) return
+    const limit = customer.credit_limit ?? 0
+    const balance = customer.current_balance ?? 0
+    const available = Math.max(0, limit - balance)
+    creditLimitValue.value = limit
+    creditAvailable.value = available
+    creditAllowed.value = limit > 0 && available > 0
+  } catch {
+    creditAllowed.value = false
+  }
+}
+
+// Show the credit section when enabled in settings (regardless of customer/limit)
+const showCreditOption = computed(() => creditEnabled.value)
 
 async function loadCustomerPoints() {
   const cid = cartStore.customerId
@@ -148,9 +179,11 @@ const canComplete = computed(() => {
     return cashTendered.value >= remainingAmount.value
   }
 
-  return referenceNumber.value.trim().length > 0
+  if (selectedMethod.value === 'credit') {
+    return remainingAmount.value <= creditAvailable.value
+  }
 
-  return true
+  return referenceNumber.value.trim().length > 0
 })
 
 const formattedTotal = computed(() => vatService.formatCurrency(totalAmount.value))
@@ -178,6 +211,7 @@ watch(() => props.visible, (visible) => {
   if (visible) {
     resetForm()
     loadCustomerPoints()
+    loadCustomerCredit()
   }
 })
 
@@ -269,6 +303,7 @@ function handleCancel() {
 }
 
 function getMethodLabel(method: PaymentMethod): string {
+  if (method === 'credit') return 'Charge (Utang)'
   const found = allPaymentMethods.find(m => m.value === method)
   return found?.label || method
 }
@@ -449,6 +484,35 @@ function getMethodLabel(method: PaymentMethod): string {
             </div>
           </div>
 
+          <!-- Credit (Utang) Button -->
+          <div v-if="showCreditOption" class="mb-6">
+            <button
+              v-if="creditAllowed"
+              @click="selectedMethod = 'credit'"
+              :class="[
+                'w-full flex items-center justify-between py-4 px-5 rounded-xl border-2 transition-all text-sm font-semibold cursor-pointer',
+                selectedMethod === 'credit'
+                  ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm'
+                  : 'border-orange-200 bg-white text-orange-600 hover:border-orange-300'
+              ]"
+            >
+              <div class="flex items-center gap-2">
+                <i class="pi pi-wallet text-xl"></i>
+                <span>Charge (Utang)</span>
+              </div>
+              <span class="text-xs font-normal opacity-80">₱{{ creditAvailable.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }} available</span>
+            </button>
+            <div v-else class="w-full flex items-center justify-between py-4 px-5 rounded-xl border-2 border-neutral-200 bg-neutral-50 text-neutral-400 text-sm">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-wallet text-xl"></i>
+                <span class="font-semibold">Charge (Utang)</span>
+              </div>
+              <span class="text-xs">
+                {{ !hasCustomer ? 'Assign a customer first' : creditLimitValue <= 0 ? 'No credit limit set' : 'No available credit' }}
+              </span>
+            </div>
+          </div>
+
           <!-- Split Amount (if split payment) -->
           <div v-if="isSplitPayment" class="mb-5">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Amount for this payment</label>
@@ -464,8 +528,25 @@ function getMethodLabel(method: PaymentMethod): string {
             />
           </div>
 
+          <!-- Credit (Utang) Summary -->
+          <div v-if="selectedMethod === 'credit'" class="p-4 rounded-xl bg-orange-50 border border-orange-200">
+            <div class="text-sm text-orange-600 mb-2 font-medium">Charge to Account Summary</div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sm text-neutral-600">Available Credit:</span>
+              <span class="font-semibold">₱{{ creditAvailable.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sm text-neutral-600">Charge Amount:</span>
+              <span class="font-semibold text-orange-700">₱{{ (isSplitPayment ? (splitAmount || 0) : remainingAmount).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div v-if="(isSplitPayment ? (splitAmount || 0) : remainingAmount) > creditAvailable" class="mt-2 text-sm text-red-600">
+              <i class="pi pi-exclamation-triangle mr-1"></i>
+              Amount exceeds available credit
+            </div>
+          </div>
+
           <!-- Cash Payment -->
-          <div v-if="selectedMethod === 'cash'">
+          <div v-else-if="selectedMethod === 'cash'">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Cash Tendered</label>
             <InputNumber
               v-model="cashTendered"
@@ -514,7 +595,7 @@ function getMethodLabel(method: PaymentMethod): string {
           <div v-if="isSplitPayment" class="mt-5">
             <button
               @click="addSplitPayment"
-              :disabled="!splitAmount || splitAmount <= 0 || (selectedMethod !== 'cash' && !referenceNumber)"
+              :disabled="!splitAmount || splitAmount <= 0 || (selectedMethod !== 'cash' && selectedMethod !== 'credit' && !referenceNumber)"
               class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-neutral-300 bg-white text-neutral-700 font-semibold text-sm hover:bg-neutral-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               <i class="pi pi-plus text-xs"></i>

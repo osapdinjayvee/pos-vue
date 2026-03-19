@@ -110,6 +110,8 @@ const filteredMovements = computed(() => {
   return movements.value.filter(m =>
     m.productName?.toLowerCase().includes(query) ||
     m.variantName?.toLowerCase().includes(query) ||
+    m.sku?.toLowerCase().includes(query) ||
+    m.barcode?.toLowerCase().includes(query) ||
     m.reason?.toLowerCase().includes(query) ||
     m.movementTypeLabel?.toLowerCase().includes(query)
   )
@@ -335,7 +337,7 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
             <InputIcon class="pi pi-search" />
             <InputText
               v-model="searchQuery"
-              placeholder="Search adjustments..."
+              placeholder="Search by name, SKU, barcode..."
               class="search-input"
             />
           </IconField>
@@ -366,6 +368,8 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
         :value="filteredMovements"
         :loading="isLoadingHistory"
         stripedRows
+        scrollable
+        scrollHeight="flex"
         paginator
         :rows="20"
         :rowsPerPageOptions="[10, 20, 50, 100]"

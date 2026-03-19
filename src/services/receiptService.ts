@@ -406,7 +406,12 @@ class ReceiptService {
       card: 'Credit/Debit Card',
       gcash: 'GCash',
       maya: 'Maya',
-      other_ewallet: 'E-Wallet'
+      other_ewallet: 'E-Wallet',
+      credit: 'CHARGE TO ACCOUNT (UTANG)',
+      grab_pay: 'GrabPay',
+      bank_transfer: 'Bank Transfer',
+      check: 'Check',
+      points: 'Loyalty Points'
     }
     return labels[method] || method
   }

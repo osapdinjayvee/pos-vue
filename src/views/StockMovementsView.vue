@@ -219,7 +219,7 @@ onMounted(loadMovements)
             <i class="pi pi-search" />
             <InputText
               v-model="searchQuery"
-              placeholder="Search product, SKU..."
+              placeholder="Search name, SKU, barcode..."
               class="search-input"
             />
           </span>

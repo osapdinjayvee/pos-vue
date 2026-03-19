@@ -349,7 +349,8 @@ const paymentMethods = ref({
   mayaEnabled: true,
   grabPayEnabled: false,
   bankTransferEnabled: false,
-  checkEnabled: false
+  checkEnabled: false,
+  creditEnabled: false
 })
 
 // System Settings
@@ -587,7 +588,8 @@ function hydrateFromDB() {
       mayaEnabled: pay.maya_enabled === 1,
       grabPayEnabled: pay.grab_pay_enabled === 1,
       bankTransferEnabled: pay.bank_transfer_enabled === 1,
-      checkEnabled: pay.check_enabled === 1
+      checkEnabled: pay.check_enabled === 1,
+      creditEnabled: pay.credit_enabled === 1
     }
   }
 
@@ -735,7 +737,8 @@ const savePaymentSettings = async () => {
       maya_enabled: paymentMethods.value.mayaEnabled,
       grab_pay_enabled: paymentMethods.value.grabPayEnabled,
       bank_transfer_enabled: paymentMethods.value.bankTransferEnabled,
-      check_enabled: paymentMethods.value.checkEnabled
+      check_enabled: paymentMethods.value.checkEnabled,
+      credit_enabled: paymentMethods.value.creditEnabled
     })
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Payment settings saved.', life: 3000 })
   } catch {
@@ -1628,6 +1631,20 @@ onMounted(async () => {
                         </div>
                       </div>
                       <ToggleSwitch v-model="paymentMethods.checkEnabled" />
+                    </div>
+                  </template>
+                </Card>
+                <Card class="payment-card">
+                  <template #content>
+                    <div class="payment-item">
+                      <div class="payment-info">
+                        <i class="pi pi-wallet payment-icon credit"></i>
+                        <div>
+                          <h4>Credit (Utang)</h4>
+                          <small>Allow charge-to-account for customers with credit limit</small>
+                        </div>
+                      </div>
+                      <ToggleSwitch v-model="paymentMethods.creditEnabled" />
                     </div>
                   </template>
                 </Card>

@@ -362,6 +362,15 @@ class CustomerRepository extends BaseRepository<Customer> {
   }
 
   /**
+   * Get customers with outstanding credit balance
+   */
+  async getCustomersWithBalance(): Promise<Customer[]> {
+    return await db.query<Customer>(
+      `SELECT * FROM ${this.tableName} WHERE current_balance > 0 AND is_active = 1 ORDER BY current_balance DESC`
+    )
+  }
+
+  /**
    * Deactivate customer
    */
   async deactivate(id: string): Promise<Customer | null> {

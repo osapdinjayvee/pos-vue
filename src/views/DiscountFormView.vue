@@ -105,8 +105,19 @@ onMounted(async () => {
       maxDiscount.value = discount.max_discount
       autoApply.value = discount.auto_apply === 1
       isActive.value = discount.is_active === 1
-      startDate.value = discount.start_date ? new Date(discount.start_date) : null
-      endDate.value = discount.end_date ? new Date(discount.end_date) : null
+      // Parse YYYY-MM-DD as local date (not UTC) to avoid timezone shift
+      if (discount.start_date) {
+        const [y, m, d] = discount.start_date.split('-').map(Number)
+        startDate.value = new Date(y!, m! - 1, d!)
+      } else {
+        startDate.value = null
+      }
+      if (discount.end_date) {
+        const [y, m, d] = discount.end_date.split('-').map(Number)
+        endDate.value = new Date(y!, m! - 1, d!)
+      } else {
+        endDate.value = null
+      }
       startTime.value = discount.start_time ? parseTimeString(discount.start_time) : null
       endTime.value = discount.end_time ? parseTimeString(discount.end_time) : null
 

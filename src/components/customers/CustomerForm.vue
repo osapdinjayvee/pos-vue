@@ -249,7 +249,6 @@ function handleCancel() {
             mode="currency"
             currency="PHP"
             locale="en-PH"
-            prefix="₱"
             :min="0"
             class="w-full"
             :disabled="loading"

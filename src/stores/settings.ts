@@ -95,7 +95,8 @@ export const useSettingsStore = defineStore('settings', () => {
     maya: (paymentConfig.value?.maya_enabled ?? 1) === 1,
     grabPay: (paymentConfig.value?.grab_pay_enabled ?? 0) === 1,
     bankTransfer: (paymentConfig.value?.bank_transfer_enabled ?? 0) === 1,
-    check: (paymentConfig.value?.check_enabled ?? 0) === 1
+    check: (paymentConfig.value?.check_enabled ?? 0) === 1,
+    credit: (paymentConfig.value?.credit_enabled ?? 0) === 1
   }))
 
   // =====================
