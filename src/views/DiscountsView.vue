@@ -350,7 +350,7 @@ const getTimeRange = (discount: PromoDiscount): string | null => {
 
         <Column header="Actions" style="width: 180px">
           <template #body="{ data }">
-            <div class="action-buttons">
+            <div class="table-actions">
               <Button
                 icon="pi pi-pencil"
                 text
@@ -408,13 +408,6 @@ const getTimeRange = (discount: PromoDiscount): string | null => {
   min-width: 140px;
 }
 
-.table-container {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  overflow: hidden;
-}
-
 .discounts-table {
   border: none;
 }
@@ -468,30 +461,6 @@ const getTimeRange = (discount: PromoDiscount): string | null => {
   padding: 0.1rem 0.35rem;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 3rem 2rem;
-  gap: 1rem;
-  color: var(--p-text-muted-color);
-}
-
-.empty-state i {
-  font-size: 3rem;
-  opacity: 0.5;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 1rem;
-}
-
 @media (max-width: 879.98px) {
   .discounts-page {
     gap: 1rem;
@@ -509,16 +478,5 @@ const getTimeRange = (discount: PromoDiscount): string | null => {
     min-width: 110px;
   }
 
-  .table-container {
-    border-radius: 8px;
-  }
-
-  .empty-state {
-    padding: 2rem 1rem;
-  }
-
-  .empty-state i {
-    font-size: 2.5rem;
-  }
 }
 </style>

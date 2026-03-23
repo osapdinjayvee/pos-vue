@@ -89,7 +89,7 @@ onUnmounted(() => {
 
 <style>
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   margin: 0;
   padding: 0;
 }

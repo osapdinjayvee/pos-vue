@@ -252,7 +252,7 @@ onMounted(loadMovements)
       </div>
 
       <!-- Data Table -->
-      <div v-else class="table-wrapper">
+      <div v-else class="table-container flex-table">
         <DataTable
           :value="movements"
           :loading="isLoading"
@@ -330,7 +330,7 @@ onMounted(loadMovements)
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalRecords > 0 && !isLoading" class="pagination-bar">
+      <div v-if="totalRecords > 0 && !isLoading" class="table-pagination">
         <span class="record-count">
           Showing {{ first + 1 }}-{{ Math.min(first + rows, totalRecords) }} of {{ totalRecords }} movements
         </span>
@@ -437,40 +437,6 @@ onMounted(loadMovements)
   margin-bottom: 1rem;
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-  flex: 1;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: var(--p-surface-400);
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  margin: 0 0 0.5rem;
-  color: var(--p-text-color);
-}
-
-.empty-state p {
-  margin: 0;
-  color: var(--p-text-muted-color);
-}
-
-/* Table */
-.table-wrapper {
-  flex: 1;
-  overflow: auto;
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-}
 
 .movements-table {
   min-width: 100%;
@@ -541,19 +507,6 @@ onMounted(loadMovements)
   font-size: 0.8125rem;
 }
 
-/* Pagination */
-.pagination-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  padding: 0.5rem 1rem;
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
-  border-top: none;
-  border-radius: 0 0 12px 12px;
-}
-
 .record-count {
   font-size: 0.8125rem;
   color: var(--p-text-muted-color);
@@ -579,10 +532,6 @@ onMounted(loadMovements)
     width: 150px;
   }
 
-  .table-wrapper {
-    border-radius: 8px;
-  }
-
   .type-filter {
     width: 140px;
   }
@@ -591,10 +540,9 @@ onMounted(loadMovements)
     width: 130px;
   }
 
-  .pagination-bar {
+  .table-pagination {
     flex-direction: column;
     gap: 0.5rem;
-    border-radius: 0 0 8px 8px;
   }
 }
 </style>

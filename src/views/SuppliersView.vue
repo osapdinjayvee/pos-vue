@@ -160,7 +160,7 @@ function handleViewProducts(supplier: Supplier) {
       </div>
     </div>
 
-    <div class="suppliers-content">
+    <div class="table-container">
       <SupplierList
         ref="supplierListRef"
         :search="searchQuery"
@@ -193,31 +193,9 @@ function handleViewProducts(supplier: Supplier) {
   padding: 1.5rem;
 }
 
-.suppliers-content {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  padding: 1.5rem;
-}
-
-@media (max-width: 767.98px) {
-  .suppliers-view {
-    padding: 1rem;
-  }
-
-  .suppliers-content {
-    padding: 1rem;
-  }
-}
-
 @media (max-width: 879.98px) {
   .suppliers-view {
     padding: 0.5rem;
-  }
-
-  .suppliers-content {
-    padding: 0.75rem;
-    border-radius: 8px;
   }
 }
 </style>

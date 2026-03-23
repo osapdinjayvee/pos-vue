@@ -205,19 +205,4 @@ function handleStatsFilter(filter: string) {
   color: var(--p-text-secondary-color);
   white-space: nowrap;
 }
-
-.tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.25rem;
-  height: 1.25rem;
-  padding: 0 0.375rem;
-  margin-left: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: var(--p-red-500);
-  color: white;
-  border-radius: 10px;
-}
 </style>

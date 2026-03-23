@@ -217,7 +217,6 @@ function formatCurrency(amount: number): string {
   gap: 1rem;
 }
 
-.empty-state,
 .error-state {
   display: flex;
   flex-direction: column;

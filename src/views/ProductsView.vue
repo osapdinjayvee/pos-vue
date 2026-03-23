@@ -682,7 +682,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
         </div>
 
         <!-- List View -->
-        <div v-if="viewMode === 'list'" class="products-table">
+        <div v-if="viewMode === 'list'" class="table-container">
           <DataTable
             :value="paginatedProducts"
             v-model:selection="selectedProducts"
@@ -797,7 +797,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
         :totalRecords="filteredProducts.length"
         :rowsPerPageOptions="[10, 25, 50]"
         @page="onPageChange"
-        class="products-paginator"
+        class="table-pagination"
       />
     </div>
 
@@ -886,46 +886,6 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
   min-width: 0;
 }
 
-.products-table {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  overflow: hidden;
-}
-
-.clickable-rows :deep(.p-datatable-row-selected) {
-  background: var(--p-surface-50) !important;
-}
-
-.clickable-rows :deep(tr) {
-  cursor: pointer;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: var(--p-surface-400);
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  margin: 0 0 0.5rem;
-  color: var(--p-text-color);
-}
-
-.empty-state p {
-  margin: 0;
-  color: var(--p-text-muted-color);
-}
-
 .empty-table {
   display: flex;
   flex-direction: column;
@@ -985,25 +945,12 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
   color: var(--p-text-muted-color);
 }
 
-.table-actions {
-  display: flex;
-  gap: 0.25rem;
-}
-
 .text-red-500 {
   color: var(--p-red-500);
 }
 
 .text-orange-500 {
   color: var(--p-orange-500);
-}
-
-.products-paginator {
-  flex-shrink: 0;
-  margin-top: 1rem;
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
 }
 
 /* Filter Drawer */

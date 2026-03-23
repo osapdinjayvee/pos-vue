@@ -386,7 +386,7 @@ onMounted(() => {
 
         <Column header="Actions" style="width: 160px">
           <template #body="{ data }">
-            <div class="action-buttons">
+            <div class="table-actions">
               <Button
                 icon="pi pi-eye"
                 text
@@ -666,13 +666,6 @@ onMounted(() => {
   min-width: 140px;
 }
 
-.table-container {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  overflow: hidden;
-}
-
 /* OR Number cell */
 .or-cell {
   display: flex;
@@ -719,11 +712,6 @@ onMounted(() => {
 .total-amount.voided {
   color: var(--p-red-500);
   text-decoration: line-through;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.25rem;
 }
 
 /* Expansion content */
@@ -976,32 +964,6 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-/* Empty state */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 3rem 2rem;
-  gap: 0.75rem;
-  color: var(--p-text-muted-color);
-}
-
-.empty-state i {
-  font-size: 3rem;
-  opacity: 0.5;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.empty-hint {
-  font-size: 0.875rem;
-  opacity: 0.7;
-}
-
 @media (max-width: 879.98px) {
   .transactions-page {
     gap: 1rem;
@@ -1021,10 +983,6 @@ onMounted(() => {
 
   .filter-select {
     min-width: 110px;
-  }
-
-  .table-container {
-    border-radius: 8px;
   }
 
   .expansion-content {

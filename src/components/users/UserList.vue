@@ -79,7 +79,7 @@ function formatDateTime(dateString: string | null): string {
       removable-sort
       scrollable
       scroll-height="flex"
-      class="users-table"
+      class="table-container users-table"
     >
       <template #empty>
         <div class="empty-state">
@@ -142,7 +142,7 @@ function formatDateTime(dateString: string | null): string {
       <!-- Actions -->
       <Column header="Actions" style="width: 150px" :exportable="false">
         <template #body="{ data }">
-          <div class="action-buttons">
+          <div class="table-actions">
             <Button
               icon="pi pi-pencil"
               text
@@ -194,9 +194,6 @@ function formatDateTime(dateString: string | null): string {
 }
 
 .users-table {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  overflow: hidden;
   max-width: 100%;
 }
 
@@ -232,33 +229,4 @@ function formatDateTime(dateString: string | null): string {
   color: var(--p-text-muted-color);
 }
 
-.action-buttons {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  text-align: center;
-}
-
-.empty-state i {
-  font-size: 3rem;
-  color: var(--p-text-muted-color);
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--p-text-color);
-}
-
-.empty-state p {
-  margin: 0 0 1.5rem 0;
-  color: var(--p-text-muted-color);
-}
 </style>

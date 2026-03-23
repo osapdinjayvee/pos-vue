@@ -347,7 +347,7 @@ const formatDate = (dateString: string | undefined) => {
 
         <Column header="Actions" style="width: 180px">
           <template #body="{ data }">
-            <div class="action-buttons">
+            <div class="table-actions">
               <Button
                 icon="pi pi-pencil"
                 text
@@ -466,13 +466,6 @@ const formatDate = (dateString: string | undefined) => {
 }
 
 
-.table-container {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  overflow: hidden;
-}
-
 .categories-table {
   border: none;
 }
@@ -512,30 +505,6 @@ const formatDate = (dateString: string | undefined) => {
 .product-count {
   font-weight: 500;
   color: var(--p-text-color);
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 3rem 2rem;
-  gap: 1rem;
-  color: var(--p-text-muted-color);
-}
-
-.empty-state i {
-  font-size: 3rem;
-  opacity: 0.5;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 1rem;
 }
 
 .dialog-content {
@@ -616,16 +585,5 @@ const formatDate = (dateString: string | undefined) => {
     height: 36px;
   }
 
-  .table-container {
-    border-radius: 8px;
-  }
-
-  .empty-state {
-    padding: 2rem 1rem;
-  }
-
-  .empty-state i {
-    font-size: 2.5rem;
-  }
 }
 </style>

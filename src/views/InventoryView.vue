@@ -4,12 +4,13 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
-import Toolbar from 'primevue/toolbar'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
-import SelectButton from 'primevue/selectbutton'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
 import InputText from 'primevue/inputtext'
 import StockMovementDialog from '@/components/inventory/StockMovementDialog.vue'
 import { useProductStore } from '@/stores/product'
@@ -27,15 +28,6 @@ const { receiveStock } = useInventory()
 
 // Filter state
 type FilterTab = 'all' | 'low-stock' | 'out-of-stock' | 'expiring' | 'slow-moving' | 'fast-moving'
-
-const filterTabs = [
-  { label: 'All', value: 'all' },
-  { label: 'Low Stock', value: 'low-stock' },
-  { label: 'Out of Stock', value: 'out-of-stock' },
-  { label: 'Expiring', value: 'expiring' },
-  { label: 'Slow Moving', value: 'slow-moving' },
-  { label: 'Fast Moving', value: 'fast-moving' }
-]
 
 const activeFilter = ref<FilterTab>('all')
 const searchQuery = ref('')
@@ -208,20 +200,17 @@ function getStockClass(product: Product): string {
       </div>
     </div>
 
-    <!-- Toolbar -->
-    <Toolbar class="inventory-toolbar">
-      <template #start>
-        <SelectButton
-          v-model="activeFilter"
-          :options="filterTabs"
-          optionLabel="label"
-          optionValue="value"
-          @change="onFilterChange"
-          class="filter-tabs"
-        />
-      </template>
-
-      <template #end>
+    <!-- Filter Tabs + Toolbar -->
+    <Tabs :value="activeFilter" @update:value="(v: FilterTab) => { activeFilter = v; onFilterChange() }" class="inventory-tabs">
+      <div class="inventory-toolbar-row">
+        <TabList class="inventory-tablist">
+          <Tab value="all">All</Tab>
+          <Tab value="low-stock">Low Stock</Tab>
+          <Tab value="out-of-stock">Out of Stock</Tab>
+          <Tab value="expiring">Expiring</Tab>
+          <Tab value="slow-moving">Slow Moving</Tab>
+          <Tab value="fast-moving">Fast Moving</Tab>
+        </TabList>
         <div class="toolbar-end">
           <span class="p-input-icon-left search-wrapper">
             <i class="pi pi-search" />
@@ -247,8 +236,8 @@ function getStockClass(product: Product): string {
             @click="goToAdjustments"
           />
         </div>
-      </template>
-    </Toolbar>
+      </div>
+    </Tabs>
 
     <!-- Content -->
     <div class="inventory-content">
@@ -263,12 +252,12 @@ function getStockClass(product: Product): string {
         <i class="pi pi-inbox"></i>
         <h3>No products found</h3>
         <p v-if="searchQuery">Try adjusting your search or filters</p>
-        <p v-else-if="activeFilter !== 'all'">No products match the "{{ filterTabs.find(t => t.value === activeFilter)?.label }}" filter</p>
+        <p v-else-if="activeFilter !== 'all'">No products match the "{{ activeFilter }}" filter</p>
         <p v-else>Add some products to get started</p>
       </div>
 
       <!-- Data Table -->
-      <div v-else class="table-wrapper">
+      <div v-else class="table-container flex-table">
         <DataTable
           :value="paginatedProducts"
           v-model:selection="selectedProducts"
@@ -372,7 +361,7 @@ function getStockClass(product: Product): string {
         :totalRecords="filteredProducts.length"
         :rowsPerPageOptions="[10, 25, 50]"
         @page="onPageChange"
-        class="inventory-paginator"
+        class="table-pagination"
       />
     </div>
 
@@ -397,15 +386,23 @@ function getStockClass(product: Product): string {
   overflow: hidden;
 }
 
-/* Toolbar */
-.inventory-toolbar {
-  margin-bottom: 1rem;
-  border-radius: 12px;
+/* Toolbar row */
+.inventory-tabs {
   flex-shrink: 0;
+  margin-bottom: 1rem;
 }
 
-.filter-tabs {
-  flex-shrink: 0;
+.inventory-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.inventory-tablist {
+  flex: 1;
+  min-width: 0;
 }
 
 .toolbar-end {
@@ -452,41 +449,6 @@ function getStockClass(product: Product): string {
 .loading-state i {
   font-size: 2rem;
   margin-bottom: 1rem;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-  flex: 1;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: var(--p-surface-400);
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  margin: 0 0 0.5rem;
-  color: var(--p-text-color);
-}
-
-.empty-state p {
-  margin: 0;
-  color: var(--p-text-muted-color);
-}
-
-/* Table */
-.table-wrapper {
-  flex: 1;
-  overflow: auto;
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
 }
 
 .inventory-table {
@@ -564,32 +526,19 @@ function getStockClass(product: Product): string {
   font-weight: 600;
 }
 
-/* Actions */
-.table-actions {
-  display: flex;
-  gap: 0.25rem;
-}
-
-/* Pagination */
-.inventory-paginator {
-  flex-shrink: 0;
-  border-top: 1px solid var(--p-surface-200);
-  background: var(--p-surface-0);
-  border-radius: 0 0 12px 12px;
-}
-
 /* Responsive */
 @media (max-width: 1024px) {
-  .filter-tabs :deep(.p-selectbutton) {
-    flex-wrap: wrap;
+  .inventory-toolbar-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inventory-tablist :deep(.p-tablist-content) {
+    overflow-x: auto;
   }
 }
 
 @media (max-width: 768px) {
-  .inventory-toolbar {
-    border-radius: 8px;
-  }
-
   .toolbar-end :deep(.p-button-label) {
     display: none;
   }
@@ -598,21 +547,12 @@ function getStockClass(product: Product): string {
     width: 150px;
   }
 
-  .table-wrapper {
-    border-radius: 8px;
-  }
-
-  .inventory-paginator {
+  .table-pagination {
     border-radius: 0 0 8px 8px;
   }
 }
 
 @media (max-width: 576px) {
-  .filter-tabs {
-    width: 100%;
-    overflow-x: auto;
-  }
-
   .search-input {
     width: 120px;
   }

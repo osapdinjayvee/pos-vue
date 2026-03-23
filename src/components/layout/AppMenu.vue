@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import PanelMenu from 'primevue/panelmenu'
 import { usePermissions } from '@/composables/usePermissions'
 
 const props = defineProps<{
@@ -11,463 +10,270 @@ const props = defineProps<{
 const route = useRoute()
 const { can, canAny, PERMISSIONS } = usePermissions()
 
-// Top-level items (always visible, no group wrapper)
-const topItems = [
-  { label: 'Dashboard', icon: 'pi pi-home', route: '/' },
-  { label: 'POS Terminal', icon: 'pi pi-calculator', route: '/pos', permission: PERMISSIONS.SALES_CREATE }
-]
-
-const filteredTopItems = computed(() =>
-  topItems.filter(item => !item.permission || can(item.permission))
-)
-
-// Raw grouped menu definitions
-interface MenuChild {
+interface MenuItem {
   label: string
   icon: string
   route: string
+  color: string
   permission?: string | string[]
 }
 
-interface MenuGroup {
-  key: string
-  label: string
-  icon: string
-  items: MenuChild[]
+interface MenuSection {
+  label?: string
+  items: MenuItem[]
 }
 
-const rawGroups: MenuGroup[] = [
+const sections: MenuSection[] = [
   {
-    key: 'sales',
+    items: [
+      { label: 'Dashboard', icon: 'pi pi-home', color: '#3b82f6', route: '/' },
+      { label: 'POS Terminal', icon: 'pi pi-calculator', color: '#10b981', route: '/pos', permission: PERMISSIONS.SALES_CREATE }
+    ]
+  },
+  {
     label: 'Sales',
-    icon: 'pi pi-shopping-cart',
     items: [
-      { label: 'Transactions', icon: 'pi pi-receipt', route: '/orders', permission: PERMISSIONS.SALES_CREATE },
-      { label: 'Discounts', icon: 'pi pi-percentage', route: '/discounts', permission: PERMISSIONS.SALES_DISCOUNT }
+      { label: 'Transactions', icon: 'pi pi-receipt', color: '#6366f1', route: '/orders', permission: PERMISSIONS.SALES_CREATE },
+      { label: 'Discounts', icon: 'pi pi-percentage', color: '#f59e0b', route: '/discounts', permission: PERMISSIONS.SALES_DISCOUNT }
     ]
   },
   {
-    key: 'catalog',
     label: 'Catalog',
-    icon: 'pi pi-box',
     items: [
-      { label: 'Products', icon: 'pi pi-box', route: '/products', permission: PERMISSIONS.INVENTORY_VIEW },
-      { label: 'Categories', icon: 'pi pi-tags', route: '/categories', permission: PERMISSIONS.INVENTORY_VIEW },
-      { label: 'Suppliers', icon: 'pi pi-truck', route: '/suppliers', permission: PERMISSIONS.INVENTORY_VIEW }
+      { label: 'Products', icon: 'pi pi-box', color: '#8b5cf6', route: '/products', permission: PERMISSIONS.INVENTORY_VIEW },
+      { label: 'Categories', icon: 'pi pi-tags', color: '#ec4899', route: '/categories', permission: PERMISSIONS.INVENTORY_VIEW },
+      { label: 'Suppliers', icon: 'pi pi-truck', color: '#14b8a6', route: '/suppliers', permission: PERMISSIONS.INVENTORY_VIEW }
     ]
   },
   {
-    key: 'inventory',
     label: 'Inventory',
-    icon: 'pi pi-warehouse',
     items: [
-      { label: 'Stock Levels', icon: 'pi pi-warehouse', route: '/inventory', permission: PERMISSIONS.INVENTORY_VIEW },
-      { label: 'Product Movements', icon: 'pi pi-history', route: '/stock-movements', permission: PERMISSIONS.INVENTORY_VIEW },
-      { label: 'Adjustments', icon: 'pi pi-sliders-h', route: '/adjustments', permission: PERMISSIONS.INVENTORY_ADJUST },
-      { label: 'Transfers', icon: 'pi pi-arrow-right-arrow-left', route: '/transfers', permission: PERMISSIONS.INVENTORY_ADJUST }
+      { label: 'Stock Levels', icon: 'pi pi-warehouse', color: '#f97316', route: '/inventory', permission: PERMISSIONS.INVENTORY_VIEW },
+      { label: 'Movements', icon: 'pi pi-history', color: '#64748b', route: '/stock-movements', permission: PERMISSIONS.INVENTORY_VIEW },
+      { label: 'Adjustments', icon: 'pi pi-sliders-h', color: '#0ea5e9', route: '/adjustments', permission: PERMISSIONS.INVENTORY_ADJUST },
+      { label: 'Transfers', icon: 'pi pi-arrow-right-arrow-left', color: '#a855f7', route: '/transfers', permission: PERMISSIONS.INVENTORY_ADJUST }
     ]
   },
   {
-    key: 'customers',
     label: 'Customers',
-    icon: 'pi pi-users',
     items: [
-      { label: 'Customer List', icon: 'pi pi-users', route: '/customers', permission: PERMISSIONS.SALES_CREATE },
-      { label: 'Insights', icon: 'pi pi-chart-line', route: '/customer-insights', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'Loyalty Tiers', icon: 'pi pi-star', route: '/tiers', permission: PERMISSIONS.SETTINGS_VIEW }
+      { label: 'Customer List', icon: 'pi pi-users', color: '#3b82f6', route: '/customers', permission: PERMISSIONS.SALES_CREATE },
+      { label: 'Insights', icon: 'pi pi-chart-line', color: '#10b981', route: '/customer-insights', permission: PERMISSIONS.REPORTS_SALES },
+      { label: 'Loyalty Tiers', icon: 'pi pi-star', color: '#f59e0b', route: '/tiers', permission: PERMISSIONS.SETTINGS_VIEW }
     ]
   },
   {
-    key: 'reports',
-    label: 'Reports & Analytics',
-    icon: 'pi pi-chart-bar',
+    label: 'Reports',
     items: [
-      { label: 'Sales Reports', icon: 'pi pi-file', route: '/reports', permission: [PERMISSIONS.REPORTS_XREADING, PERMISSIONS.REPORTS_SALES] },
-      { label: 'Cash Variance', icon: 'pi pi-money-bill', route: '/cash-variance', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'Product Analytics', icon: 'pi pi-chart-bar', route: '/analytics/products', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'Time Analysis', icon: 'pi pi-clock', route: '/analytics/time', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'Cashier Performance', icon: 'pi pi-id-card', route: '/analytics/cashiers', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'Inventory Analytics', icon: 'pi pi-chart-pie', route: '/analytics/inventory', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'Custom Reports', icon: 'pi pi-file-export', route: '/analytics/custom-reports', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'EIS Submissions', icon: 'pi pi-cloud-upload', route: '/eis-submissions', permission: PERMISSIONS.REPORTS_SALES },
-      { label: 'EIS Reports', icon: 'pi pi-file-check', route: '/eis-reports', permission: PERMISSIONS.REPORTS_SALES }
+      { label: 'Sales Reports', icon: 'pi pi-file', color: '#6366f1', route: '/reports', permission: [PERMISSIONS.REPORTS_XREADING, PERMISSIONS.REPORTS_SALES] },
+      { label: 'Cash Variance', icon: 'pi pi-money-bill', color: '#10b981', route: '/cash-variance', permission: PERMISSIONS.REPORTS_SALES },
+      { label: 'Product Analytics', icon: 'pi pi-chart-bar', color: '#f97316', route: '/analytics/products', permission: PERMISSIONS.REPORTS_SALES },
+      { label: 'Time Analysis', icon: 'pi pi-clock', color: '#0ea5e9', route: '/analytics/time', permission: PERMISSIONS.REPORTS_SALES },
+      { label: 'Cashier Performance', icon: 'pi pi-id-card', color: '#8b5cf6', route: '/analytics/cashiers', permission: PERMISSIONS.REPORTS_SALES },
+      { label: 'Inventory Analytics', icon: 'pi pi-chart-pie', color: '#ec4899', route: '/analytics/inventory', permission: PERMISSIONS.REPORTS_SALES },
+      { label: 'Custom Reports', icon: 'pi pi-file-export', color: '#14b8a6', route: '/analytics/custom-reports', permission: PERMISSIONS.REPORTS_SALES }
     ]
   },
   {
-    key: 'admin',
     label: 'Administration',
-    icon: 'pi pi-cog',
     items: [
-      { label: 'Users', icon: 'pi pi-user', route: '/users', permission: PERMISSIONS.USERS_VIEW },
-      { label: 'Roles', icon: 'pi pi-shield', route: '/roles', permission: PERMISSIONS.USERS_EDIT },
-      { label: 'Branches', icon: 'pi pi-building', route: '/branches', permission: PERMISSIONS.USERS_EDIT },
-      // { label: 'Sync Queue', icon: 'pi pi-cloud-upload', route: '/sync-queue', permission: [PERMISSIONS.REPORTS_XREADING, PERMISSIONS.REPORTS_SALES] },
-      // { label: 'Sync Health', icon: 'pi pi-heart', route: '/sync-health', permission: PERMISSIONS.USERS_EDIT },
-      { label: 'Settings', icon: 'pi pi-cog', route: '/settings', permission: PERMISSIONS.SETTINGS_VIEW }
+      { label: 'Users', icon: 'pi pi-user', color: '#64748b', route: '/users', permission: PERMISSIONS.USERS_VIEW },
+      { label: 'Roles', icon: 'pi pi-shield', color: '#ef4444', route: '/roles', permission: PERMISSIONS.USERS_EDIT },
+      { label: 'Branches', icon: 'pi pi-building', color: '#a855f7', route: '/branches', permission: PERMISSIONS.USERS_EDIT },
+      { label: 'Settings', icon: 'pi pi-cog', color: '#64748b', route: '/settings', permission: PERMISSIONS.SETTINGS_VIEW }
     ]
   }
 ]
 
-// Permission-filtered PanelMenu model
-const menuModel = computed(() => {
-  return rawGroups
-    .map(group => ({
-      key: group.key,
-      label: group.label,
-      icon: group.icon,
-      items: group.items
-        .filter(item => {
-          if (!item.permission) return true
-          if (Array.isArray(item.permission)) return canAny(item.permission)
-          return can(item.permission)
-        })
-        .map(item => ({
-          label: item.label,
-          icon: item.icon,
-          route: item.route
-        }))
-    }))
-    .filter(group => group.items.length > 0)
-})
+function filterItem(item: MenuItem): boolean {
+  if (!item.permission) return true
+  if (Array.isArray(item.permission)) return canAny(item.permission)
+  return can(item.permission)
+}
 
-// Expanded keys for PanelMenu controlled mode
-const expandedKeys = ref<Record<string, boolean>>({})
+const filteredSections = computed(() =>
+  sections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(filterItem)
+    }))
+    .filter(section => section.items.length > 0)
+)
 
 function isRouteActive(itemRoute: string): boolean {
   if (itemRoute === '/') return route.path === '/'
   return route.path === itemRoute || route.path.startsWith(itemRoute + '/')
 }
 
-function groupHasActiveRoute(group: { items: { route?: string }[] }): boolean {
-  return group.items.some(item => item.route ? isRouteActive(item.route) : false)
-}
-
-// Auto-expand group containing the active route
-function expandActiveGroup() {
-  const activeGroup = menuModel.value.find(group => groupHasActiveRoute(group))
-  if (activeGroup) {
-    expandedKeys.value = { ...expandedKeys.value, [activeGroup.key]: true }
-  }
-}
-
-watch(() => route.path, expandActiveGroup)
-onMounted(expandActiveGroup)
+// Collapsed mode: pick first item per section
+const collapsedItems = computed(() =>
+  filteredSections.value.flatMap(section => section.items)
+)
 </script>
 
 <template>
-  <nav class="sidebar-menu" :class="{ 'sidebar-menu--collapsed': collapsed }">
-    <!-- Top-level items (Dashboard, POS) -->
-    <div class="nav-section nav-section--top">
+  <nav class="sidebar-nav" :class="{ 'sidebar-nav--collapsed': collapsed }">
+    <!-- Expanded mode -->
+    <template v-if="!collapsed">
+      <div
+        v-for="(section, idx) in filteredSections"
+        :key="idx"
+        class="nav-section"
+      >
+        <div v-if="section.label" class="nav-section__label">{{ section.label }}</div>
+        <router-link
+          v-for="item in section.items"
+          :key="item.route"
+          :to="item.route"
+          class="nav-link"
+          :class="{ 'nav-link--active': isRouteActive(item.route) }"
+        >
+          <span class="nav-link__icon-badge" :style="{ background: item.color }">
+            <i :class="item.icon" />
+          </span>
+          <span class="nav-link__text">{{ item.label }}</span>
+        </router-link>
+      </div>
+    </template>
+
+    <!-- Collapsed mode: icon-only -->
+    <template v-else>
       <router-link
-        v-for="item in filteredTopItems"
+        v-for="item in collapsedItems"
         :key="item.route"
         :to="item.route"
-        class="nav-item"
-        :class="{ 'nav-item--active': isRouteActive(item.route) }"
-        v-tooltip.right="collapsed ? item.label : undefined"
+        class="nav-link nav-link--icon-only"
+        :class="{ 'nav-link--active': isRouteActive(item.route) }"
+        v-tooltip.right="item.label"
       >
-        <i :class="item.icon" class="nav-item__icon"></i>
-        <span v-if="!collapsed" class="nav-item__label">{{ item.label }}</span>
+        <span class="nav-link__icon-badge" :style="{ background: item.color }">
+          <i :class="item.icon" />
+        </span>
       </router-link>
-    </div>
-
-    <div v-if="!collapsed" class="nav-divider"></div>
-
-    <!-- Grouped items via PanelMenu (expanded mode) -->
-    <div v-show="!collapsed" class="nav-section nav-section--groups">
-      <PanelMenu v-model:expandedKeys="expandedKeys" :model="menuModel" multiple class="sidebar-panelmenu">
-        <template #item="{ item }">
-          <!-- Group header (no route) -->
-          <a v-if="!item.route" v-ripple class="nav-group-header">
-            <i :class="item.icon" class="nav-group-header__icon"></i>
-            <span class="nav-group-header__label">{{ item.label }}</span>
-            <i
-              class="pi pi-chevron-right nav-group-header__chevron"
-              :class="{ 'nav-group-header__chevron--open': item.key && expandedKeys[item.key] }"
-            ></i>
-          </a>
-          <!-- Child link (has route) -->
-          <router-link
-            v-else
-            v-slot="{ href, navigate }"
-            :to="item.route"
-            custom
-          >
-            <a
-              v-ripple
-              :href="href"
-              class="nav-item nav-item--child"
-              :class="{ 'nav-item--active': isRouteActive(item.route) }"
-              @click="navigate"
-            >
-              <i :class="item.icon" class="nav-item__icon"></i>
-              <span class="nav-item__label">{{ item.label }}</span>
-            </a>
-          </router-link>
-        </template>
-      </PanelMenu>
-    </div>
-
-    <!-- Collapsed mode: icon-only for groups -->
-    <div v-show="collapsed" class="nav-section nav-section--collapsed-groups">
-      <div v-if="collapsed" class="nav-divider"></div>
-      <router-link
-        v-for="group in menuModel"
-        :key="group.key"
-        :to="group.items[0]?.route || '/'"
-        class="nav-item"
-        :class="{ 'nav-item--active': groupHasActiveRoute(group) }"
-        v-tooltip.right="group.label"
-      >
-        <i :class="group.icon" class="nav-item__icon"></i>
-      </router-link>
-    </div>
+    </template>
   </nav>
 </template>
 
 <style scoped>
-/* ===== Nav Section Layout ===== */
-.nav-section--top {
+.sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0 0.75rem;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
-.nav-section--groups {
-  padding: 0 0.5rem;
+.sidebar-nav:hover {
+  scrollbar-color: var(--p-surface-300) transparent;
 }
 
-.nav-section--collapsed-groups {
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: var(--p-surface-300);
+}
+
+/* ── Section ── */
+.nav-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0 0.75rem;
+  gap: 1px;
 }
 
-.nav-divider {
-  height: 1px;
-  background: var(--p-surface-200);
-  margin: 0.5rem 1.25rem;
+.nav-section + .nav-section {
+  margin-top: 0.75rem;
 }
 
-/* ===== Nav Items (top-level + child links) ===== */
-.nav-item {
+.nav-section__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-text-muted-color);
+  padding: 0.375rem 0.75rem 0.375rem;
+  user-select: none;
+}
+
+/* ── Link ── */
+.nav-link {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.6rem 0.875rem;
-  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
   text-decoration: none;
   color: var(--p-text-color);
-  font-size: 0.875rem;
-  font-weight: 450;
-  transition: background 0.15s ease, color 0.15s ease;
+  font-size: var(--text-base);
+  font-weight: 400;
+  transition: background 0.15s ease;
   cursor: pointer;
-  position: relative;
 }
 
-.nav-item:hover {
+.nav-link:hover {
   background: var(--p-surface-100);
 }
 
-.nav-item--active {
+.nav-link--active {
+  background: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
   color: var(--p-primary-color);
-  background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+  font-weight: 500;
 }
 
-.nav-item--active:hover {
-  background: color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+.nav-link--active:hover {
+  background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
 }
 
-.nav-item__icon {
-  font-size: 1.125rem;
-  width: 1.375rem;
-  text-align: center;
+/* iOS-style icon badge */
+.nav-link__icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   flex-shrink: 0;
-  opacity: 0.7;
+  color: #fff;
+  font-size: 0.875rem;
 }
 
-.nav-item--active .nav-item__icon {
-  color: var(--p-primary-color);
-  opacity: 1;
-}
-
-.nav-item__label {
+.nav-link__text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
 }
 
-/* Child items get slight left indent */
-.nav-item--child {
-  padding-left: 2.25rem;
-  font-weight: 400;
-}
-
-/* ===== Group Header ===== */
-.nav-group-header {
-  display: flex;
+/* ── Collapsed mode ── */
+.sidebar-nav--collapsed {
+  padding: 0.5rem;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.875rem;
-  cursor: pointer;
-  text-decoration: none;
-  border-radius: 6px;
-  transition: background 0.15s ease;
+  gap: 2px;
 }
 
-.nav-group-header:hover {
-  background: var(--p-surface-100);
-}
-
-.nav-group-header__icon {
-  font-size: 0.875rem;
-  width: 1.375rem;
-  text-align: center;
-  flex-shrink: 0;
-  color: var(--p-text-muted-color);
-}
-
-.nav-group-header__label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--p-text-muted-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.nav-group-header__chevron {
-  font-size: 0.625rem;
-  color: var(--p-text-muted-color);
-  margin-left: auto;
-  transition: transform 0.2s ease;
-  opacity: 0.6;
-}
-
-.nav-group-header__chevron--open {
-  transform: rotate(90deg);
-}
-
-.nav-group-header:hover .nav-group-header__chevron {
-  opacity: 1;
-}
-
-/* ===== Collapsed Mode ===== */
-.sidebar-menu--collapsed .nav-section--top,
-.sidebar-menu--collapsed .nav-section--collapsed-groups {
-  padding: 0 0.5rem;
-}
-
-.sidebar-menu--collapsed .nav-item {
+.nav-link--icon-only {
   justify-content: center;
-  padding: 0.7rem;
-  gap: 0;
+  padding: 0.5rem;
 }
 
-.sidebar-menu--collapsed .nav-item__icon {
-  font-size: 1.25rem;
-  width: auto;
-}
-
-.sidebar-menu--collapsed .nav-divider {
-  margin: 0.5rem 0.75rem;
-}
-
-/* ===== PanelMenu Reset (strip PrimeVue defaults) ===== */
-.sidebar-panelmenu :deep(.p-panelmenu-panel) {
-  border: none;
-  margin-bottom: 0;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-header) {
-  border: none;
-  background: transparent;
-  outline: none;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-header-content) {
-  border: none !important;
-  background: transparent !important;
-  padding: 0;
-  border-radius: 6px;
-  transition: none;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-header-link) {
-  padding: 0 !important;
-  gap: 0;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* Hide PanelMenu's built-in chevron (we render our own) */
-.sidebar-panelmenu :deep(.p-panelmenu-submenu-icon) {
-  display: none;
-}
-
-/* Content and submenu list */
-.sidebar-panelmenu :deep(.p-panelmenu-content-container) {
-  border: none;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-content) {
-  border: none !important;
-  background: transparent !important;
-  padding: 2px 0 0.25rem !important;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-root-list) {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-submenu) {
-  padding: 0 !important;
-  list-style: none;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-item) {
-  margin: 0;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-item-content) {
-  border: none !important;
-  background: transparent !important;
-  padding: 0;
+.nav-link--icon-only .nav-link__icon-badge {
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  transition: none;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-item-link) {
-  padding: 0 !important;
-}
-
-/* Focus ring override - keep subtle */
-.sidebar-panelmenu :deep(.p-panelmenu-header:focus-visible) {
-  outline: none;
-}
-
-.sidebar-panelmenu :deep(.p-panelmenu-item-content:focus-visible) {
-  outline: none;
-}
-
-.sidebar-panelmenu :deep(.p-focus > .p-panelmenu-item-content) {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.sidebar-panelmenu :deep(.p-focus > .p-panelmenu-header-content) {
-  background: transparent !important;
-  box-shadow: none !important;
+  font-size: 1rem;
 }
 </style>

@@ -76,7 +76,7 @@ async function handleSaveTransfer(data: TransferFormData) {
       </div>
     </div>
 
-    <div class="transfers-content">
+    <div class="table-container">
       <TransferList
         ref="transferListRef"
         :search="searchQuery"
@@ -97,31 +97,9 @@ async function handleSaveTransfer(data: TransferFormData) {
   padding: 1.5rem;
 }
 
-.transfers-content {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  padding: 1.5rem;
-}
-
-@media (max-width: 767.98px) {
-  .transfers-view {
-    padding: 1rem;
-  }
-
-  .transfers-content {
-    padding: 1rem;
-  }
-}
-
 @media (max-width: 879.98px) {
   .transfers-view {
     padding: 0.5rem;
-  }
-
-  .transfers-content {
-    padding: 0.75rem;
-    border-radius: 8px;
   }
 }
 </style>

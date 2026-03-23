@@ -363,7 +363,7 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
     </Toolbar>
 
     <!-- Adjustments History Table -->
-    <div class="adjustments-content">
+    <div class="table-container flex-table">
       <DataTable
         :value="filteredMovements"
         :loading="isLoadingHistory"
@@ -638,14 +638,6 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
   align-items: center;
 }
 
-.adjustments-content {
-  flex: 1;
-  overflow: hidden;
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-}
-
 .adjustments-table {
   height: 100%;
 }
@@ -683,30 +675,6 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
 .text-danger {
   color: var(--p-red-500);
   font-weight: 600;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4rem 2rem;
-  color: var(--p-text-muted-color);
-  text-align: center;
-}
-
-.empty-state i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
-.empty-state h3 {
-  margin: 0 0 0.5rem;
-  color: var(--p-text-color);
-}
-
-.empty-state p {
-  margin: 0;
 }
 
 .mt-3 {
@@ -813,12 +781,6 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
 
   .toolbar-end :deep(.p-button-label) {
     display: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .adjustments-content {
-    border-radius: 8px;
   }
 }
 </style>

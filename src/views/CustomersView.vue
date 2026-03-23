@@ -127,7 +127,7 @@ function handleViewCustomer(customer: Customer) {
       </div>
     </div>
 
-    <div class="customers-content">
+    <div class="table-container">
       <CustomerList
         ref="customerListRef"
         :search="searchQuery"
@@ -152,31 +152,9 @@ function handleViewCustomer(customer: Customer) {
   padding: 1.5rem;
 }
 
-.customers-content {
-  background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
-  padding: 1.5rem;
-}
-
-@media (max-width: 767.98px) {
-  .customers-view {
-    padding: 1rem;
-  }
-
-  .customers-content {
-    padding: 1rem;
-  }
-}
-
 @media (max-width: 879.98px) {
   .customers-view {
     padding: 0.5rem;
-  }
-
-  .customers-content {
-    padding: 0.75rem;
-    border-radius: 8px;
   }
 }
 </style>

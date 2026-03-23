@@ -20,15 +20,20 @@ import Tag from 'primevue/tag'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import DatePicker from 'primevue/datepicker'
+import ConfirmDialog from 'primevue/confirmdialog'
 import EISConfigForm from '@/components/eis/EISConfigForm.vue'
 import { useEIS } from '@/composables/useEIS'
+import { usePrinter } from '@/composables/usePrinter'
 import { useSettingsStore } from '@/stores/settings'
 import { useSettings } from '@/composables/useSettings'
 import { testConnection } from '@/services/eisConnectionTestService'
 import type { EISConfig } from '@/types/eis'
 import { toLocalDateStr } from '@/utils/dateHelpers'
+import { db } from '@/db/database'
+import { useConfirm } from 'primevue/useconfirm'
 
 const toast = useToast()
+const confirm = useConfirm()
 const settingsStore = useSettingsStore()
 const activeTab = ref('business')
 
@@ -47,6 +52,27 @@ const {
   savePayment,
   saveSystem
 } = useSettings()
+
+// Printer / Bluetooth
+const {
+  isNative: printerIsNative,
+  isBluetoothEnabled,
+  isConnected: btConnected,
+  connectedDevice: btConnectedDevice,
+  pairedDevices,
+  discoveredDevices,
+  isScanning: btScanning,
+  isConnecting: btConnecting,
+  isPrinting: btPrinting,
+  error: btError,
+  checkBluetooth,
+  loadPairedDevices,
+  scanDevices,
+  connect: btConnect,
+  disconnect: btDisconnect,
+  testPrint: btTestPrint,
+  refreshConnectionStatus
+} = usePrinter()
 
 // EIS Configuration
 const { config: eisConfigRef, loadDashboard: loadEISConfig, saveConfig: saveEISConfig } = useEIS()
@@ -328,17 +354,92 @@ const cashDrawerPinOptions = [
   { label: 'Pin 5', value: 5 }
 ]
 
-const testPrinterConnection = () => {
-  console.log('Testing printer connection...')
-  printerSettings.value.isConnected = true
+const getEscPosOptions = () => ({
+  paperWidth: (receiptSettings.value.paperWidth === '58mm' ? '58mm' : '80mm') as '58mm' | '80mm',
+  autoCut: printerSettings.value.autoCut,
+  openCashDrawer: false,
+  cashDrawerPin: printerSettings.value.cashDrawerPin
+})
+
+const testPrinterConnection = async () => {
+  if (!printerIsNative.value) {
+    toast.add({ severity: 'warn', summary: 'Not Available', detail: 'Bluetooth printing is only available on the mobile app.', life: 3000 })
+    return
+  }
+  if (!printerSettings.value.bluetoothDevice) {
+    toast.add({ severity: 'warn', summary: 'No Device', detail: 'Please select a Bluetooth device first.', life: 3000 })
+    return
+  }
+  await checkBluetooth()
+  await loadPairedDevices()
+  const device = pairedDevices.value.find(d => d.address === printerSettings.value.bluetoothDevice)
+  if (device) {
+    const ok = await btConnect(device)
+    printerSettings.value.isConnected = ok
+    if (ok) {
+      toast.add({ severity: 'success', summary: 'Connected', detail: `Connected to ${device.name}`, life: 3000 })
+    } else {
+      toast.add({ severity: 'error', summary: 'Failed', detail: btError.value || 'Could not connect to printer.', life: 3000 })
+    }
+  } else {
+    toast.add({ severity: 'warn', summary: 'Not Found', detail: 'Saved device not found in paired devices.', life: 3000 })
+  }
 }
 
-const printTestReceipt = () => {
-  console.log('Printing test receipt...')
+const printTestReceipt = async () => {
+  if (!printerIsNative.value) {
+    toast.add({ severity: 'warn', summary: 'Not Available', detail: 'Bluetooth printing is only available on the mobile app.', life: 3000 })
+    return
+  }
+  const ok = await btTestPrint(getEscPosOptions())
+  if (ok) {
+    toast.add({ severity: 'success', summary: 'Printed', detail: 'Test page sent to printer.', life: 3000 })
+  } else {
+    toast.add({ severity: 'error', summary: 'Print Failed', detail: btError.value || 'Failed to print test page.', life: 3000 })
+  }
 }
 
-const openCashDrawerTest = () => {
-  console.log('Opening cash drawer...')
+const openCashDrawerTest = async () => {
+  if (!printerIsNative.value) {
+    toast.add({ severity: 'warn', summary: 'Not Available', detail: 'Cash drawer control is only available on the mobile app.', life: 3000 })
+    return
+  }
+  const { printerService } = await import('@/services/printerService')
+  const { escposService } = await import('@/services/escposService')
+  const result = await printerService.printRaw(escposService.openCashDrawer(printerSettings.value.cashDrawerPin))
+  if (result.success) {
+    toast.add({ severity: 'success', summary: 'Opened', detail: 'Cash drawer command sent.', life: 3000 })
+  } else {
+    toast.add({ severity: 'error', summary: 'Failed', detail: result.error || 'Could not open cash drawer.', life: 3000 })
+  }
+}
+
+const handleBluetoothScan = async () => {
+  await checkBluetooth()
+  if (!isBluetoothEnabled.value) {
+    toast.add({ severity: 'warn', summary: 'Bluetooth Off', detail: 'Please enable Bluetooth on your device.', life: 3000 })
+    return
+  }
+  await loadPairedDevices()
+  await scanDevices()
+}
+
+const handleBluetoothConnect = async (device: { name: string; address: string; id: string }) => {
+  const ok = await btConnect(device)
+  if (ok) {
+    printerSettings.value.bluetoothDevice = device.address
+    printerSettings.value.printerName = device.name
+    printerSettings.value.isConnected = true
+    toast.add({ severity: 'success', summary: 'Connected', detail: `Connected to ${device.name}`, life: 3000 })
+  } else {
+    toast.add({ severity: 'error', summary: 'Failed', detail: btError.value || 'Could not connect.', life: 3000 })
+  }
+}
+
+const handleBluetoothDisconnect = async () => {
+  await btDisconnect()
+  printerSettings.value.isConnected = false
+  toast.add({ severity: 'info', summary: 'Disconnected', detail: 'Printer disconnected.', life: 3000 })
 }
 
 // Payment Methods
@@ -420,8 +521,36 @@ const conflictResolutionOptions = [
   { label: 'Ask User', value: 'ask_user', description: 'Prompt user to resolve conflicts' }
 ]
 
-const triggerBackup = () => {
-  console.log('Triggering manual backup...')
+const isBackingUp = ref(false)
+const isRestoring = ref(false)
+
+const triggerBackup = async () => {
+  isBackingUp.value = true
+  try {
+    const data = await db.exportDatabase()
+    if (!data) {
+      toast.add({ severity: 'error', summary: 'Backup Failed', detail: 'Could not export database', life: 3000 })
+      return
+    }
+
+    const date = toLocalDateStr(new Date()).replace(/-/g, '')
+    const filename = `pos-backup-${date}.db`
+    const blob = new Blob([data], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast.add({ severity: 'success', summary: 'Backup Complete', detail: `Saved as ${filename}`, life: 3000 })
+  } catch (err: any) {
+    toast.add({ severity: 'error', summary: 'Backup Failed', detail: err.message || 'Unknown error', life: 5000 })
+  } finally {
+    isBackingUp.value = false
+  }
 }
 
 const triggerSync = () => {
@@ -429,7 +558,38 @@ const triggerSync = () => {
 }
 
 const restoreBackup = () => {
-  console.log('Opening restore backup dialog...')
+  confirm.require({
+    message: 'Restoring a backup will replace ALL current data. This cannot be undone. Are you sure?',
+    header: 'Restore Backup',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    acceptLabel: 'Restore',
+    rejectLabel: 'Cancel',
+    accept: () => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.db,.sqlite,.backup'
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) return
+
+        isRestoring.value = true
+        try {
+          const buffer = await file.arrayBuffer()
+          const data = new Uint8Array(buffer)
+          await db.importDatabase(data)
+          toast.add({ severity: 'success', summary: 'Restore Complete', detail: 'Database restored successfully. Reloading...', life: 3000 })
+          // Reload to reinitialize everything with restored data
+          setTimeout(() => window.location.reload(), 1500)
+        } catch (err: any) {
+          toast.add({ severity: 'error', summary: 'Restore Failed', detail: err.message || 'Invalid backup file', life: 5000 })
+        } finally {
+          isRestoring.value = false
+        }
+      }
+      input.click()
+    }
+  })
 }
 
 // Users & Roles (summary)
@@ -790,6 +950,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <ConfirmDialog />
   <div class="settings-page">
     <div class="view-header">
       <div class="header-left">
@@ -827,10 +988,11 @@ onMounted(async () => {
             <i class="pi pi-star"></i>
             <span>Loyalty</span>
           </Tab>
-          <Tab value="eis" @click="loadEISData">
+          <!-- EIS tab hidden - online feature -->
+          <!-- <Tab value="eis" @click="loadEISData">
             <i class="pi pi-cloud-upload"></i>
             <span>EIS Compliance</span>
-          </Tab>
+          </Tab> -->
           <Tab value="system">
             <i class="pi pi-cog"></i>
             <span>System</span>
@@ -1453,12 +1615,78 @@ onMounted(async () => {
                 <!-- Bluetooth Settings -->
                 <template v-if="printerSettings.connectionType === 'bluetooth'">
                   <div class="form-group full-width">
-                    <label>Bluetooth Device</label>
-                    <div class="flex gap-2">
-                      <InputText v-model="printerSettings.bluetoothDevice" placeholder="Select or scan for device" class="flex-1" readonly />
-                      <Button icon="pi pi-search" label="Scan" outlined />
-                    </div>
-                    <small>Click Scan to search for nearby Bluetooth printers</small>
+                    <!-- Platform notice -->
+                    <Message v-if="!printerIsNative" severity="warn" :closable="false" class="mb-3">
+                      Bluetooth printing is available on the mobile app only. Browser printing will be used as fallback.
+                    </Message>
+
+                    <template v-if="printerIsNative">
+                      <!-- Bluetooth status -->
+                      <Message v-if="!isBluetoothEnabled" severity="warn" :closable="false" class="mb-3">
+                        Bluetooth is disabled. Please enable Bluetooth on your device.
+                      </Message>
+
+                      <!-- Connected printer -->
+                      <div v-if="btConnected && btConnectedDevice" class="bt-connected-card mb-3">
+                        <div class="flex items-center gap-3">
+                          <i class="pi pi-check-circle" style="color: var(--p-green-500); font-size: 1.5rem;"></i>
+                          <div class="flex-1">
+                            <div class="font-semibold">{{ btConnectedDevice.name }}</div>
+                            <small class="text-surface-500">{{ btConnectedDevice.address }}</small>
+                          </div>
+                          <Button label="Disconnect" icon="pi pi-times" severity="danger" size="small" outlined @click="handleBluetoothDisconnect" />
+                        </div>
+                      </div>
+
+                      <!-- Paired devices -->
+                      <div v-if="pairedDevices.length > 0" class="mb-3">
+                        <label class="mb-2 block font-semibold">Paired Devices</label>
+                        <div class="bt-device-list">
+                          <div v-for="device in pairedDevices" :key="device.address" class="bt-device-item">
+                            <div class="flex items-center gap-2 flex-1">
+                              <i class="pi pi-bluetooth"></i>
+                              <div>
+                                <div>{{ device.name }}</div>
+                                <small class="text-surface-500">{{ device.address }}</small>
+                              </div>
+                            </div>
+                            <Button
+                              :label="btConnectedDevice?.address === device.address ? 'Connected' : 'Connect'"
+                              size="small"
+                              :severity="btConnectedDevice?.address === device.address ? 'success' : 'primary'"
+                              :outlined="btConnectedDevice?.address !== device.address"
+                              :disabled="btConnecting || btConnectedDevice?.address === device.address"
+                              :loading="btConnecting"
+                              @click="handleBluetoothConnect(device)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Discovered devices -->
+                      <div v-if="discoveredDevices.length > 0" class="mb-3">
+                        <label class="mb-2 block font-semibold">Discovered Devices</label>
+                        <div class="bt-device-list">
+                          <div v-for="device in discoveredDevices" :key="device.address" class="bt-device-item">
+                            <div class="flex items-center gap-2 flex-1">
+                              <i class="pi pi-bluetooth"></i>
+                              <div>
+                                <div>{{ device.name }}</div>
+                                <small class="text-surface-500">{{ device.address }}</small>
+                              </div>
+                            </div>
+                            <Button label="Connect" size="small" outlined :disabled="btConnecting" :loading="btConnecting" @click="handleBluetoothConnect(device)" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Error display -->
+                      <Message v-if="btError" severity="error" :closable="false" class="mb-3">{{ btError }}</Message>
+
+                      <!-- Scan button -->
+                      <Button label="Scan for Devices" icon="pi pi-search" outlined :loading="btScanning" @click="handleBluetoothScan" class="w-full" />
+                      <small class="mt-1 block">Scans for paired and nearby Bluetooth printers</small>
+                    </template>
                   </div>
                 </template>
 
@@ -1760,7 +1988,8 @@ onMounted(async () => {
           </TabPanel>
 
           <!-- System Settings -->
-          <TabPanel value="eis">
+          <!-- EIS tab panel hidden - online feature -->
+          <!-- <TabPanel value="eis">
             <div class="settings-section">
               <div class="section-header">
                 <h2>EIS Electronic OR Submission</h2>
@@ -1774,11 +2003,12 @@ onMounted(async () => {
                 @test="handleEISTest"
               />
             </div>
-          </TabPanel>
+          </TabPanel> -->
 
           <TabPanel value="system">
             <div class="settings-section">
-              <div class="section-header">
+              <!-- Offline Mode & Sync settings hidden - online feature -->
+              <!-- <div class="section-header">
                 <h2>Offline Mode</h2>
                 <p>Configure offline operation and data synchronization</p>
               </div>
@@ -1815,7 +2045,7 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <Divider />
+              <Divider /> -->
 
               <div class="section-header">
                 <h3>Data Management</h3>
@@ -1860,7 +2090,8 @@ onMounted(async () => {
 
               <Divider />
 
-              <div class="section-header">
+              <!-- Sync Strategy section hidden - online feature -->
+              <!-- <div class="section-header">
                 <h2>Sync Strategy</h2>
                 <p>Configure how data synchronizes between devices and server</p>
               </div>
@@ -1962,7 +2193,7 @@ onMounted(async () => {
                 <Button label="Sync Now" icon="pi pi-sync" @click="triggerSync" />
               </div>
 
-              <Divider />
+              <Divider /> -->
 
               <div class="section-header">
                 <h2>Backup Settings</h2>
@@ -2048,8 +2279,8 @@ onMounted(async () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Backup Now" icon="pi pi-download" @click="triggerBackup" />
-                <Button label="Restore Backup" icon="pi pi-upload" outlined @click="restoreBackup" />
+                <Button label="Backup Now" icon="pi pi-download" :loading="isBackingUp" :disabled="isRestoring" @click="triggerBackup" />
+                <Button label="Restore Backup" icon="pi pi-upload" outlined severity="danger" :loading="isRestoring" :disabled="isBackingUp" @click="restoreBackup" />
               </div>
 
               <Divider />
@@ -2180,35 +2411,12 @@ onMounted(async () => {
 
 .settings-tabs {
   height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.settings-tabs :deep(.p-tablist) {
-  background: var(--p-surface-0);
-  border-radius: 8px;
-  padding: 0.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid var(--p-surface-200);
-}
-
-.settings-tabs :deep(.p-tab) {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
 }
 
 .settings-tabs :deep(.p-tabpanels) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: transparent;
-  padding: 0;
-}
-
-.settings-tabs :deep(.p-tabpanel) {
-  padding: 0;
 }
 
 .settings-section {
@@ -2720,13 +2928,27 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 768px) {
-  .settings-tabs :deep(.p-tab span) {
-    display: none;
-  }
+/* Bluetooth device list */
+.bt-connected-card {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--p-green-200);
+  background: var(--p-green-50);
+}
 
-  .settings-tabs :deep(.p-tab) {
-    padding: 0.75rem;
-  }
+.bt-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bt-device-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--p-surface-200);
+  background: var(--p-surface-0);
 }
 </style>
