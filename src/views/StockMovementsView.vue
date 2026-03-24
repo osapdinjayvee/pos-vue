@@ -3,7 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
-import Toolbar from 'primevue/toolbar'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
@@ -172,68 +173,57 @@ onMounted(loadMovements)
           <p class="text-muted">Track all stock movements across products</p>
         </div>
       </div>
+      <div class="header-actions">
+        <Select
+          v-model="selectedType"
+          :options="typeOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All Types"
+          class="type-filter"
+        />
+        <DatePicker
+          v-model="dateFrom"
+          placeholder="From date"
+          dateFormat="yy-mm-dd"
+          showIcon
+          :showOnFocus="false"
+          class="date-filter"
+        />
+        <DatePicker
+          v-model="dateTo"
+          placeholder="To date"
+          dateFormat="yy-mm-dd"
+          showIcon
+          :showOnFocus="false"
+          class="date-filter"
+        />
+        <Button
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          text
+          rounded
+          @click="resetFilters"
+          v-tooltip.top="'Clear Filters'"
+        />
+        <IconField>
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="searchQuery"
+            placeholder="Search..."
+            class="search-input"
+          />
+        </IconField>
+        <Button
+          label="Export"
+          icon="pi pi-download"
+          severity="secondary"
+          outlined
+          @click="handleExport"
+          :disabled="movements.length === 0"
+        />
+      </div>
     </div>
-
-    <!-- Filters Toolbar -->
-    <Toolbar class="movements-toolbar">
-      <template #start>
-        <div class="filter-group">
-          <Select
-            v-model="selectedType"
-            :options="typeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="All Types"
-            class="type-filter"
-          />
-          <DatePicker
-            v-model="dateFrom"
-            placeholder="From date"
-            dateFormat="yy-mm-dd"
-            showIcon
-            :showOnFocus="false"
-            class="date-filter"
-          />
-          <DatePicker
-            v-model="dateTo"
-            placeholder="To date"
-            dateFormat="yy-mm-dd"
-            showIcon
-            :showOnFocus="false"
-            class="date-filter"
-          />
-          <Button
-            icon="pi pi-filter-slash"
-            severity="secondary"
-            text
-            rounded
-            @click="resetFilters"
-            v-tooltip.top="'Clear Filters'"
-          />
-        </div>
-      </template>
-
-      <template #end>
-        <div class="toolbar-end">
-          <span class="p-input-icon-left search-wrapper">
-            <i class="pi pi-search" />
-            <InputText
-              v-model="searchQuery"
-              placeholder="Search name, SKU, barcode..."
-              class="search-input"
-            />
-          </span>
-          <Button
-            label="Export"
-            icon="pi pi-download"
-            severity="secondary"
-            outlined
-            @click="handleExport"
-            :disabled="movements.length === 0"
-          />
-        </div>
-      </template>
-    </Toolbar>
 
     <!-- Content -->
     <div class="movements-content">
@@ -327,21 +317,20 @@ onMounted(loadMovements)
             </div>
           </template>
         </DataTable>
-      </div>
 
-      <!-- Pagination -->
-      <div v-if="totalRecords > 0 && !isLoading" class="table-pagination">
-        <span class="record-count">
-          Showing {{ first + 1 }}-{{ Math.min(first + rows, totalRecords) }} of {{ totalRecords }} movements
-        </span>
-        <Paginator
-          :first="first"
-          :rows="rows"
-          :totalRecords="totalRecords"
-          :rowsPerPageOptions="[25, 50, 100]"
-          @page="onPageChange"
-          class="movements-paginator"
-        />
+        <div v-if="totalRecords > 0 && !isLoading" class="table-pagination">
+          <span class="record-count">
+            Showing {{ first + 1 }}-{{ Math.min(first + rows, totalRecords) }} of {{ totalRecords }} movements
+          </span>
+          <Paginator
+            :first="first"
+            :rows="rows"
+            :totalRecords="totalRecords"
+            :rowsPerPageOptions="[25, 50, 100]"
+            @page="onPageChange"
+            class="movements-paginator"
+          />
+        </div>
       </div>
     </div>
   </div>

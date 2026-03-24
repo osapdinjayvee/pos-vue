@@ -50,10 +50,10 @@ body {
   left: 0;
   top: 0;
   height: 100vh;
-  width: 280px;
+  width: 240px;
   background: var(--p-surface-0);
   border-right: 1px solid var(--p-surface-200);
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, transform 0.3s ease;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -65,14 +65,14 @@ body {
 }
 
 .layout-main {
-  margin-left: 280px;
+  margin-left: 240px;
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100vh;
   transition: margin-left 0.3s ease;
   background: var(--p-surface-50);
-  width: calc(100% - 280px);
+  width: calc(100% - 240px);
 }
 
 .layout-main.sidebar-collapsed {
@@ -102,53 +102,82 @@ body {
   min-height: 0;
 }
 
-/* Shared Page Header */
+/* ── iPadOS Toolbar / Page Header ── */
 .view-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
   gap: 1rem;
   flex-wrap: wrap;
+  padding: 0.5rem 0;
 }
 
 .view-header .header-left {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 
 .view-header .header-left h1 {
-  font-size: var(--text-3xl);
+  font-size: var(--text-2xl);
   font-weight: 700;
   margin: 0;
   color: var(--p-surface-900);
+  letter-spacing: -0.01em;
 }
 
 .view-header .header-left .text-muted {
-  color: var(--p-surface-500);
+  color: var(--p-text-muted-color);
   margin: 0;
   font-size: var(--text-sm);
 }
 
 .view-header .header-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.625rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
+/* Search input in toolbar — pill shape */
+.view-header .header-actions .p-inputtext,
+.view-header .header-actions .p-icon-field .p-inputtext,
+.toolbar-search .p-inputtext {
+  border-radius: 20px !important;
+  background: transparent !important;
+  border: 1.5px solid var(--p-surface-200) !important;
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem !important;
+  font-size: var(--text-sm) !important;
+  min-width: 180px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.view-header .header-actions .p-inputtext:focus,
+.view-header .header-actions .p-icon-field .p-inputtext:focus,
+.toolbar-search .p-inputtext:focus {
+  background: transparent !important;
+  border-color: var(--p-primary-color) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color) 20%, transparent) !important;
+}
+
 @media (max-width: 768px) {
   .view-header {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .view-header .header-left h1 {
-    font-size: var(--text-2xl);
+    font-size: var(--text-xl);
   }
 
   .view-header .header-actions {
     width: 100%;
+  }
+
+  .view-header .header-actions .p-inputtext,
+  .toolbar-search .p-inputtext {
+    min-width: 0;
+    flex: 1;
   }
 }
 
@@ -198,7 +227,7 @@ body {
 .sidebar-menu {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0;
+  padding: 1rem 0 3rem;
 }
 
 /* Menu styles are now scoped inside AppMenu.vue */
@@ -271,14 +300,15 @@ body {
 /* Stats Card */
 .stats-card {
   background: var(--p-surface-0);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.25rem 1.5rem;
-  border: 1px solid var(--p-surface-200);
-  transition: box-shadow 0.2s;
+  border: none;
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .stats-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.03), 0 6px 24px rgba(0,0,0,0.08);
 }
 
 .stats-card-header {
@@ -379,9 +409,10 @@ body {
 /* Chart Card */
 .chart-card {
   background: var(--p-surface-0);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.5rem;
-  border: 1px solid var(--p-surface-200);
+  border: none;
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.05);
   overflow: hidden;
 }
 
@@ -403,7 +434,8 @@ body {
   background: var(--p-surface-0);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid var(--p-surface-200);
+  border: none;
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.05);
   overflow-x: auto;
 }
 
@@ -703,22 +735,254 @@ body {
   }
 }
 
-/* ── Dialog close button: remove circle border ── */
+/* ── iPadOS-inspired Dialog ── */
+
+/* Overlay backdrop */
+.p-dialog-mask {
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Dialog container */
+.p-dialog {
+  border: none !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.04),
+    0 8px 40px rgba(0, 0, 0, 0.12),
+    0 2px 12px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden;
+}
+
+/* Header */
+.p-dialog-header {
+  background: var(--p-surface-0) !important;
+  border-bottom: 1px solid var(--p-surface-100) !important;
+  padding: 1rem 1.25rem !important;
+}
+
+.p-dialog-title {
+  font-size: var(--text-lg) !important;
+  font-weight: 600 !important;
+}
+
+/* Close button */
 .p-dialog-header-actions .p-button {
   border: none !important;
-  background: transparent !important;
-  border-radius: 6px !important;
+  background: var(--p-surface-100) !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  color: var(--p-text-muted-color) !important;
 }
 
 .p-dialog-header-actions .p-button:hover {
-  background: var(--p-surface-100) !important;
+  background: var(--p-surface-200) !important;
+  color: var(--p-text-color) !important;
 }
 
-/* ── Global Table Container ── */
+.p-dialog-header-actions .p-button .p-icon,
+.p-dialog-header-actions .p-button i {
+  font-size: 0.75rem !important;
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+}
+
+/* Content */
+.p-dialog-content {
+  background: var(--p-surface-0) !important;
+  padding: 1.25rem !important;
+  font-size: var(--text-base) !important;
+}
+
+/* Footer */
+.p-dialog-footer {
+  background: var(--p-surface-0) !important;
+  border-top: 1px solid var(--p-surface-100) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  display: flex !important;
+  justify-content: stretch !important;
+}
+
+/* Footer buttons — iOS text-only style (override ALL button variants) */
+.p-dialog-footer .p-button,
+.p-dialog-footer .p-button.p-button-text,
+.p-dialog-footer .p-button.p-button-outlined,
+.p-dialog-footer .p-button.p-button-link,
+.p-dialog-footer .p-button.p-button-secondary,
+.p-dialog-footer .p-button.p-button-sm,
+.p-dialog-footer .p-button[class*="p-button"] {
+  flex: 1 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-left: 1px solid var(--p-surface-100) !important;
+  padding: 0.875rem 1rem !important;
+  font-size: var(--text-base) !important;
+  font-weight: 400 !important;
+  background: transparent !important;
+  color: var(--p-primary-color) !important;
+  justify-content: center !important;
+  min-width: 0;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.p-dialog-footer .p-button:first-child {
+  border-left: none !important;
+}
+
+.p-dialog-footer .p-button:hover {
+  background: var(--p-surface-50) !important;
+}
+
+.p-dialog-footer .p-button:active {
+  background: var(--p-surface-100) !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Last button (primary action) — bold like iOS preferred action */
+.p-dialog-footer .p-button:last-child {
+  font-weight: 600 !important;
+}
+
+/* First button in a 2-button footer = cancel = regular weight */
+.p-dialog-footer .p-button:first-child:not(:last-child) {
+  font-weight: 400 !important;
+  color: var(--p-primary-color) !important;
+}
+
+/* Danger buttons — red text */
+.p-dialog-footer .p-button.p-button-danger,
+.p-dialog-footer .p-button[severity="danger"] {
+  color: var(--p-red-500) !important;
+}
+
+/* Bottom corners match dialog radius */
+.p-dialog-footer .p-button:first-child:last-child {
+  border-radius: 0 0 14px 14px !important;
+}
+
+.p-dialog-footer .p-button:first-child:not(:last-child) {
+  border-radius: 0 0 0 14px !important;
+}
+
+.p-dialog-footer .p-button:last-child:not(:first-child) {
+  border-radius: 0 0 14px 0 !important;
+}
+
+/* dialog-footer wrapper used inside #footer slot */
+.dialog-footer {
+  display: flex;
+  width: 100%;
+}
+
+.dialog-footer .p-button {
+  flex: 1 !important;
+}
+
+.dialog-actions {
+  display: flex;
+  width: 100%;
+}
+
+.dialog-actions .p-button {
+  flex: 1 !important;
+}
+
+/* Maximized dialog: square corners */
+.p-dialog-maximized {
+  border-radius: 0 !important;
+}
+
+/* ── ConfirmDialog — iPadOS alert style ── */
+.p-confirmdialog {
+  max-width: 340px !important;
+  border-radius: 14px !important;
+}
+
+.p-confirmdialog .p-dialog-header {
+  display: none !important;
+}
+
+.p-confirmdialog .p-dialog-content {
+  text-align: center;
+  padding: 1.5rem 1.5rem 1rem !important;
+}
+
+.p-confirmdialog .p-confirmdialog-icon {
+  font-size: 2.5rem !important;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.p-confirmdialog .p-confirmdialog-message {
+  font-size: var(--text-base) !important;
+  color: var(--p-text-muted-color);
+  line-height: 1.5;
+}
+
+.p-confirmdialog .p-dialog-footer {
+  flex-direction: column !important;
+  padding: 0 !important;
+  border-top: 1px solid var(--p-surface-200) !important;
+  gap: 0 !important;
+  background: var(--p-surface-0) !important;
+  justify-content: stretch !important;
+}
+
+.p-confirmdialog .p-dialog-footer .p-button {
+  width: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--p-surface-200) !important;
+  padding: 0.875rem !important;
+  font-size: var(--text-base) !important;
+  font-weight: 500 !important;
+  justify-content: center;
+  background: transparent !important;
+  color: var(--p-primary-color) !important;
+  min-width: auto;
+}
+
+.p-confirmdialog .p-dialog-footer .p-button:last-child {
+  border-bottom: none !important;
+  border-radius: 0 0 14px 14px !important;
+}
+
+.p-confirmdialog .p-dialog-footer .p-button:hover {
+  background: var(--p-surface-50) !important;
+}
+
+/* Reject = lighter */
+.p-confirmdialog .p-dialog-footer .p-button.p-confirmdialog-reject-button {
+  font-weight: 400 !important;
+  color: var(--p-text-muted-color) !important;
+}
+
+/* Accept = bold blue */
+.p-confirmdialog .p-dialog-footer .p-button.p-confirmdialog-accept-button {
+  font-weight: 600 !important;
+  color: var(--p-primary-color) !important;
+}
+
+/* Danger variant */
+.p-confirmdialog .p-dialog-footer .p-button.p-button-danger,
+.p-confirmdialog .p-dialog-footer .p-button.p-confirmdialog-accept-button.p-button-danger {
+  color: var(--p-red-500) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Global Table Container (Floating Card) ── */
 .table-container {
   background: var(--p-surface-0);
-  border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border-radius: 16px;
+  border: none;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.03),
+    0 4px 20px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -731,9 +995,9 @@ body {
 /* Table pagination bar (sits below table) */
 .table-pagination {
   flex-shrink: 0;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--p-surface-100);
   background: var(--p-surface-0);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 16px 16px;
 }
 
 /* Clickable row cursor */
@@ -741,10 +1005,30 @@ body {
   cursor: pointer;
 }
 
-/* Table actions column */
+/* Table actions column — ghost icon buttons */
 .table-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.125rem;
+}
+
+.table-actions .p-button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--p-text-muted-color) !important;
+  border-radius: 8px !important;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease !important;
+}
+
+.table-actions .p-button:hover {
+  opacity: 1;
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-color) !important;
+}
+
+.table-actions .p-button:active {
+  transform: scale(0.93) !important;
 }
 
 /* Common empty state */
@@ -758,27 +1042,617 @@ body {
 }
 
 .empty-state i {
-  font-size: 4rem;
-  color: var(--p-surface-400);
+  font-size: 3.5rem;
+  color: var(--p-surface-300);
   margin-bottom: 1rem;
 }
 
 .empty-state h3 {
   margin: 0 0 0.5rem;
   color: var(--p-text-color);
+  font-weight: 600;
 }
 
 .empty-state p {
   color: var(--p-text-muted-color);
   margin: 0;
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 768px) {
   .table-container {
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   }
 
   .table-pagination {
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 12px 12px;
   }
+}
+
+/* ── iPadOS-inspired DataTable ── */
+
+/* Remove default table border */
+.p-datatable {
+  border: none !important;
+}
+
+/* Header: subtle tinted background */
+.p-datatable-header-cell {
+  background: #F9F9FB !important;
+  border: none !important;
+  border-bottom: 1px solid var(--p-surface-100) !important;
+  padding: 0.625rem 1rem !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: #6B7280 !important;
+}
+
+/* Rows: generous padding, hairline dividers */
+.p-datatable-row > td,
+.p-datatable-tbody > tr > td {
+  border: none !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+  padding: 0.75rem 1rem !important;
+  font-size: var(--text-base) !important;
+  vertical-align: middle !important;
+  transition: background 0.15s ease !important;
+}
+
+/* Alternating rows — all white base, odd rows get a faint blue-gray tint */
+.p-datatable-tbody > tr > td {
+  background: #FFFFFF !important;
+}
+
+.p-datatable-tbody > tr:nth-child(odd):not(.p-datatable-row-selected):not(:hover) > td {
+  background: #F8F9FC !important;
+}
+
+/* Subtle hover — #F5F5F7 */
+.p-datatable-tbody > tr:not(.p-datatable-row-selected):hover > td {
+  background: #F5F5F7 !important;
+}
+
+/* Selected row */
+.p-datatable-tbody > tr.p-datatable-row-selected > td {
+  background: color-mix(in srgb, var(--p-primary-color) 6%, transparent) !important;
+  color: var(--p-text-color) !important;
+}
+
+/* Last row: no bottom border */
+.p-datatable-tbody > tr:last-child > td {
+  border-bottom: none !important;
+}
+
+/* Empty message */
+.p-datatable-empty-message > td {
+  border: none !important;
+  padding: 3rem 1rem !important;
+  text-align: center;
+  color: var(--p-text-muted-color);
+}
+
+/* Sortable header icon */
+.p-datatable-sort-icon {
+  font-size: 0.75rem !important;
+  color: var(--p-text-muted-color) !important;
+}
+
+.p-datatable-header-cell:has(.p-datatable-sort-icon.p-datatable-sort-icon-active) {
+  color: var(--p-primary-color) !important;
+}
+
+/* Built-in paginator inside DataTable */
+.p-datatable .p-paginator {
+  border: none !important;
+  border-top: 1px solid var(--p-surface-100) !important;
+  background: var(--p-surface-0) !important;
+  padding: 0.625rem 1rem !important;
+  font-size: var(--text-sm) !important;
+}
+
+/* Frozen columns border */
+.p-datatable-frozen-column {
+  border-right: 1px solid var(--p-surface-100) !important;
+}
+
+/* Row expansion */
+.p-datatable-row-expansion > td {
+  background: var(--p-surface-50) !important;
+  border-bottom: 1px solid var(--p-surface-200) !important;
+  padding: 0 !important;
+}
+
+/* Column resize handle */
+.p-datatable-column-resize-indicator {
+  background: var(--p-primary-color) !important;
+}
+
+/* Scrollable table header stays clean */
+.p-datatable-scrollable .p-datatable-thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .p-datatable-header-cell {
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.65rem !important;
+  }
+
+  .p-datatable-tbody > tr > td {
+    padding: 0.625rem 0.75rem !important;
+  }
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Buttons
+   ═══════════════════════════════════════ */
+
+/* Base button */
+.p-button {
+  border-radius: 10px !important;
+  font-size: var(--text-base) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.p-button:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* Buttons WITH label — comfortable horizontal padding */
+.p-button .p-button-label + .p-button-icon,
+.p-button .p-button-icon + .p-button-label {
+  /* gap handled by PrimeVue */
+}
+
+/* Primary filled — soft shadow */
+.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-icon-only) {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Text / ghost button */
+.p-button.p-button-text {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.p-button.p-button-text:hover {
+  background: var(--p-surface-100) !important;
+}
+
+/* Outlined button — soft border */
+.p-button.p-button-outlined {
+  border: 1.5px solid currentColor !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.p-button.p-button-outlined:hover {
+  background: color-mix(in srgb, currentColor 6%, transparent) !important;
+}
+
+/* Icon-only button — keep square proportions */
+.p-button.p-button-icon-only {
+  border-radius: 10px !important;
+}
+
+.p-button.p-button-icon-only.p-button-rounded {
+  border-radius: 50% !important;
+}
+
+/* Small button */
+.p-button-sm,
+.p-button.p-button-sm {
+  font-size: var(--text-sm) !important;
+  border-radius: 8px !important;
+}
+
+/* Large button */
+.p-button-lg,
+.p-button.p-button-lg {
+  font-size: var(--text-lg) !important;
+  border-radius: 12px !important;
+}
+
+/* Secondary severity — iOS gray tint */
+.p-button.p-button-secondary:not(.p-button-outlined):not(.p-button-text) {
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-color) !important;
+  border: none !important;
+}
+
+.p-button.p-button-secondary:not(.p-button-outlined):not(.p-button-text):hover {
+  background: var(--p-surface-200) !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Inputs
+   ═══════════════════════════════════════ */
+
+/* Text input */
+.p-inputtext {
+  border-radius: 10px !important;
+  border: 1.5px solid var(--p-surface-200) !important;
+  font-size: var(--text-base) !important;
+  background: transparent !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.p-inputtext:hover {
+  border-color: var(--p-surface-300) !important;
+}
+
+.p-inputtext:focus,
+.p-inputtext.p-focus {
+  border-color: var(--p-primary-color) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color) 15%, transparent) !important;
+  outline: none !important;
+}
+
+.p-inputtext::placeholder {
+  color: var(--p-text-muted-color) !important;
+}
+
+/* IconField — ensure icon stays aligned */
+.p-icon-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.p-icon-field .p-inputtext {
+  width: 100%;
+}
+
+/* Textarea */
+.p-textarea {
+  border-radius: 10px !important;
+  border: 1.5px solid var(--p-surface-200) !important;
+  font-size: var(--text-base) !important;
+  background: transparent !important;
+}
+
+.p-textarea:focus {
+  border-color: var(--p-primary-color) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color) 15%, transparent) !important;
+}
+
+/* ── Grouped / connected inputs (DatePicker, InputNumber with buttons, InputGroup) ── */
+
+/* Wrapper containers — apply border-radius + border to the GROUP, not individual parts */
+.p-datepicker,
+.p-inputnumber,
+.p-inputgroup {
+  display: inline-flex !important;
+  align-items: stretch !important;
+  border-radius: 10px !important;
+  border: 1.5px solid var(--p-surface-200) !important;
+  background: transparent !important;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.p-datepicker:hover,
+.p-inputnumber:hover,
+.p-inputgroup:hover {
+  border-color: var(--p-surface-300) !important;
+}
+
+.p-datepicker:focus-within,
+.p-inputnumber:focus-within,
+.p-inputgroup:focus-within {
+  border-color: var(--p-primary-color) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color) 15%, transparent) !important;
+}
+
+/* Inner input inside group — strip its own border/radius */
+.p-datepicker .p-inputtext,
+.p-inputnumber .p-inputtext,
+.p-inputgroup .p-inputtext {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Buttons inside groups (calendar icon, increment/decrement) — strip borders */
+.p-datepicker .p-datepicker-dropdown,
+.p-inputnumber .p-inputnumber-button,
+.p-inputgroup .p-button,
+.p-inputgroup .p-inputgroup-addon {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--p-surface-50) !important;
+  color: var(--p-text-muted-color) !important;
+}
+
+.p-datepicker .p-datepicker-dropdown:hover,
+.p-inputnumber .p-inputnumber-button:hover,
+.p-inputgroup .p-button:hover {
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-color) !important;
+}
+
+/* Separator line between input and addon/button */
+.p-datepicker .p-datepicker-dropdown,
+.p-inputgroup .p-inputgroup-addon,
+.p-inputgroup .p-button {
+  border-left: 1px solid var(--p-surface-200) !important;
+}
+
+/* InputNumber buttons stacked — top/bottom separator */
+.p-inputnumber-stacked .p-inputnumber-button-up {
+  border-bottom: 1px solid var(--p-surface-200) !important;
+  border-left: 1px solid var(--p-surface-200) !important;
+}
+
+.p-inputnumber-stacked .p-inputnumber-button-down {
+  border-left: 1px solid var(--p-surface-200) !important;
+}
+
+/* InputNumber horizontal buttons */
+.p-inputnumber-horizontal .p-inputnumber-button {
+  border-left: 1px solid var(--p-surface-200) !important;
+}
+
+.p-inputnumber-horizontal .p-inputnumber-button:first-child {
+  border-left: none !important;
+  border-right: 1px solid var(--p-surface-200) !important;
+}
+
+/* Keep active state clean inside groups */
+.p-datepicker .p-datepicker-dropdown:active,
+.p-inputnumber .p-inputnumber-button:active {
+  transform: none !important;
+  opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Select / Dropdown
+   ═══════════════════════════════════════ */
+
+.p-select {
+  border-radius: 10px !important;
+  border: 1.5px solid var(--p-surface-200) !important;
+  background: transparent !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.p-select:hover {
+  border-color: var(--p-surface-300) !important;
+}
+
+.p-select.p-focus,
+.p-select:focus-within {
+  border-color: var(--p-primary-color) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color) 15%, transparent) !important;
+}
+
+/* Dropdown overlay panel */
+.p-select-overlay {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden;
+  padding: 0.375rem !important;
+}
+
+/* Dropdown option */
+.p-select-option {
+  border-radius: 8px !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: var(--text-base) !important;
+  transition: background 0.12s ease !important;
+}
+
+.p-select-option:hover,
+.p-select-option.p-focus {
+  background: var(--p-surface-100) !important;
+}
+
+.p-select-option.p-selected {
+  background: color-mix(in srgb, var(--p-primary-color) 10%, transparent) !important;
+  color: var(--p-primary-color) !important;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Card
+   ═══════════════════════════════════════ */
+
+.p-card {
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.03),
+    0 4px 20px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden;
+  background: var(--p-surface-0) !important;
+}
+
+.p-card-title {
+  font-size: var(--text-lg) !important;
+  font-weight: 600 !important;
+}
+
+.p-card-body {
+  padding: 1.25rem !important;
+  gap: 0.75rem !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Tag / Badge
+   ═══════════════════════════════════════ */
+
+.p-tag {
+  border-radius: 6px !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 600 !important;
+  padding: 0.25rem 0.5rem !important;
+  letter-spacing: 0.01em;
+}
+
+.p-tag.p-tag-rounded {
+  border-radius: 50px !important;
+}
+
+/* Softer tag colors — iOS tinted style */
+.p-tag-success {
+  background: color-mix(in srgb, #10b981 14%, var(--p-surface-0)) !important;
+  color: #059669 !important;
+}
+
+.p-tag-info {
+  background: color-mix(in srgb, #3b82f6 14%, var(--p-surface-0)) !important;
+  color: #2563eb !important;
+}
+
+.p-tag-warn {
+  background: color-mix(in srgb, #f59e0b 14%, var(--p-surface-0)) !important;
+  color: #d97706 !important;
+}
+
+.p-tag-danger {
+  background: color-mix(in srgb, #ef4444 14%, var(--p-surface-0)) !important;
+  color: #dc2626 !important;
+}
+
+.p-tag-secondary {
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-muted-color) !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Toast
+   ═══════════════════════════════════════ */
+
+.p-toast-message {
+  border-radius: 14px !important;
+  border: none !important;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.12),
+    0 1px 4px rgba(0, 0, 0, 0.06) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+.p-toast-message-content {
+  padding: 0.875rem 1rem !important;
+  gap: 0.75rem !important;
+}
+
+.p-toast-summary {
+  font-weight: 600 !important;
+  font-size: var(--text-base) !important;
+}
+
+.p-toast-detail {
+  font-size: var(--text-sm) !important;
+  color: var(--p-text-muted-color) !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Toolbar
+   ═══════════════════════════════════════ */
+
+.p-toolbar {
+  border-radius: 16px !important;
+  border: none !important;
+  background: var(--p-surface-0) !important;
+  padding: 0.75rem 1rem !important;
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.05) !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Paginator
+   ═══════════════════════════════════════ */
+
+.p-paginator {
+  border: none !important;
+  background: transparent !important;
+  padding: 0.625rem 0.5rem !important;
+  gap: 0.25rem !important;
+}
+
+.p-paginator-page,
+.p-paginator-first,
+.p-paginator-prev,
+.p-paginator-next,
+.p-paginator-last {
+  border-radius: 8px !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  border: none !important;
+}
+
+.p-paginator-page.p-paginator-page-selected {
+  background: var(--p-primary-color) !important;
+  color: #fff !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Message
+   ═══════════════════════════════════════ */
+
+.p-message {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — ToggleSwitch
+   ═══════════════════════════════════════ */
+
+.p-toggleswitch-slider {
+  border-radius: 50px !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — DatePicker Panel
+   ═══════════════════════════════════════ */
+
+.p-datepicker-panel {
+  border-radius: 14px !important;
+  border: none !important;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ═══════════════════════════════════════
+   iPadOS DESIGN SYSTEM — Global polish
+   ═══════════════════════════════════════ */
+
+/* Smooth scroll everywhere */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background: color-mix(in srgb, var(--p-primary-color) 25%, transparent);
+}
+
+/* Focus ring — consistent blue glow */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color) 20%, transparent);
 }

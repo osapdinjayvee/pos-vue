@@ -12,6 +12,8 @@ import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import StockMovementDialog from '@/components/inventory/StockMovementDialog.vue'
 import { useProductStore } from '@/stores/product'
 import { useInventory } from '@/composables/useInventory'
@@ -198,45 +200,42 @@ function getStockClass(product: Product): string {
           <p class="text-muted">Manage stock levels and movements</p>
         </div>
       </div>
+      <div class="header-actions">
+        <IconField>
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="searchQuery"
+            placeholder="Search products..."
+          />
+        </IconField>
+        <Button
+          label="Export"
+          icon="pi pi-download"
+          severity="secondary"
+          outlined
+          @click="handleExport"
+          :disabled="filteredProducts.length === 0"
+        />
+        <Button
+          label="Adjustments"
+          icon="pi pi-sliders-h"
+          severity="secondary"
+          outlined
+          @click="goToAdjustments"
+        />
+      </div>
     </div>
 
-    <!-- Filter Tabs + Toolbar -->
+    <!-- Filter Tabs -->
     <Tabs :value="activeFilter" @update:value="(v: FilterTab) => { activeFilter = v; onFilterChange() }" class="inventory-tabs">
-      <div class="inventory-toolbar-row">
-        <TabList class="inventory-tablist">
-          <Tab value="all">All</Tab>
-          <Tab value="low-stock">Low Stock</Tab>
-          <Tab value="out-of-stock">Out of Stock</Tab>
-          <Tab value="expiring">Expiring</Tab>
-          <Tab value="slow-moving">Slow Moving</Tab>
-          <Tab value="fast-moving">Fast Moving</Tab>
-        </TabList>
-        <div class="toolbar-end">
-          <span class="p-input-icon-left search-wrapper">
-            <i class="pi pi-search" />
-            <InputText
-              v-model="searchQuery"
-              placeholder="Search products..."
-              class="search-input"
-            />
-          </span>
-          <Button
-            label="Export"
-            icon="pi pi-download"
-            severity="secondary"
-            outlined
-            @click="handleExport"
-            :disabled="filteredProducts.length === 0"
-          />
-          <Button
-            label="Adjustments"
-            icon="pi pi-sliders-h"
-            severity="secondary"
-            outlined
-            @click="goToAdjustments"
-          />
-        </div>
-      </div>
+      <TabList>
+        <Tab value="all">All</Tab>
+        <Tab value="low-stock">Low Stock</Tab>
+        <Tab value="out-of-stock">Out of Stock</Tab>
+        <Tab value="expiring">Expiring</Tab>
+        <Tab value="slow-moving">Slow Moving</Tab>
+        <Tab value="fast-moving">Fast Moving</Tab>
+      </TabList>
     </Tabs>
 
     <!-- Content -->
@@ -351,18 +350,17 @@ function getStockClass(product: Product): string {
             </template>
           </Column>
         </DataTable>
-      </div>
 
-      <!-- Pagination -->
-      <Paginator
-        v-if="filteredProducts.length > 0 && !productStore.isLoading"
-        :first="first"
-        :rows="rows"
-        :totalRecords="filteredProducts.length"
-        :rowsPerPageOptions="[10, 25, 50]"
-        @page="onPageChange"
-        class="table-pagination"
-      />
+        <Paginator
+          v-if="filteredProducts.length > 0"
+          :first="first"
+          :rows="rows"
+          :totalRecords="filteredProducts.length"
+          :rowsPerPageOptions="[10, 25, 50]"
+          @page="onPageChange"
+          class="table-pagination"
+        />
+      </div>
     </div>
 
     <!-- Stock Movement Dialog -->

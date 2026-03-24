@@ -504,15 +504,13 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
           <p class="text-muted">Manage your product catalog</p>
         </div>
       </div>
-    </div>
-
-    <div class="products-toolbar-wrapper">
-      <ProductToolbar
-        v-model:search="searchQuery"
-        v-model:view="viewMode"
-        :selectedCount="selectedProducts.length"
-        :activeFilterCount="activeFilterCount"
-        @add="navigateToCreate"
+      <div class="header-actions">
+        <ProductToolbar
+          v-model:search="searchQuery"
+          v-model:view="viewMode"
+          :selectedCount="selectedProducts.length"
+          :activeFilterCount="activeFilterCount"
+          @add="navigateToCreate"
         @bulkDelete="confirmBulkDelete"
         @bulkActivate="bulkSetStatus('active')"
         @bulkDeactivate="bulkSetStatus('inactive')"
@@ -520,6 +518,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
         @importCsv="openImportDialog"
         @openFilters="filterDrawerVisible = true"
       />
+    </div>
     </div>
 
     <!-- Filter Drawer -->
@@ -682,7 +681,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
         </div>
 
         <!-- List View -->
-        <div v-if="viewMode === 'list'" class="table-container">
+        <div v-if="viewMode === 'list'" class="table-container flex-table">
           <DataTable
             :value="paginatedProducts"
             v-model:selection="selectedProducts"
@@ -786,19 +785,18 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
               </template>
             </Column>
           </DataTable>
+
+          <Paginator
+            v-if="filteredProducts.length > 0"
+            :first="first"
+            :rows="rows"
+            :totalRecords="filteredProducts.length"
+            :rowsPerPageOptions="[10, 25, 50]"
+            @page="onPageChange"
+            class="table-pagination"
+          />
         </div>
       </div>
-
-      <!-- Pagination -->
-      <Paginator
-        v-if="filteredProducts.length > 0 && !productStore.isLoading"
-        :first="first"
-        :rows="rows"
-        :totalRecords="filteredProducts.length"
-        :rowsPerPageOptions="[10, 25, 50]"
-        @page="onPageChange"
-        class="table-pagination"
-      />
     </div>
 
     <!-- Bulk Receive Stock Dialog -->
@@ -826,9 +824,6 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
   overflow: hidden;
 }
 
-.products-toolbar-wrapper {
-  flex-shrink: 0;
-}
 
 .products-content {
   flex: 1;
@@ -856,6 +851,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  padding: 2px;
 }
 
 .products-grid {

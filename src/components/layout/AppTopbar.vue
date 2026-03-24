@@ -11,7 +11,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useAuth } from '@/composables/useAuth'
 import { useShift } from '@/composables/useShift'
 
-const { toggleSidebar, toggleMobileMenu } = useLayout()
+const { toggleSidebar, toggleMobileMenu, isMobile } = useLayout()
 const { isDark, toggleTheme } = useTheme()
 const { currentUser, fullName, primaryRole, logout, lock } = useAuth()
 const { hasOpenShift, currentShift, shiftDuration } = useShift()
@@ -216,15 +216,7 @@ function handleLock() {
         icon="pi pi-bars"
         text
         rounded
-        @click="toggleSidebar"
-        class="hidden-mobile"
-      />
-      <Button
-        icon="pi pi-bars"
-        text
-        rounded
-        @click="toggleMobileMenu"
-        class="hidden-desktop"
+        @click="isMobile ? toggleMobileMenu() : toggleSidebar()"
       />
       <Breadcrumb :model="breadcrumbItems" class="topbar-breadcrumb">
         <template #separator>
