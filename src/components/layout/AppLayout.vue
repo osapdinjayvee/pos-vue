@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import AppSidebar from './AppSidebar.vue'
@@ -13,7 +14,16 @@ import { useShift } from '@/composables/useShift'
 import { useCashDrawer } from '@/composables/useCashDrawer'
 import { useAuthStore } from '@/stores/auth'
 
+const route = useRoute()
 const { isCollapsed, isMobileMenuOpen, closeMobileMenu, initLayoutListeners, destroyLayoutListeners } = useLayout()
+
+// Auto-collapse sidebar on form/detail routes to maximize workspace
+const formRoutePatterns = ['/new', '/edit', '/pos']
+watch(() => route.path, (path) => {
+  if (formRoutePatterns.some(p => path.includes(p))) {
+    isCollapsed.value = true
+  }
+}, { immediate: true })
 const { initTheme } = useTheme()
 const { currentShift, hasOpenShift, startShift: startShiftAction, closeShift: closeShiftAction } = useShift()
 const { loadSession, hasOpenSession } = useCashDrawer()
