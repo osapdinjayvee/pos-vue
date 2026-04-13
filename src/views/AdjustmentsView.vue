@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import DataTable from 'primevue/datatable'
@@ -146,6 +146,18 @@ function openCreateDialog() {
   showCreateDialog.value = true
 }
 
+// Auto-fill cost from product's cost price (puhunan) when product is selected
+watch(selectedProductId, (newId) => {
+  if (newId) {
+    const product = productStore.products.find(p => p.id === newId)
+    if (product) {
+      adjustmentCost.value = product.cost || null
+    }
+  } else {
+    adjustmentCost.value = null
+  }
+})
+
 function getMovementSeverity(type: string) {
   switch (type) {
     case 'receive':
@@ -182,6 +194,16 @@ async function handleCreateAdjustment() {
       severity: 'warn',
       summary: 'Validation',
       detail: 'Please select a product and enter a quantity',
+      life: 3000
+    })
+    return
+  }
+
+  if (adjustmentType.value === 'receive' && !adjustmentCost.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Validation',
+      detail: 'Unit cost (puhunan) is required for receiving stock',
       life: 3000
     })
     return
@@ -259,6 +281,11 @@ async function handleCreateAdjustment() {
         stockChange = Math.abs(adjustmentQuantity.value)
       }
       await productRepo.updateStock(selectedProductId.value, stockChange)
+
+      // Update product cost if receiving with a new unit cost
+      if (adjustmentType.value === 'receive' && adjustmentCost.value) {
+        await productRepo.update(selectedProductId.value, { cost: adjustmentCost.value })
+      }
 
       toast.add({
         severity: 'success',
@@ -538,7 +565,7 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
         </div>
 
         <div class="form-field" v-if="adjustmentType === 'receive'">
-          <label for="cost">Unit Cost (optional)</label>
+          <label for="cost">Unit Cost / Puhunan *</label>
           <InputNumber
             id="cost"
             v-model="adjustmentCost"
@@ -549,6 +576,7 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
             :disabled="inventoryLoading"
             class="w-full"
           />
+          <small class="hint">Base cost price per unit</small>
         </div>
 
         <div class="form-field">
@@ -588,7 +616,7 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
           label="Save Adjustment"
           icon="pi pi-check"
           :loading="inventoryLoading"
-          :disabled="!selectedProductId || adjustmentQuantity === 0 || !adjustmentReason"
+          :disabled="!selectedProductId || adjustmentQuantity === 0 || !adjustmentReason || (adjustmentType === 'receive' && !adjustmentCost)"
           @click="handleCreateAdjustment"
         />
       </template>
