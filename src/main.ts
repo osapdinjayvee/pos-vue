@@ -50,4 +50,13 @@ app.directive('tooltip', Tooltip)
 // Set document title from env
 document.title = import.meta.env.VITE_APP_NAME || 'Zoomin POS'
 
+// Auto-select InputNumber value on focus (no need to backspace 0.00)
+document.addEventListener('focusin', (e) => {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' && target.closest('.p-inputnumber')) {
+    const input = target as HTMLInputElement
+    requestAnimationFrame(() => input.select())
+  }
+})
+
 app.mount('#app')
