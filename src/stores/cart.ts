@@ -125,7 +125,13 @@ export const useCartStore = defineStore('cart', () => {
     } else {
       // Add new item
       const basePrice = variant?.price_override ?? product.price
-      const taxType = (product.tax_type || 'vatable') as TaxType
+      // Normalize tax_type to transaction-compatible values: vatable | exempt | zero_rated
+      const rawTax = product.tax_type || 'vatable'
+      const taxType: TaxType = rawTax === 'vat_exempt' || rawTax === 'vat-exempt'
+        ? 'exempt'
+        : rawTax === 'zero-rated'
+          ? 'zero_rated'
+          : rawTax as TaxType
       const isWholesale = shouldApplyWholesale(product, quantity)
       const unitPrice = isWholesale ? product.wholesale_price! : basePrice
 
