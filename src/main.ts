@@ -51,12 +51,16 @@ app.directive('tooltip', Tooltip)
 document.title = import.meta.env.VITE_APP_NAME || 'Zoomin POS'
 
 // Auto-select InputNumber value on focus (no need to backspace 0.00)
-document.addEventListener('focusin', (e) => {
+// Uses both focusin and click to ensure it works on mobile dialogs with autofocus
+function selectInputNumber(e: Event) {
   const target = e.target as HTMLElement
   if (target.tagName === 'INPUT' && target.closest('.p-inputnumber')) {
     const input = target as HTMLInputElement
-    requestAnimationFrame(() => input.select())
+    // Double rAF ensures selection works even during dialog open animations
+    requestAnimationFrame(() => requestAnimationFrame(() => input.select()))
   }
-})
+}
+document.addEventListener('focusin', selectInputNumber)
+document.addEventListener('click', selectInputNumber)
 
 app.mount('#app')
