@@ -12,7 +12,6 @@ import InputIcon from 'primevue/inputicon'
 import Dialog from 'primevue/dialog'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
-import Toolbar from 'primevue/toolbar'
 import Select from 'primevue/select'
 import { useProductStore } from '@/stores/product'
 import { useInventory } from '@/composables/useInventory'
@@ -323,44 +322,33 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
     <div class="view-header">
       <div class="header-left">
         <div>
-          <h1>Adjustments</h1>
-          <p class="text-muted">Stock adjustment history</p>
+          <h1>Stock Adjustments</h1>
+          <p class="text-muted">Receive, adjust, and track all stock changes</p>
         </div>
       </div>
+      <div class="header-actions">
+        <IconField>
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="searchQuery"
+            placeholder="Search by name, SKU, barcode..."
+            class="search-input"
+          />
+        </IconField>
+        <Button
+          label="Bulk Adjustment"
+          icon="pi pi-list"
+          severity="secondary"
+          outlined
+          @click="showBulkDialog = true"
+        />
+        <Button
+          label="Create Adjustment"
+          icon="pi pi-plus"
+          @click="openCreateDialog"
+        />
+      </div>
     </div>
-
-    <!-- Toolbar -->
-    <Toolbar class="adjustments-toolbar">
-      <template #start>
-        <div class="toolbar-start">
-          <IconField>
-            <InputIcon class="pi pi-search" />
-            <InputText
-              v-model="searchQuery"
-              placeholder="Search by name, SKU, barcode..."
-              class="search-input"
-            />
-          </IconField>
-        </div>
-      </template>
-
-      <template #end>
-        <div class="toolbar-end">
-          <Button
-            label="Bulk Adjustment"
-            icon="pi pi-list"
-            severity="secondary"
-            outlined
-            @click="showBulkDialog = true"
-          />
-          <Button
-            label="Create Adjustment"
-            icon="pi pi-plus"
-            @click="openCreateDialog"
-          />
-        </div>
-      </template>
-    </Toolbar>
 
     <!-- Adjustments History Table -->
     <div class="table-container flex-table">

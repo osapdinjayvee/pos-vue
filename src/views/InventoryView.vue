@@ -14,9 +14,7 @@ import Tab from 'primevue/tab'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
-import StockMovementDialog from '@/components/inventory/StockMovementDialog.vue'
 import { useProductStore } from '@/stores/product'
-import { useInventory } from '@/composables/useInventory'
 import { formatCurrency } from '@/utils/format'
 import { exportToCsv } from '@/utils/exportCsv'
 import type { Product } from '@/repositories/productRepository'
@@ -26,7 +24,6 @@ import { toLocalDateStr } from '@/utils/dateHelpers'
 const router = useRouter()
 const toast = useToast()
 const productStore = useProductStore()
-const { receiveStock } = useInventory()
 
 // Filter state
 type FilterTab = 'all' | 'low-stock' | 'out-of-stock' | 'expiring' | 'slow-moving' | 'fast-moving'
@@ -38,11 +35,6 @@ const searchQuery = ref('')
 const selectedProducts = ref<Product[]>([])
 const first = ref(0)
 const rows = ref(10)
-
-// Stock dialog state
-const showStockDialog = ref(false)
-const selectedProduct = ref<Product | null>(null)
-const selectedVariantId = ref<string | null>(null)
 
 onMounted(() => {
   productStore.fetchAll()
@@ -129,55 +121,6 @@ function viewProduct(product: Product) {
   router.push(`/products/${product.id}`)
 }
 
-// Stock dialog handlers
-async function openAddStock(product: Product) {
-  selectedProduct.value = product
-  // Resolve actual variant ID for inventory operations
-  const { variantRepository } = await import('@/repositories/variantRepository')
-  let variant = await variantRepository.getDefaultVariant(product.id)
-  if (!variant) {
-    // Auto-create default variant
-    variant = await variantRepository.createVariant({
-      product_id: product.id,
-      name: 'Default',
-      sku: product.sku,
-      barcode: product.barcode || undefined,
-      is_active: true,
-      display_order: 0
-    })
-    // Sync existing stock to the new variant
-    if (variant && product.stock > 0) {
-      const { inventoryService } = await import('@/services/inventoryService')
-      await inventoryService.receiveStock(variant.id, product.stock, {
-        reason: 'Initial stock sync'
-      })
-    }
-  }
-  if (variant) {
-    selectedVariantId.value = variant.id
-    showStockDialog.value = true
-  } else {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Could not resolve product variant',
-      life: 3000
-    })
-  }
-}
-
-async function handleStockMovement(newStock: number) {
-  if (selectedProduct.value) {
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Stock updated to ${newStock} units`,
-      life: 3000
-    })
-    await productStore.fetchAll()
-  }
-}
-
 // Export functionality
 function handleExport() {
   const columns: ExportColumn[] = [
@@ -188,6 +131,11 @@ function handleExport() {
     { field: 'price', header: 'Price', formatter: (v) => v?.toFixed(2) ?? '0.00' },
     { field: 'cost', header: 'Cost', formatter: (v) => v?.toFixed(2) ?? '0.00' },
     { field: 'stock', header: 'Stock' },
+    {
+      field: 'stock_value',
+      header: 'Stock Value',
+      formatter: (_, row) => (row.stock * (row.cost || 0)).toFixed(2)
+    },
     {
       field: 'status',
       header: 'Status',
@@ -228,8 +176,8 @@ function getStockClass(product: Product): string {
     <div class="view-header">
       <div class="header-left">
         <div>
-          <h1>Inventory</h1>
-          <p class="text-muted">Manage stock levels and movements</p>
+          <h1>Stock Levels</h1>
+          <p class="text-muted">Monitor inventory and stock status</p>
         </div>
       </div>
       <div class="header-actions">
@@ -359,26 +307,22 @@ function getStockClass(product: Product): string {
             </template>
           </Column>
 
-          <Column header="Actions" style="min-width: 130px">
+          <Column field="stock_value" header="Stock Value" sortable style="min-width: 120px">
             <template #body="{ data }">
-              <div class="table-actions">
-                <Button
-                  icon="pi pi-eye"
-                  text
-                  rounded
-                  severity="secondary"
-                  @click="viewProduct(data)"
-                  v-tooltip.top="'View'"
-                />
-                <Button
-                  icon="pi pi-plus"
-                  text
-                  rounded
-                  severity="success"
-                  @click="openAddStock(data)"
-                  v-tooltip.top="'Add Stock'"
-                />
-              </div>
+              {{ formatCurrency(data.stock * (data.cost || 0)) }}
+            </template>
+          </Column>
+
+          <Column header="" style="min-width: 60px">
+            <template #body="{ data }">
+              <Button
+                icon="pi pi-eye"
+                text
+                rounded
+                severity="secondary"
+                @click="viewProduct(data)"
+                v-tooltip.top="'View Details'"
+              />
             </template>
           </Column>
         </DataTable>
@@ -395,17 +339,6 @@ function getStockClass(product: Product): string {
       </div>
     </div>
 
-    <!-- Stock Movement Dialog -->
-    <StockMovementDialog
-      v-if="selectedProduct && selectedVariantId"
-      v-model:visible="showStockDialog"
-      :variant-id="selectedVariantId"
-      :variant-name="selectedProduct.name"
-      :product-id="selectedProduct.id"
-      :product-name="selectedProduct.name"
-      :current-stock="selectedProduct.stock"
-      @movement-recorded="handleStockMovement"
-    />
   </div>
 </template>
 
