@@ -36,6 +36,32 @@ const notes = ref('')
 // Search state
 const searchQuery = ref('')
 const filteredProducts = ref<Product[]>([])
+const selectedSupplierId = ref<string | null>(null)
+
+// Supplier options derived from products
+const supplierOptions = computed(() => {
+  const map = new Map<string, string>()
+  for (const p of props.products) {
+    if (p.supplier_id && p.supplier_name) {
+      map.set(p.supplier_id, p.supplier_name)
+    }
+  }
+  return Array.from(map.entries())
+    .map(([id, name]) => ({ label: name, value: id }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+const remainingBySupplier = computed(() => {
+  if (!selectedSupplierId.value) return []
+  return props.products.filter(
+    p => p.supplier_id === selectedSupplierId.value && !addedProductIds.value.has(p.id)
+  )
+})
+
+const selectedSupplierName = computed(() => {
+  if (!selectedSupplierId.value) return ''
+  return supplierOptions.value.find(s => s.value === selectedSupplierId.value)?.label || ''
+})
 
 const adjustmentTypeOptions = [
   { label: 'Receive Stock', value: 'receive', icon: 'pi pi-plus' },
@@ -92,6 +118,10 @@ const totalUnits = computed(() =>
   entries.value.reduce((sum, e) => sum + (e.quantity || 0), 0)
 )
 
+const totalCost = computed(() =>
+  entries.value.reduce((sum, e) => sum + (e.quantity || 0) * (e.unitCost || 0), 0)
+)
+
 const hasValidEntries = computed(() =>
   entries.value.some(e => e.quantity > 0) && !!adjustmentReason.value
 )
@@ -111,6 +141,7 @@ watch(() => props.visible, (visible) => {
     notes.value = ''
     searchQuery.value = ''
     filteredProducts.value = []
+    selectedSupplierId.value = null
   }
 })
 
@@ -148,7 +179,6 @@ function onProductSelect(event: { value: Product }) {
     quantity: 1,
     unitCost: product.cost || null
   })
-  // Clear search after adding
   searchQuery.value = ''
 }
 
@@ -156,15 +186,19 @@ function removeEntry(index: number) {
   entries.value.splice(index, 1)
 }
 
-function addAllProducts() {
-  const remaining = props.products.filter(p => !addedProductIds.value.has(p.id))
-  for (const p of remaining) {
+function addAllBySupplier() {
+  if (!selectedSupplierId.value) return
+  for (const p of remainingBySupplier.value) {
     entries.value.push({
       product: p,
       quantity: 1,
       unitCost: p.cost || null
     })
   }
+}
+
+function clearAll() {
+  entries.value = []
 }
 
 function setAllQuantities(qty: number) {
@@ -195,7 +229,6 @@ async function handleSubmit() {
 
   for (const entry of entriesToProcess.value) {
     try {
-      // Get or create default variant
       let variant = await variantRepository.getDefaultVariant(entry.product.id)
       if (!variant) {
         variant = await variantRepository.createVariant({
@@ -237,11 +270,15 @@ async function handleSubmit() {
       }
 
       if (result.success) {
-        // Update product stock
         let stockChange = entry.quantity
         if (adjustmentType.value === 'damage') stockChange = -Math.abs(entry.quantity)
         else if (adjustmentType.value === 'receive' || adjustmentType.value === 'return') stockChange = Math.abs(entry.quantity)
         await productRepo.updateStock(entry.product.id, stockChange)
+
+        // Update product cost when receiving
+        if (adjustmentType.value === 'receive' && entry.unitCost) {
+          await productRepo.update(entry.product.id, { cost: entry.unitCost })
+        }
         success++
       } else {
         failed++
@@ -272,11 +309,15 @@ async function handleSubmit() {
     }"
   >
     <div class="bulk-adj-container">
-      <!-- Type & Reason -->
-      <div class="adj-config">
+      <!-- Section 1: Type & Reason -->
+      <div class="section">
+        <div class="section-header">
+          <i class="pi pi-cog"></i>
+          <span>Configuration</span>
+        </div>
         <div class="config-row">
           <div class="config-field flex-1">
-            <label>Adjustment Type</label>
+            <label>Type</label>
             <Select
               v-model="adjustmentType"
               :options="adjustmentTypeOptions"
@@ -314,15 +355,50 @@ async function handleSubmit() {
         </div>
       </div>
 
-      <!-- Search to Add Products -->
-      <div class="search-section">
-        <label>Add Products</label>
+      <!-- Section 2: Add Products -->
+      <div class="section">
+        <div class="section-header">
+          <i class="pi pi-box"></i>
+          <span>Products</span>
+          <span v-if="entries.length > 0" class="entry-count">{{ entries.length }} added</span>
+        </div>
+
+        <!-- Supplier batch add -->
+        <div class="supplier-row">
+          <Select
+            v-model="selectedSupplierId"
+            :options="supplierOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Filter by supplier..."
+            :disabled="isProcessing || supplierOptions.length === 0"
+            filter
+            filterPlaceholder="Search supplier..."
+            class="flex-1"
+            showClear
+          />
+          <Button
+            :label="`Add All${selectedSupplierName ? '' : ''}`"
+            icon="pi pi-plus-circle"
+            size="small"
+            :disabled="isProcessing || !selectedSupplierId || remainingBySupplier.length === 0"
+            @click="addAllBySupplier"
+          />
+        </div>
+        <small v-if="selectedSupplierId && remainingBySupplier.length > 0" class="supplier-hint">
+          {{ remainingBySupplier.length }} product{{ remainingBySupplier.length !== 1 ? 's' : '' }} from {{ selectedSupplierName }}
+        </small>
+        <small v-else-if="selectedSupplierId && remainingBySupplier.length === 0" class="supplier-hint">
+          All products from {{ selectedSupplierName }} already added
+        </small>
+
+        <!-- Individual search -->
         <div class="search-row">
           <AutoComplete
             v-model="searchQuery"
             :suggestions="filteredProducts"
             optionLabel="name"
-            placeholder="Search by name, SKU, or barcode..."
+            placeholder="Or search individual product..."
             :disabled="isProcessing"
             class="flex-1"
             @complete="searchProducts"
@@ -331,109 +407,117 @@ async function handleSubmit() {
           >
             <template #option="{ option }">
               <div class="search-option">
-                <span class="search-option-name">{{ option.name }}</span>
-                <span class="search-option-meta">{{ option.sku }} · Stock: {{ option.stock }}</span>
+                <div class="search-option-left">
+                  <span class="search-option-name">{{ option.name }}</span>
+                  <span class="search-option-meta">{{ option.sku }}{{ option.supplier_name ? ` · ${option.supplier_name}` : '' }}</span>
+                </div>
+                <Tag :value="`Stock: ${option.stock}`" severity="secondary" class="search-option-tag" />
               </div>
             </template>
             <template #empty>
               <div class="search-empty">No products found</div>
             </template>
           </AutoComplete>
+        </div>
+      </div>
+
+      <!-- Section 3: Product List -->
+      <div class="section product-section">
+        <div v-if="entries.length > 0" class="list-toolbar">
+          <div class="quick-actions">
+            <span class="quick-label">Set all qty:</span>
+            <Button label="1" size="small" severity="secondary" text @click="setAllQuantities(1)" :disabled="isProcessing" />
+            <Button label="5" size="small" severity="secondary" text @click="setAllQuantities(5)" :disabled="isProcessing" />
+            <Button label="10" size="small" severity="secondary" text @click="setAllQuantities(10)" :disabled="isProcessing" />
+            <Button label="50" size="small" severity="secondary" text @click="setAllQuantities(50)" :disabled="isProcessing" />
+          </div>
           <Button
-            label="Add All"
-            icon="pi pi-plus-circle"
+            label="Clear All"
+            icon="pi pi-trash"
             size="small"
-            severity="secondary"
-            outlined
-            :disabled="isProcessing || addedProductIds.size === products.length"
-            @click="addAllProducts"
-            v-tooltip.top="'Add all products'"
+            severity="danger"
+            text
+            :disabled="isProcessing"
+            @click="clearAll"
           />
         </div>
-      </div>
 
-      <!-- Quick Actions (only show when there are entries) -->
-      <div v-if="entries.length > 0" class="quick-actions">
-        <span class="quick-label">Quick set all:</span>
-        <Button label="+1" size="small" severity="secondary" outlined @click="setAllQuantities(1)" :disabled="isProcessing" />
-        <Button label="+5" size="small" severity="secondary" outlined @click="setAllQuantities(5)" :disabled="isProcessing" />
-        <Button label="+10" size="small" severity="secondary" outlined @click="setAllQuantities(10)" :disabled="isProcessing" />
-        <Button label="+50" size="small" severity="secondary" outlined @click="setAllQuantities(50)" :disabled="isProcessing" />
-        <Button label="Clear" size="small" severity="secondary" text @click="setAllQuantities(0)" :disabled="isProcessing" />
-      </div>
-
-      <!-- Product List -->
-      <div class="product-list">
-        <div v-if="entries.length === 0" class="empty-list">
-          <i class="pi pi-search"></i>
-          <p>Search and add products above</p>
-        </div>
-        <div
-          v-for="(entry, index) in entries"
-          :key="entry.product.id"
-          class="product-row"
-          :class="{ 'has-quantity': entry.quantity > 0 }"
-        >
-          <div class="product-info">
-            <div class="product-initials-box">
-              <span>{{ entry.product.name.substring(0, 2).toUpperCase() }}</span>
-            </div>
-            <div class="product-details">
-              <span class="product-name">{{ entry.product.name }}</span>
-              <span class="product-meta">
-                {{ entry.product.sku }} · Stock: {{ entry.product.stock }}
-                <template v-if="entry.quantity > 0">
-                  → <strong>{{ newStock(entry) }}</strong>
-                </template>
-              </span>
-            </div>
+        <div class="product-list">
+          <div v-if="entries.length === 0" class="empty-list">
+            <i class="pi pi-inbox"></i>
+            <p>Select a supplier and click "Add All" to start</p>
+            <p class="empty-hint">or search for individual products above</p>
           </div>
-          <div class="product-inputs">
-            <div class="input-group">
-              <label>Qty</label>
-              <InputNumber
-                v-model="entry.quantity"
-                :min="0"
-                showButtons
-                buttonLayout="horizontal"
-                :inputStyle="{ width: '3rem', textAlign: 'center' }"
+          <div
+            v-for="(entry, index) in entries"
+            :key="entry.product.id"
+            class="product-row"
+            :class="{ 'has-quantity': entry.quantity > 0 }"
+          >
+            <div class="product-info">
+              <div class="product-initials-box">
+                <span>{{ entry.product.name.substring(0, 2).toUpperCase() }}</span>
+              </div>
+              <div class="product-details">
+                <span class="product-name">{{ entry.product.name }}</span>
+                <span class="product-meta">
+                  {{ entry.product.sku }}
+                  <template v-if="entry.product.supplier_name"> · {{ entry.product.supplier_name }}</template>
+                  · Stock: {{ entry.product.stock }}
+                  <template v-if="entry.quantity > 0">
+                    <i class="pi pi-arrow-right" style="font-size: 0.625rem; margin: 0 0.25rem"></i>
+                    <strong>{{ newStock(entry) }}</strong>
+                  </template>
+                </span>
+              </div>
+            </div>
+            <div class="product-inputs">
+              <div class="input-group">
+                <label>QTY</label>
+                <InputNumber
+                  v-model="entry.quantity"
+                  :min="0"
+                  showButtons
+                  buttonLayout="horizontal"
+                  :inputStyle="{ width: '3rem', textAlign: 'center' }"
+                  :disabled="isProcessing"
+                  decrementButtonClass="p-button-secondary p-button-outlined p-button-sm"
+                  incrementButtonClass="p-button-secondary p-button-outlined p-button-sm"
+                  incrementButtonIcon="pi pi-plus"
+                  decrementButtonIcon="pi pi-minus"
+                />
+              </div>
+              <div v-if="showCostColumn" class="input-group">
+                <label>COST</label>
+                <InputNumber
+                  v-model="entry.unitCost"
+                  mode="currency"
+                  currency="PHP"
+                  locale="en-PH"
+                  :min="0"
+                  :disabled="isProcessing"
+                  :inputStyle="{ width: '5rem' }"
+                  placeholder="0.00"
+                />
+              </div>
+              <Button
+                icon="pi pi-times"
+                text
+                rounded
+                severity="danger"
+                size="small"
                 :disabled="isProcessing"
-                decrementButtonClass="p-button-secondary p-button-outlined p-button-sm"
-                incrementButtonClass="p-button-secondary p-button-outlined p-button-sm"
-                incrementButtonIcon="pi pi-plus"
-                decrementButtonIcon="pi pi-minus"
+                @click="removeEntry(index)"
+                v-tooltip.top="'Remove'"
+                class="remove-btn"
               />
             </div>
-            <div v-if="showCostColumn" class="input-group">
-              <label>Cost</label>
-              <InputNumber
-                v-model="entry.unitCost"
-                mode="currency"
-                currency="PHP"
-                locale="en-PH"
-                :min="0"
-                :disabled="isProcessing"
-                :inputStyle="{ width: '5rem' }"
-                placeholder="0.00"
-              />
-            </div>
-            <Button
-              icon="pi pi-times"
-              text
-              rounded
-              severity="danger"
-              size="small"
-              :disabled="isProcessing"
-              @click="removeEntry(index)"
-              v-tooltip.top="'Remove'"
-              class="remove-btn"
-            />
           </div>
         </div>
       </div>
 
       <!-- Notes -->
-      <div class="notes-field">
+      <div class="section notes-section">
         <label>Notes (optional)</label>
         <Textarea
           v-model="notes"
@@ -444,14 +528,26 @@ async function handleSubmit() {
         />
       </div>
 
-      <!-- Summary -->
-      <div class="summary" v-if="hasValidEntries">
-        <span>
-          <Tag :value="adjustmentTypeOptions.find(o => o.value === adjustmentType)?.label || ''" :severity="adjustmentType === 'damage' ? 'danger' : adjustmentType === 'receive' ? 'success' : 'warn'" class="mr-2" />
-          <strong>{{ entriesToProcess.length }}</strong> product{{ entriesToProcess.length !== 1 ? 's' : '' }}
-          · <strong>{{ totalUnits }}</strong> total units
-          · {{ adjustmentReason }}
-        </span>
+      <!-- Summary Bar -->
+      <div class="summary" v-if="entries.length > 0">
+        <div class="summary-items">
+          <div class="summary-item">
+            <span class="summary-label">Products</span>
+            <span class="summary-value">{{ entriesToProcess.length }}</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-item">
+            <span class="summary-label">Total Units</span>
+            <span class="summary-value">{{ totalUnits }}</span>
+          </div>
+          <template v-if="showCostColumn && totalCost > 0">
+            <div class="summary-divider"></div>
+            <div class="summary-item">
+              <span class="summary-label">Total Cost</span>
+              <span class="summary-value summary-cost">{{ totalCost.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' }) }}</span>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -475,14 +571,47 @@ async function handleSubmit() {
 .bulk-adj-container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-.adj-config {
-  padding-bottom: 0.5rem;
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--p-text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-bottom: 0.375rem;
   border-bottom: 1px solid var(--p-surface-200);
 }
 
+.section-header i {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.entry-count {
+  margin-left: auto;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--p-primary-color);
+  text-transform: none;
+  letter-spacing: normal;
+  background: var(--p-primary-50);
+  padding: 0.125rem 0.5rem;
+  border-radius: 10px;
+}
+
+/* Config */
 .config-row {
   display: flex;
   gap: 0.75rem;
@@ -495,19 +624,26 @@ async function handleSubmit() {
 }
 
 .config-field label,
-.notes-field label,
-.search-section label {
+.notes-section label {
   font-weight: 500;
   font-size: 0.8125rem;
   color: var(--p-text-muted-color);
 }
 
-.search-section {
+/* Supplier row */
+.supplier-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.5rem;
+  align-items: flex-start;
 }
 
+.supplier-hint {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  padding-left: 0.125rem;
+}
+
+/* Search */
 .search-row {
   display: flex;
   gap: 0.5rem;
@@ -516,9 +652,18 @@ async function handleSubmit() {
 
 .search-option {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  width: 100%;
+}
+
+.search-option-left {
+  display: flex;
   flex-direction: column;
   gap: 0.125rem;
-  padding: 0.25rem 0;
+  min-width: 0;
 }
 
 .search-option-name {
@@ -531,33 +676,50 @@ async function handleSubmit() {
   color: var(--p-text-muted-color);
 }
 
+.search-option-tag {
+  flex-shrink: 0;
+}
+
 .search-empty {
   padding: 0.5rem 1rem;
   font-size: 0.8125rem;
   color: var(--p-text-muted-color);
 }
 
+/* List toolbar */
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.625rem;
+  background: var(--p-surface-50);
+  border-radius: 8px;
+  border: 1px solid var(--p-surface-200);
+}
+
 .quick-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  background: var(--p-surface-100);
-  border-radius: 8px;
-  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .quick-label {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--p-text-muted-color);
   margin-right: 0.25rem;
+  white-space: nowrap;
+}
+
+/* Product list */
+.product-section {
+  gap: 0.5rem;
 }
 
 .product-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-height: 40vh;
+  gap: 0.375rem;
+  max-height: 35vh;
   overflow-y: auto;
 }
 
@@ -565,13 +727,14 @@ async function handleSubmit() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
+  padding: 2.5rem 1rem;
   color: var(--p-text-muted-color);
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .empty-list i {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
 }
 
 .empty-list p {
@@ -579,41 +742,46 @@ async function handleSubmit() {
   font-size: 0.875rem;
 }
 
+.empty-hint {
+  font-size: 0.75rem !important;
+  opacity: 0.7;
+}
+
 .product-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.625rem 0.75rem;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
   background: var(--p-surface-0);
   border: 1px solid var(--p-surface-200);
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .product-row.has-quantity {
-  border-color: var(--p-primary-color);
+  border-color: var(--p-primary-200);
   background: var(--p-primary-50);
 }
 
 .product-info {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   flex: 1;
   min-width: 0;
 }
 
 .product-initials-box {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   background: var(--p-surface-100);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 600;
   color: var(--p-surface-500);
   border: 1px solid var(--p-surface-200);
@@ -627,7 +795,7 @@ async function handleSubmit() {
 
 .product-name {
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--p-text-color);
   white-space: nowrap;
   overflow: hidden;
@@ -635,13 +803,13 @@ async function handleSubmit() {
 }
 
 .product-meta {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--p-text-muted-color);
 }
 
 .product-inputs {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.625rem;
   flex-shrink: 0;
   align-items: center;
 }
@@ -649,11 +817,11 @@ async function handleSubmit() {
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.1875rem;
 }
 
 .input-group label {
-  font-size: 0.625rem;
+  font-size: 0.5625rem;
   text-transform: uppercase;
   color: var(--p-text-muted-color);
   font-weight: 600;
@@ -661,40 +829,72 @@ async function handleSubmit() {
 }
 
 .remove-btn {
-  margin-top: 0.75rem;
+  margin-top: 0.625rem;
 }
 
-.notes-field {
+/* Notes */
+.notes-section {
+  gap: 0.375rem;
+}
+
+/* Summary */
+.summary {
+  padding: 0.75rem 1rem;
+  background: var(--p-surface-50);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 8px;
+}
+
+.summary-items {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.summary-item {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  align-items: center;
+  gap: 0.125rem;
 }
 
-.summary {
-  padding: 0.625rem 1rem;
-  background: var(--p-primary-100);
-  border-radius: 8px;
-  text-align: center;
-  font-size: 0.8125rem;
-  color: var(--p-primary-700);
+.summary-label {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+  font-weight: 500;
+  letter-spacing: 0.03em;
 }
 
-.summary strong {
-  font-weight: 600;
+.summary-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--p-text-color);
 }
 
+.summary-cost {
+  color: var(--p-primary-color);
+}
+
+.summary-divider {
+  width: 1px;
+  height: 2rem;
+  background: var(--p-surface-300);
+}
+
+/* Footer */
 .dialog-footer {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
 }
 
+/* Utilities */
 .w-full { width: 100%; }
 .flex-1 { flex: 1; }
-.mr-2 { margin-right: 0.5rem; }
 
+/* Mobile */
 @media (max-width: 576px) {
   :deep(.bulk-adj-dialog-root) {
     width: 100vw !important;
@@ -714,18 +914,22 @@ async function handleSubmit() {
     flex-direction: column;
   }
 
-  .search-row {
+  .supplier-row {
     flex-direction: column;
   }
 
   .product-row {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .product-inputs {
     justify-content: space-between;
+  }
+
+  .summary-items {
+    gap: 0.75rem;
   }
 
   .dialog-footer {
@@ -739,7 +943,7 @@ async function handleSubmit() {
 
 @media (min-width: 577px) {
   :deep(.bulk-adj-dialog-root) {
-    width: 40rem;
+    width: 42rem;
     min-width: 36rem;
     max-width: 90vw;
   }
