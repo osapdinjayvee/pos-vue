@@ -137,12 +137,13 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
   overflow: hidden;
 }
 
+/* Icon and label scale with viewport height */
 .tile-icon {
-  font-size: 1.25rem;
+  font-size: clamp(0.875rem, 2.5vh, 1.75rem);
 }
 
 .tile-label {
-  font-size: 0.6875rem;
+  font-size: clamp(0.5rem, 1.5vh, 0.875rem);
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
@@ -153,9 +154,6 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
   .action-tiles-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-
-  .tile-icon { font-size: 1.125rem; }
-  .tile-label { font-size: 0.625rem; }
 }
 
 /* Tablet+ */
@@ -164,8 +162,5 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
     gap: 0.5rem;
     padding: 0.625rem;
   }
-
-  .tile-icon { font-size: 1.375rem; }
-  .tile-label { font-size: 0.75rem; }
 }
 </style>
