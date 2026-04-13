@@ -129,11 +129,12 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
 .action-tiles-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 1fr;
   gap: 0.375rem;
   padding: 0.5rem;
   flex: 1;
-  overflow-y: auto;
-  align-content: start;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tile-icon {
@@ -147,12 +148,10 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
   text-align: center;
 }
 
-/* Mobile: 2 columns */
+/* Mobile: 3 columns */
 @media (max-width: 639px) {
   .action-tiles-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.375rem;
-    padding: 0.375rem;
   }
 
   .tile-icon { font-size: 1.125rem; }
@@ -162,7 +161,6 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
 /* Tablet+ */
 @media (min-width: 640px) {
   .action-tiles-grid {
-    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
     padding: 0.625rem;
   }
