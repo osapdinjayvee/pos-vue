@@ -261,6 +261,39 @@ export const useProductStore = defineStore('product', () => {
               })
             }
           }
+
+          // Record stock movement if stock was changed via product edit
+          const stockChanged = data.stock !== undefined && data.stock !== current.stock
+          if (stockChanged) {
+            try {
+              const { variantRepository: varRepo } = await import('@/repositories/variantRepository')
+              const { inventoryService } = await import('@/services/inventoryService')
+              let variant = await varRepo.getDefaultVariant(id)
+              if (!variant) {
+                variant = await varRepo.createVariant({
+                  product_id: id,
+                  name: 'Default',
+                  sku: updated.sku,
+                  barcode: updated.barcode || undefined,
+                  is_active: true,
+                  display_order: 0
+                })
+              }
+              if (variant) {
+                const diff = data.stock! - current.stock
+                if (diff > 0) {
+                  await inventoryService.receiveStock(variant.id, diff, {
+                    reason: 'Stock updated via product edit',
+                    unitCost: updated.cost
+                  })
+                } else if (diff < 0) {
+                  await inventoryService.adjustStock(variant.id, diff, 'Stock updated via product edit')
+                }
+              }
+            } catch (e) {
+              console.warn('[ProductStore] Failed to record stock movement for edit:', e)
+            }
+          }
         }
 
         const index = products.value.findIndex(p => p.id === id)
