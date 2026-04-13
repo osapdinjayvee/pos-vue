@@ -23,7 +23,11 @@ const isAccepting = ref(false)
 const fetchError = ref<string | null>(null)
 const acceptError = ref<string | null>(null)
 
-const canAccept = computed(() => isAgreed.value && privacy.value !== null)
+const privacyUnavailable = ref(false)
+const canAccept = computed(() => {
+  if (privacyUnavailable.value) return true
+  return isAgreed.value && privacy.value !== null
+})
 
 onMounted(async () => {
   await loadPrivacy()
@@ -32,37 +36,51 @@ onMounted(async () => {
 async function loadPrivacy() {
   isFetching.value = true
   fetchError.value = null
+  privacyUnavailable.value = false
 
   try {
+    // Show cached content immediately if available
+    const cached = await onboarding.getCachedPrivacy()
+    if (cached) {
+      privacy.value = cached
+      isFetching.value = false
+    }
+
+    // Fetch fresh copy from server (updates cache for next time)
     if (connectivityService.isOnline.value) {
       const fetched = await onboarding.fetchPrivacyPolicy()
       if (fetched) {
         privacy.value = fetched
-      } else {
-        const cached = await onboarding.getCachedPrivacy()
-        if (cached) {
-          privacy.value = cached
-        } else {
-          throw new Error('Failed to load privacy policy from server and no cached version available.')
-        }
-      }
-    } else {
-      const cached = await onboarding.getCachedPrivacy()
-      if (cached) {
-        privacy.value = cached
-      } else {
-        throw new Error('No internet connection and no cached privacy policy available.')
+        isFetching.value = false
+        return
       }
     }
+
+    // If we already have cached content, we're good
+    if (privacy.value) return
+
+    // Nothing available
+    privacyUnavailable.value = true
+    fetchError.value = 'Privacy policy not available. You can proceed and accept it later.'
   } catch (err: any) {
-    fetchError.value = err.message || 'Failed to load privacy policy'
+    if (!privacy.value) {
+      privacyUnavailable.value = true
+      fetchError.value = 'Privacy policy not available. You can proceed and accept it later.'
+    }
   } finally {
     isFetching.value = false
   }
 }
 
 async function handleAccept() {
-  if (!canAccept.value || !privacy.value) return
+  if (!canAccept.value) return
+
+  if (privacyUnavailable.value) {
+    emit('next')
+    return
+  }
+
+  if (!privacy.value) return
 
   isAccepting.value = true
   acceptError.value = null
@@ -90,14 +108,14 @@ async function handleAccept() {
     <div class="flex-1 overflow-y-auto pb-28">
       <OnboardingConnectivityBanner />
 
-      <Message v-if="fetchError" severity="error" :closable="false" icon="pi pi-times-circle" class="w-full mb-3">
+      <Message v-if="fetchError" :severity="privacyUnavailable ? 'warn' : 'error'" :closable="false" :icon="privacyUnavailable ? 'pi pi-info-circle' : 'pi pi-times-circle'" class="w-full mb-3">
         <div class="flex flex-col gap-2">
           <span>{{ fetchError }}</span>
           <Button
             label="Retry"
             icon="pi pi-refresh"
             size="small"
-            severity="danger"
+            severity="secondary"
             outlined
             @click="loadPrivacy"
           />
@@ -142,8 +160,8 @@ async function handleAccept() {
           @click="emit('back')"
         />
         <Button
-          label="Accept & Continue"
-          icon="pi pi-check"
+          :label="privacyUnavailable ? 'Skip & Continue' : 'Accept & Continue'"
+          :icon="privacyUnavailable ? 'pi pi-arrow-right' : 'pi pi-check'"
           iconPos="right"
           class="!h-14 !text-base !font-bold"
           :disabled="!canAccept || isAccepting"

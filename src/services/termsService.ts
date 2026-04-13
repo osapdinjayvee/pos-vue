@@ -17,7 +17,10 @@ function mapLegalDoc(data: LegalDocumentResponse, docType: string): TermsDocumen
 class TermsService {
   async fetchActive(): Promise<TermsDocument | null> {
     try {
-      const response = await httpClient.get<LegalDocumentResponse>('/legal/terms-and-conditions')
+      const response = await httpClient.get<LegalDocumentResponse>('/legal/terms-and-conditions', {
+        timeout: 8000,
+        _maxRetries: 0
+      })
       const doc = mapLegalDoc(response.data, 'terms')
       await termsRepository.saveDocument(doc)
       return doc
@@ -29,7 +32,10 @@ class TermsService {
 
   async fetchPrivacyPolicy(): Promise<TermsDocument | null> {
     try {
-      const response = await httpClient.get<LegalDocumentResponse>('/legal/privacy-policy')
+      const response = await httpClient.get<LegalDocumentResponse>('/legal/privacy-policy', {
+        timeout: 8000,
+        _maxRetries: 0
+      })
       const doc = mapLegalDoc(response.data, 'privacy')
       await termsRepository.saveDocument(doc)
       return doc

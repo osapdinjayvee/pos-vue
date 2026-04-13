@@ -573,6 +573,7 @@ const onMovementRecorded = (newStock: number) => {
       v-model:visible="showStockDialog"
       :variant-id="defaultVariantId"
       variant-name="Default"
+      :product-id="product.id"
       :product-name="product.name"
       :current-stock="product.stock"
       @movement-recorded="onMovementRecorded"

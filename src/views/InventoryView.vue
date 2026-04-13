@@ -42,6 +42,7 @@ const rows = ref(10)
 // Stock dialog state
 const showStockDialog = ref(false)
 const selectedProduct = ref<Product | null>(null)
+const selectedVariantId = ref<string | null>(null)
 
 onMounted(() => {
   productStore.fetchAll()
@@ -129,9 +130,40 @@ function viewProduct(product: Product) {
 }
 
 // Stock dialog handlers
-function openAddStock(product: Product) {
+async function openAddStock(product: Product) {
   selectedProduct.value = product
-  showStockDialog.value = true
+  // Resolve actual variant ID for inventory operations
+  const { variantRepository } = await import('@/repositories/variantRepository')
+  let variant = await variantRepository.getDefaultVariant(product.id)
+  if (!variant) {
+    // Auto-create default variant
+    variant = await variantRepository.createVariant({
+      product_id: product.id,
+      name: 'Default',
+      sku: product.sku,
+      barcode: product.barcode || undefined,
+      is_active: true,
+      display_order: 0
+    })
+    // Sync existing stock to the new variant
+    if (variant && product.stock > 0) {
+      const { inventoryService } = await import('@/services/inventoryService')
+      await inventoryService.receiveStock(variant.id, product.stock, {
+        reason: 'Initial stock sync'
+      })
+    }
+  }
+  if (variant) {
+    selectedVariantId.value = variant.id
+    showStockDialog.value = true
+  } else {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Could not resolve product variant',
+      life: 3000
+    })
+  }
 }
 
 async function handleStockMovement(newStock: number) {
@@ -365,10 +397,11 @@ function getStockClass(product: Product): string {
 
     <!-- Stock Movement Dialog -->
     <StockMovementDialog
-      v-if="selectedProduct"
+      v-if="selectedProduct && selectedVariantId"
       v-model:visible="showStockDialog"
-      :variant-id="selectedProduct.id"
+      :variant-id="selectedVariantId"
       :variant-name="selectedProduct.name"
+      :product-id="selectedProduct.id"
       :product-name="selectedProduct.name"
       :current-stock="selectedProduct.stock"
       @movement-recorded="handleStockMovement"

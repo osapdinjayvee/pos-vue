@@ -23,7 +23,12 @@ const isAccepting = ref(false)
 const fetchError = ref<string | null>(null)
 const acceptError = ref<string | null>(null)
 
-const canAccept = computed(() => isAgreed.value && terms.value !== null)
+const termsUnavailable = ref(false)
+const canAccept = computed(() => {
+  // Allow proceeding if terms couldn't be loaded (server not ready)
+  if (termsUnavailable.value) return true
+  return isAgreed.value && terms.value !== null
+})
 
 onMounted(async () => {
   await loadTerms()
@@ -32,38 +37,52 @@ onMounted(async () => {
 async function loadTerms() {
   isFetching.value = true
   fetchError.value = null
+  termsUnavailable.value = false
 
   try {
+    // Show cached content immediately if available
+    const cached = await onboarding.getCachedTerms()
+    if (cached) {
+      terms.value = cached
+      isFetching.value = false
+    }
+
+    // Fetch fresh copy from server (updates cache for next time)
     if (connectivityService.isOnline.value) {
       const fetched = await onboarding.fetchTerms()
       if (fetched) {
         terms.value = fetched
-      } else {
-        // API returned null (request failed), try cache
-        const cached = await onboarding.getCachedTerms()
-        if (cached) {
-          terms.value = cached
-        } else {
-          throw new Error('Failed to load terms from server and no cached version available.')
-        }
-      }
-    } else {
-      const cached = await onboarding.getCachedTerms()
-      if (cached) {
-        terms.value = cached
-      } else {
-        throw new Error('No internet connection and no cached terms available.')
+        isFetching.value = false
+        return
       }
     }
+
+    // If we already have cached content, we're good
+    if (terms.value) return
+
+    // Nothing available
+    termsUnavailable.value = true
+    fetchError.value = 'Terms not available. You can proceed and accept them later.'
   } catch (err: any) {
-    fetchError.value = err.message || 'Failed to load terms and conditions'
+    if (!terms.value) {
+      termsUnavailable.value = true
+      fetchError.value = 'Terms not available. You can proceed and accept them later.'
+    }
   } finally {
     isFetching.value = false
   }
 }
 
 async function handleAccept() {
-  if (!canAccept.value || !terms.value) return
+  if (!canAccept.value) return
+
+  // If terms unavailable, just skip ahead
+  if (termsUnavailable.value) {
+    emit('next')
+    return
+  }
+
+  if (!terms.value) return
 
   isAccepting.value = true
   acceptError.value = null
@@ -91,14 +110,14 @@ async function handleAccept() {
     <div class="flex-1 overflow-y-auto pb-28">
       <OnboardingConnectivityBanner />
 
-      <Message v-if="fetchError" severity="error" :closable="false" icon="pi pi-times-circle" class="w-full mb-3">
+      <Message v-if="fetchError" :severity="termsUnavailable ? 'warn' : 'error'" :closable="false" :icon="termsUnavailable ? 'pi pi-info-circle' : 'pi pi-times-circle'" class="w-full mb-3">
         <div class="flex flex-col gap-2">
           <span>{{ fetchError }}</span>
           <Button
             label="Retry"
             icon="pi pi-refresh"
             size="small"
-            severity="danger"
+            severity="secondary"
             outlined
             @click="loadTerms"
           />
@@ -143,8 +162,8 @@ async function handleAccept() {
           @click="emit('back')"
         />
         <Button
-          label="Accept & Continue"
-          icon="pi pi-check"
+          :label="termsUnavailable ? 'Skip & Continue' : 'Accept & Continue'"
+          :icon="termsUnavailable ? 'pi pi-arrow-right' : 'pi pi-check'"
           iconPos="right"
           class="!h-14 !text-base !font-bold"
           :disabled="!canAccept || isAccepting"

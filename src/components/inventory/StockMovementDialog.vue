@@ -13,6 +13,7 @@ const props = defineProps<{
   visible: boolean
   variantId: string
   variantName: string
+  productId: string
   productName: string
   currentStock: number
 }>()
@@ -87,6 +88,18 @@ async function handleSubmit() {
   }
 
   if (result.success) {
+    // Persist the stock change to the products table
+    try {
+      const productRepo = await import('@/repositories/productRepository').then(m => m.default)
+      let stockChange = quantity.value
+      if (movementType.value === 'receive') {
+        stockChange = Math.abs(quantity.value)
+      }
+      await productRepo.updateStock(props.productId, stockChange)
+    } catch (e) {
+      console.error('[StockMovementDialog] Failed to update product stock:', e)
+    }
+
     emit('movement-recorded', result.newStock)
     dialogVisible.value = false
   }
