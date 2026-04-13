@@ -82,7 +82,7 @@ function isDisabled(tile: ActionTile): boolean {
 function tileClasses(tile: ActionTile): string {
   const severity = getTileSeverity(tile)
   const disabled = isDisabled(tile)
-  const base = 'flex flex-col items-center justify-center gap-1.5 rounded-xl border transition-all relative text-white min-h-[72px] sm:min-h-[88px] lg:min-h-[96px]'
+  const base = 'flex flex-col items-center justify-center gap-1 rounded-xl border transition-all relative text-white'
 
   if (disabled) {
     const bg = severity === 'danger' ? 'bg-red-600 border-red-600' : 'border-transparent'
@@ -109,7 +109,7 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
 </script>
 
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2 p-3 sm:p-4 flex-1 overflow-y-auto content-start">
+  <div class="action-tiles-grid">
     <button
       v-for="tile in tiles"
       :key="tile.id"
@@ -118,9 +118,56 @@ function tileStyle(tile: ActionTile): Record<string, string> | undefined {
       :disabled="isDisabled(tile)"
       @click="emit('action', getTileAction(tile))"
     >
-      <i :class="getTileIcon(tile)" style="font-size: 1.5rem"></i>
-      <span class="text-xs sm:text-sm font-semibold">{{ getTileLabel(tile) }}</span>
+      <i :class="getTileIcon(tile)" class="tile-icon"></i>
+      <span class="tile-label">{{ getTileLabel(tile) }}</span>
       <kbd v-if="tile.shortcut" class="absolute top-1 right-1 text-[10px] bg-white/20 rounded px-1">{{ tile.shortcut }}</kbd>
     </button>
   </div>
 </template>
+
+<style scoped>
+.action-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.375rem;
+  padding: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.tile-icon {
+  font-size: 1.25rem;
+}
+
+.tile-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* Mobile: 2 columns */
+@media (max-width: 639px) {
+  .action-tiles-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.375rem;
+    padding: 0.375rem;
+  }
+
+  .tile-icon { font-size: 1.125rem; }
+  .tile-label { font-size: 0.625rem; }
+}
+
+/* Tablet+ */
+@media (min-width: 640px) {
+  .action-tiles-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    padding: 0.625rem;
+  }
+
+  .tile-icon { font-size: 1.375rem; }
+  .tile-label { font-size: 0.75rem; }
+}
+</style>
