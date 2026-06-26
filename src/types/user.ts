@@ -29,7 +29,36 @@ export interface User {
   created_at: string
   updated_at: string
   synced_at: string | null
+  // Security questions for PIN recovery (Forgot PIN) — nullable
+  security_question_1?: string | null
+  security_answer_1_hash?: string | null
+  security_question_2?: string | null
+  security_answer_2_hash?: string | null
 }
+
+/**
+ * Security-question setup payload (answers are plaintext here; hashed before storage)
+ */
+export interface SecurityQuestionsInput {
+  question1: string
+  answer1: string
+  question2: string
+  answer2: string
+}
+
+/**
+ * Preset security questions offered during admin setup / user editing.
+ */
+export const SECURITY_QUESTIONS: string[] = [
+  'What was the name of your first pet?',
+  "What is your mother's maiden name?",
+  'What city were you born in?',
+  'What was the name of your elementary school?',
+  'What is your favorite food?',
+  'What was the make of your first vehicle?',
+  'What is your favorite movie?',
+  'What was your childhood nickname?'
+]
 
 export interface UserInput {
   username: string
@@ -40,6 +69,7 @@ export interface UserInput {
   email?: string
   branch_id: string
   role_ids: string[]
+  securityQuestions?: SecurityQuestionsInput
 }
 
 export interface UserUpdateInput {
@@ -49,6 +79,7 @@ export interface UserUpdateInput {
   pin?: string
   password?: string
   role_ids?: string[]
+  securityQuestions?: SecurityQuestionsInput
 }
 
 export interface DisplayUser {

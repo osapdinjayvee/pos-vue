@@ -7,6 +7,7 @@ import { useSupplierStore } from '@/stores/supplier'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
@@ -16,6 +17,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { ProductStatus, TaxType } from '@/types'
+import { normalizeTaxType } from '@/types/transaction'
 import ProductPreview from '@/components/products/ProductPreview.vue'
 import VariantList from '@/components/inventory/VariantList.vue'
 import VariantForm from '@/components/inventory/VariantForm.vue'
@@ -100,6 +102,37 @@ const defaultForm = (): ProductForm => ({
 
 const form = ref<ProductForm>(defaultForm())
 
+// --- Draft persistence (R27): keep new-product input if the user navigates
+// away (e.g. taps another tab) and comes back. Only for ADD mode. ---
+const DRAFT_KEY = 'pos_product_form_draft'
+
+function saveDraft() {
+  if (isEditMode.value) return
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(form.value))
+  } catch { /* storage unavailable */ }
+}
+
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    form.value = {
+      ...defaultForm(),
+      ...data,
+      expiration_date: data.expiration_date ? new Date(data.expiration_date) : null
+    }
+  } catch { /* ignore corrupt draft */ }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+}
+
+// Persist on every change (add mode only — guarded inside saveDraft)
+watch(form, saveDraft, { deep: true })
+
 const statusOptions = [
   { label: 'Active', value: 'active' },
   { label: 'Inactive', value: 'inactive' },
@@ -108,8 +141,8 @@ const statusOptions = [
 
 const taxTypeOptions = [
   { label: 'VATable (12%)', value: 'vatable' },
-  { label: 'VAT Exempt', value: 'vat-exempt' },
-  { label: 'Zero-rated', value: 'zero-rated' }
+  { label: 'VAT Exempt', value: 'exempt' },
+  { label: 'Zero-rated', value: 'zero_rated' }
 ]
 
 // Use category store for options
@@ -141,7 +174,7 @@ onMounted(async () => {
         stock: product.stock,
         low_stock_threshold: product.low_stock_threshold,
         status: product.status,
-        tax_type: product.tax_type,
+        tax_type: normalizeTaxType(product.tax_type),
         image: product.image || '',
         expiration_date: product.expiration_date ? new Date(product.expiration_date) : null,
         wholesale_price: product.wholesale_price || null,
@@ -163,6 +196,9 @@ onMounted(async () => {
       })
       router.push('/products')
     }
+  } else {
+    // Add mode — restore any unsaved draft from a previous visit
+    restoreDraft()
   }
 })
 
@@ -192,8 +228,10 @@ watch(hasVariants, (newValue) => {
 const validateForm = (): string | null => {
   if (!form.value.name.trim()) return 'Product name is required'
   if (!form.value.sku.trim()) return 'SKU is required'
+  if (!form.value.barcode.trim()) return 'Barcode is required'
   if (!form.value.category_id) return 'Category is required'
   if (form.value.price <= 0) return 'Price must be greater than 0'
+  if (form.value.cost <= 0) return 'Cost price must be greater than 0'
   return null
 }
 
@@ -253,6 +291,7 @@ const onSave = async () => {
       const created = await productStore.create(formData)
 
       if (created) {
+        clearDraft()
         toast.add({
           severity: 'success',
           summary: 'Product Created',
@@ -282,6 +321,7 @@ const onSave = async () => {
 }
 
 const onCancel = () => {
+  clearDraft()
   router.push('/products')
 }
 
@@ -656,21 +696,17 @@ const totalVariantStock = computed(() => {
           <div class="form-grid">
             <div class="form-field">
               <label for="price">Selling Price *</label>
-              <InputNumber
+              <AmountInput
                 id="price"
                 v-model="form.price"
-                mode="currency"
-                currency="PHP"
                 class="w-full"
               />
             </div>
             <div class="form-field">
               <label for="cost">Cost Price</label>
-              <InputNumber
+              <AmountInput
                 id="cost"
                 v-model="form.cost"
-                mode="currency"
-                currency="PHP"
                 class="w-full"
               />
             </div>
@@ -693,11 +729,10 @@ const totalVariantStock = computed(() => {
           <div class="form-grid">
             <div class="form-field">
               <label for="wholesale_price">Wholesale Price</label>
-              <InputNumber
+              <AmountInput
                 id="wholesale_price"
                 v-model="form.wholesale_price"
-                mode="currency"
-                currency="PHP"
+                allow-empty
                 class="w-full"
                 placeholder="Leave empty to disable"
               />

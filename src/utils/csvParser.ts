@@ -156,16 +156,22 @@ export function downloadCsvTemplate(
   fields: { field: string; label: string; required?: boolean }[],
   filename: string
 ): void {
-  const csvContent = generateCsvTemplate(fields)
+  // Prepend a UTF-8 BOM so Excel opens the template with correct encoding.
+  const csvContent = '﻿' + generateCsvTemplate(fields)
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
 
   const link = document.createElement('a')
   link.href = url
   link.setAttribute('download', `${filename}.csv`)
+  link.style.display = 'none'
   document.body.appendChild(link)
   link.click()
 
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  // Defer cleanup — removing the anchor / revoking the URL synchronously can
+  // cancel the download before it starts in Electron/WebView environments.
+  setTimeout(() => {
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, 1000)
 }

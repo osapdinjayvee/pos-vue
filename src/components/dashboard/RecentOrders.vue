@@ -22,13 +22,22 @@ interface RecentTransaction {
 const transactions = ref<RecentTransaction[]>([])
 
 async function loadData() {
+  // Include sales (completed), voids, and refunds/returns (separate table) so the
+  // widget reflects all transaction activity, not just completed sales.
   const rows = await db.query<RecentTransaction>(
-    `SELECT t.id, t.or_number, t.total_amount, t.status, t.created_at
-     FROM transactions t
-     WHERE date(t.created_at) >= ? AND date(t.created_at) <= ?
-     ORDER BY t.created_at DESC
+    `SELECT id, or_number, total_amount, status, created_at FROM (
+       SELECT t.id, t.or_number, t.total_amount, t.status, t.created_at
+       FROM transactions t
+       WHERE date(t.created_at) >= ? AND date(t.created_at) <= ?
+       UNION ALL
+       SELECT r.id, r.refund_or_number AS or_number, -r.total_refund_amount AS total_amount,
+              'refunded' AS status, r.created_at
+       FROM refunds r
+       WHERE date(r.created_at) >= ? AND date(r.created_at) <= ?
+     )
+     ORDER BY created_at DESC
      LIMIT 10`,
-    [props.dateFrom, props.dateTo]
+    [props.dateFrom, props.dateTo, props.dateFrom, props.dateTo]
   )
   transactions.value = rows
 }
@@ -37,6 +46,7 @@ function getStatusSeverity(status: string): 'success' | 'warn' | 'danger' | 'inf
   switch (status) {
     case 'completed': return 'success'
     case 'voided': return 'danger'
+    case 'refunded': return 'warn'
     default: return 'info'
   }
 }

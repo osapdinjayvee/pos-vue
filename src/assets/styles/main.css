@@ -315,7 +315,14 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
+}
+
+/* Let the text column shrink and wrap instead of pushing under the icon */
+.stats-card-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .stats-card-icon {
@@ -373,6 +380,7 @@ body {
   font-weight: 700;
   color: var(--p-text-color);
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .stats-card-subtitle {
@@ -1077,42 +1085,43 @@ body {
   border: none !important;
 }
 
-/* Header: subtle tinted background */
+/* Header: subtle tinted background (theme variables so dark mode adapts) */
 .p-datatable-header-cell {
-  background: #F9F9FB !important;
+  background: var(--p-surface-50) !important;
   border: none !important;
-  border-bottom: 1px solid var(--p-surface-100) !important;
+  border-bottom: 1px solid var(--p-surface-200) !important;
   padding: 0.625rem 1rem !important;
   font-size: var(--text-xs) !important;
   font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.04em !important;
-  color: #6B7280 !important;
+  color: var(--p-text-muted-color) !important;
 }
 
 /* Rows: generous padding, hairline dividers */
 .p-datatable-row > td,
 .p-datatable-tbody > tr > td {
   border: none !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+  border-bottom: 1px solid var(--p-surface-200) !important;
   padding: 0.75rem 1rem !important;
   font-size: var(--text-base) !important;
   vertical-align: middle !important;
+  color: var(--p-text-color) !important;
   transition: background 0.15s ease !important;
 }
 
-/* Alternating rows — all white base, odd rows get a faint blue-gray tint */
+/* Alternating rows — base surface, odd rows get a faint tint */
 .p-datatable-tbody > tr > td {
-  background: #FFFFFF !important;
+  background: var(--p-surface-0) !important;
 }
 
 .p-datatable-tbody > tr:nth-child(odd):not(.p-datatable-row-selected):not(:hover) > td {
-  background: #F8F9FC !important;
+  background: var(--p-surface-50) !important;
 }
 
-/* Subtle hover — #F5F5F7 */
+/* Subtle hover */
 .p-datatable-tbody > tr:not(.p-datatable-row-selected):hover > td {
-  background: #F5F5F7 !important;
+  background: var(--p-surface-100) !important;
 }
 
 /* Selected row */

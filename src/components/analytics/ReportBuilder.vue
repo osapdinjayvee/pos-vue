@@ -123,6 +123,9 @@ function toggleSaveInput() {
         :maxSelectedLabels="4"
         class="w-full"
       >
+        <template #header>
+          <div class="ms-select-all-label">Select All</div>
+        </template>
         <template #option="{ option }">
           <div class="dimension-option">
             <span class="option-label">{{ option.label }}</span>
@@ -144,6 +147,9 @@ function toggleSaveInput() {
         :maxSelectedLabels="4"
         class="w-full"
       >
+        <template #header>
+          <div class="ms-select-all-label">Select All</div>
+        </template>
         <template #option="{ option }">
           <div class="dimension-option">
             <span class="option-label">{{ option.label }}</span>
@@ -232,6 +238,13 @@ function toggleSaveInput() {
 
 .w-full {
   width: 100%;
+}
+
+.ms-select-all-label {
+  padding: 0.5rem 0.75rem 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
 }
 
 .dimension-option {

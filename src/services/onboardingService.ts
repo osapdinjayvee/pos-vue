@@ -4,7 +4,7 @@ import { businessConfigRepository } from '@/repositories/businessConfigRepositor
 import { userRepository } from '@/repositories/userRepository'
 import { syncQueueRepository } from '@/repositories/syncQueueRepository'
 import { httpClient } from '@/services/httpClient'
-import { hashPin } from '@/utils/crypto'
+import { hashPin, hashAnswer } from '@/utils/crypto'
 import { ONBOARDING_STEPS, type OnboardingStep, type AdminSetupInput, type CashierSetupInput, type ActivationCompletePayload } from '@/types/onboarding'
 import type { BusinessConfigInput } from '@/types/settings'
 
@@ -40,10 +40,27 @@ class OnboardingService {
     const pinHash = await hashPin(data.pin)
     const now = db.getCurrentTimestamp()
 
-    await db.execute(
-      `UPDATE users SET username = ?, pin_hash = ?, first_name = ?, last_name = ?, email = ?, updated_at = ? WHERE id = 'user-admin'`,
-      [data.username.toLowerCase(), pinHash, data.firstName, data.lastName, data.email || null, now]
-    )
+    if (data.securityQuestions) {
+      const sq = data.securityQuestions
+      const answer1Hash = await hashAnswer(sq.answer1)
+      const answer2Hash = await hashAnswer(sq.answer2)
+
+      await db.execute(
+        `UPDATE users SET username = ?, pin_hash = ?, first_name = ?, last_name = ?, email = ?,
+           security_question_1 = ?, security_answer_1_hash = ?,
+           security_question_2 = ?, security_answer_2_hash = ?, updated_at = ?
+         WHERE id = 'user-admin'`,
+        [
+          data.username.toLowerCase(), pinHash, data.firstName, data.lastName, data.email || null,
+          sq.question1, answer1Hash, sq.question2, answer2Hash, now
+        ]
+      )
+    } else {
+      await db.execute(
+        `UPDATE users SET username = ?, pin_hash = ?, first_name = ?, last_name = ?, email = ?, updated_at = ? WHERE id = 'user-admin'`,
+        [data.username.toLowerCase(), pinHash, data.firstName, data.lastName, data.email || null, now]
+      )
+    }
 
     await onboardingRepository.setCurrentStep('cashier')
   }

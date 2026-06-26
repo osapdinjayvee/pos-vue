@@ -4,7 +4,9 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import { useToast } from 'primevue/usetoast'
 import { useProductStore } from '@/stores/product'
+import { variantRepository } from '@/repositories/variantRepository'
 import { vatService } from '@/services/vatService'
+import { taxTypeLabel } from '@/types/transaction'
 import type { Product, ProductVariant } from '@/types'
 
 const props = defineProps<{
@@ -47,7 +49,7 @@ watch(() => props.visible, async (visible) => {
       isLoading.value = true
       try {
         await productStore.loadProducts()
-        allProducts.value = productStore.products
+        allProducts.value = await enrichWithVariants(productStore.products)
       } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load products', life: 3000 })
       } finally {
@@ -78,7 +80,7 @@ function handleSearchInput(value: string | undefined) {
 async function performSearch(query: string) {
   isSearching.value = true
   try {
-    searchResults.value = await productStore.searchProducts(query)
+    searchResults.value = await enrichWithVariants(await productStore.searchProducts(query))
   } catch {
     toast.add({ severity: 'error', summary: 'Search Error', detail: 'Failed to search products', life: 3000 })
   } finally {
@@ -104,6 +106,31 @@ function getProductVariants(product: Product): ProductVariant[] {
 
 function hasVariants(product: Product): boolean {
   return getProductVariants(product).length > 0
+}
+
+/**
+ * Attach active variants to the products being displayed so the POS can render
+ * a variant-selector card. Product loading doesn't join variants, so we fetch
+ * them here in a single query. We do NOT rely on the product's `has_variants`
+ * flag (it can be stale), so variants always show whenever they exist.
+ */
+async function enrichWithVariants(products: Product[]): Promise<Product[]> {
+  if (products.length === 0) return products
+
+  const variants = await variantRepository.findActiveByProductIds(products.map(p => p.id))
+  if (variants.length === 0) return products
+
+  const variantMap = new Map<string, ProductVariant[]>()
+  for (const v of variants) {
+    const list = variantMap.get(v.product_id) || []
+    list.push(v)
+    variantMap.set(v.product_id, list)
+  }
+
+  return products.map((p) => {
+    const v = variantMap.get(p.id)
+    return v ? ({ ...p, variants: v } as Product) : p
+  })
 }
 </script>
 
@@ -183,9 +210,9 @@ function hasVariants(product: Product): boolean {
               <div class="font-bold text-sm mt-1.5" style="color: var(--p-primary-color)">
                 {{ formatPrice(product.price) }}
               </div>
-              <div v-if="product.tax_type !== 'vatable'" class="mt-1">
+              <div v-if="product.tax_type && product.tax_type !== 'vatable'" class="mt-1">
                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-                  {{ product.tax_type === 'vat_exempt' ? 'VAT-Exempt' : 'Zero-Rated' }}
+                  {{ taxTypeLabel(product.tax_type) }}
                 </span>
               </div>
             </button>

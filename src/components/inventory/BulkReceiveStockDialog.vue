@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import { useInventory } from '@/composables/useInventory'
 import type { DisplayProduct } from '@/types'
@@ -161,11 +162,9 @@ const handleSubmit = async () => {
             </div>
             <div class="input-group">
               <label>Cost</label>
-              <InputNumber
+              <AmountInput
                 v-model="entry.unitCost"
-                mode="currency"
-                currency="PHP"
-                locale="en-PH"
+                allow-empty
                 :min="0"
                 :disabled="isLoading"
                 :inputStyle="{ width: '5rem' }"

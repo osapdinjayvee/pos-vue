@@ -105,12 +105,17 @@ export interface ReceiptDiscount {
 // Business information for receipt header
 export interface BusinessInfo {
   name: string
+  tradeName?: string
   address: string
   tin: string
   branchCode: string
   branchName?: string
   phoneNumber?: string
   email?: string
+  accreditationNumber?: string
+  dateAccredited?: string
+  ptuDateIssued?: string
+  logoUrl?: string
 }
 
 // Terminal information for receipt
@@ -150,10 +155,15 @@ export interface ReceiptData {
 
   // Footer
   customerName?: string
+  customerAddress?: string
   customerTin?: string
+  customerBusinessStyle?: string
   remarks?: string
   footerLine1?: string
   footerLine2?: string
+
+  // Summary
+  itemCount?: number
 
   // VAT display
   vatRatePercent?: number

@@ -15,7 +15,7 @@ import type {
   UserUpdateInput
 } from '@/types/user'
 import { toDisplayUser, toDisplayRole } from '@/types/user'
-import { hashPin } from '@/utils/crypto'
+import { hashPin, hashAnswer } from '@/utils/crypto'
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -74,7 +74,7 @@ export const useUserStore = defineStore('user', () => {
       }
 
       // Transform UserInput → db row: hash pin, strip role_ids
-      const { pin, role_ids, password, ...rest } = input
+      const { pin, role_ids, password, securityQuestions, ...rest } = input
       const pin_hash = await hashPin(pin)
       const password_hash = password ? await hashPin(password) : null
 
@@ -88,6 +88,17 @@ export const useUserStore = defineStore('user', () => {
       // Assign roles
       if (role_ids && role_ids.length > 0) {
         await userRepository.setRoles(newUser.id, role_ids)
+      }
+
+      // Store security questions if provided
+      if (securityQuestions) {
+        await userRepository.setSecurityQuestions(
+          newUser.id,
+          securityQuestions.question1,
+          await hashAnswer(securityQuestions.answer1),
+          securityQuestions.question2,
+          await hashAnswer(securityQuestions.answer2)
+        )
       }
 
       const userRoles = await userRepository.getUserRoles(newUser.id)
@@ -115,7 +126,7 @@ export const useUserStore = defineStore('user', () => {
 
     try {
       // Transform UserUpdateInput → db columns: hash pin/password, strip role_ids
-      const { pin, password, role_ids, ...rest } = input
+      const { pin, password, role_ids, securityQuestions, ...rest } = input
       const dbData: Record<string, any> = { ...rest }
 
       if (pin) {
@@ -134,6 +145,17 @@ export const useUserStore = defineStore('user', () => {
       // Update roles if provided
       if (role_ids) {
         await userRepository.setRoles(userId, role_ids)
+      }
+
+      // Update security questions if provided
+      if (securityQuestions) {
+        await userRepository.setSecurityQuestions(
+          userId,
+          securityQuestions.question1,
+          await hashAnswer(securityQuestions.answer1),
+          securityQuestions.question2,
+          await hashAnswer(securityQuestions.answer2)
+        )
       }
 
       const userRoles = await userRepository.getUserRoles(userId)

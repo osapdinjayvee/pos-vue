@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
@@ -93,6 +93,11 @@ function validate(): boolean {
     return false
   }
 
+  if (!form.value.phone.trim()) {
+    validationError.value = 'Phone number is required'
+    return false
+  }
+
   if (form.value.email && !isValidEmail(form.value.email)) {
     validationError.value = 'Please enter a valid email address'
     return false
@@ -168,10 +173,12 @@ function handleCancel() {
         </div>
 
         <div class="form-field">
-          <label for="phone">Phone</label>
+          <label for="phone">Phone *</label>
           <InputText
             id="phone"
             v-model="form.phone"
+            v-numeric-only
+            inputmode="numeric"
             placeholder="Contact number"
             class="w-full"
             :disabled="loading"
@@ -243,12 +250,9 @@ function handleCancel() {
 
         <div class="form-field">
           <label for="creditLimit">Credit Limit</label>
-          <InputNumber
+          <AmountInput
             id="creditLimit"
             v-model="form.credit_limit"
-            mode="currency"
-            currency="PHP"
-            locale="en-PH"
             :min="0"
             class="w-full"
             :disabled="loading"

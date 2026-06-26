@@ -14,7 +14,7 @@ const emit = defineEmits<{
   select: [id: string]
   view: [product: DisplayProduct]
   edit: [product: DisplayProduct]
-  delete: [product: DisplayProduct]
+  archive: [product: DisplayProduct]
 }>()
 
 const getStatusSeverity = (status: ProductStatus) => {
@@ -67,12 +67,13 @@ const getDiscountPercent = (product: DisplayProduct) => {
           @click="emit('edit', product)"
         />
         <Button
-          icon="pi pi-trash"
+          icon="pi pi-inbox"
           text
           rounded
           size="small"
-          severity="danger"
-          @click="emit('delete', product)"
+          severity="warn"
+          @click="emit('archive', product)"
+          v-tooltip.top="'Archive'"
         />
       </div>
     </div>

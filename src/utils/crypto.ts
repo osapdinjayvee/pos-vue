@@ -57,6 +57,28 @@ export function isValidPin(pin: string): boolean {
 }
 
 /**
+ * Normalize a security-question answer so matching is case/whitespace tolerant.
+ * (e.g. " Manila " and "manila" are treated as equal)
+ */
+export function normalizeAnswer(answer: string): string {
+  return answer.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * Hash a security-question answer (normalized then bcrypt-hashed)
+ */
+export async function hashAnswer(answer: string): Promise<string> {
+  return hashPin(normalizeAnswer(answer))
+}
+
+/**
+ * Verify a security-question answer against its stored hash
+ */
+export async function verifyAnswer(answer: string, hash: string): Promise<boolean> {
+  return verifyPin(normalizeAnswer(answer), hash)
+}
+
+/**
  * Validate that a password meets minimum requirements
  * @param password The password to validate
  * @returns True if the password is valid

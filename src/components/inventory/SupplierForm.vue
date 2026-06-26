@@ -142,6 +142,8 @@ function handleCancel() {
           <InputText
             id="phone"
             v-model="form.phone"
+            v-numeric-only
+            inputmode="numeric"
             placeholder="Contact number"
             class="w-full"
             :disabled="loading"

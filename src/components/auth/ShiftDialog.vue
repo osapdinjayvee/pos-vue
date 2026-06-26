@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
 import type { DisplayShift } from '@/types/user'
@@ -162,12 +162,9 @@ watch(
 
         <div class="form-field">
           <label for="opening-cash">Opening Cash Amount</label>
-          <InputNumber
+          <AmountInput
             id="opening-cash"
             v-model="openingCash"
-            mode="currency"
-            currency="PHP"
-            locale="en-PH"
             :min="0"
             :disabled="isLoading"
             class="w-full"
@@ -205,12 +202,9 @@ watch(
 
         <div class="form-field">
           <label for="closing-cash">Closing Cash Amount</label>
-          <InputNumber
+          <AmountInput
             id="closing-cash"
             v-model="closingCash"
-            mode="currency"
-            currency="PHP"
-            locale="en-PH"
             :min="0"
             :disabled="isLoading"
             class="w-full"

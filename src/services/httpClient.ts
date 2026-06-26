@@ -10,7 +10,6 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { DEFAULT_SYNC_CONFIG, getRetryDelay, getApiBaseUrl } from '@/config/sync'
-import { detectPlatform } from '@/db/platform'
 
 interface RetryConfig extends InternalAxiosRequestConfig {
   _retryCount?: number
@@ -40,11 +39,10 @@ interface HttpClient {
 // ─── Axios client (works on all platforms) ───
 
 function createAxiosHttpClient(): HttpClient {
-  // On Capacitor, use fetch adapter — Capacitor patches window.fetch for native HTTP
-  // but does NOT reliably patch XMLHttpRequest (Axios default)
-  const platform = detectPlatform()
-  const usesFetchAdapter = platform === 'capacitor'
-
+  // Always use fetch adapter — Capacitor patches window.fetch for native HTTP
+  // but does NOT reliably patch XMLHttpRequest (Axios default).
+  // Using fetch adapter everywhere avoids timing issues where Capacitor isn't
+  // initialized yet when this module loads, and works fine on web/Electron too.
   const client: AxiosInstance = axios.create({
     baseURL: DEFAULT_SYNC_CONFIG.apiBaseUrl,
     timeout: DEFAULT_SYNC_CONFIG.requestTimeout,
@@ -52,12 +50,10 @@ function createAxiosHttpClient(): HttpClient {
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     },
-    ...(usesFetchAdapter ? { adapter: 'fetch' } : {})
+    adapter: 'fetch'
   })
 
-  if (usesFetchAdapter) {
-    console.log('[HttpClient] Using Axios with fetch adapter (Capacitor native HTTP)')
-  }
+  console.log('[HttpClient] Using Axios with fetch adapter')
 
   // Request interceptor: inject auth token + dynamic base URL
   client.interceptors.request.use(

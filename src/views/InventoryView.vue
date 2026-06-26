@@ -32,7 +32,6 @@ const activeFilter = ref<FilterTab>('all')
 const searchQuery = ref('')
 
 // Table state
-const selectedProducts = ref<Product[]>([])
 const first = ref(0)
 const rows = ref(10)
 
@@ -239,7 +238,6 @@ function getStockClass(product: Product): string {
       <div v-else class="table-container flex-table">
         <DataTable
           :value="paginatedProducts"
-          v-model:selection="selectedProducts"
           dataKey="id"
           stripedRows
           removableSort
@@ -252,8 +250,6 @@ function getStockClass(product: Product): string {
               <p>No products found</p>
             </div>
           </template>
-
-          <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
           <Column header="Product" sortable sortField="name" style="min-width: 280px">
             <template #body="{ data }">

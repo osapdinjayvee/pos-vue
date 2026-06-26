@@ -7,6 +7,7 @@ import { useCategoryStore } from '@/stores/category'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import SelectButton from 'primevue/selectbutton'
 import MultiSelect from 'primevue/multiselect'
 import DatePicker from 'primevue/datepicker'
@@ -329,7 +330,6 @@ function toggleWeekday(day: number) {
                 id="discountValue"
                 v-model="value"
                 :suffix="type === 'percentage' ? '%' : undefined"
-                :prefix="type === 'fixed_amount' ? '\u20B1' : undefined"
                 :min="0"
                 :max="type === 'percentage' ? 100 : undefined"
                 class="w-full"
@@ -385,10 +385,9 @@ function toggleWeekday(day: number) {
           <div class="form-grid">
             <div class="form-field">
               <label for="minPurchase">Min Purchase</label>
-              <InputNumber
+              <AmountInput
                 id="minPurchase"
                 v-model="minPurchase"
-                prefix="\u20B1"
                 :min="0"
                 class="w-full"
                 :disabled="isSaving"
@@ -396,10 +395,10 @@ function toggleWeekday(day: number) {
             </div>
             <div class="form-field">
               <label for="maxDiscount">Max Discount</label>
-              <InputNumber
+              <AmountInput
                 id="maxDiscount"
                 v-model="maxDiscount"
-                prefix="\u20B1"
+                allow-empty
                 :min="0"
                 class="w-full"
                 placeholder="No limit"

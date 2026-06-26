@@ -6,7 +6,9 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import MultiSelect from 'primevue/multiselect'
 import Password from 'primevue/password'
-import type { DisplayUser, DisplayRole, UserInput, UserUpdateInput } from '@/types/user'
+import Select from 'primevue/select'
+import { SECURITY_QUESTIONS } from '@/types/user'
+import type { DisplayUser, DisplayRole, UserInput, UserUpdateInput, SecurityQuestionsInput } from '@/types/user'
 
 const props = defineProps<{
   visible: boolean
@@ -30,6 +32,31 @@ const pin = ref('')
 const confirmPin = ref('')
 const selectedRoleIds = ref<string[]>([])
 const error = ref<string | null>(null)
+
+// Security questions (optional — for PIN recovery)
+const secQuestion1 = ref('')
+const secAnswer1 = ref('')
+const secQuestion2 = ref('')
+const secAnswer2 = ref('')
+
+const question2Options = computed(() =>
+  SECURITY_QUESTIONS.filter((q) => q !== secQuestion1.value)
+)
+
+const securityProvided = computed(
+  () => !!(secQuestion1.value || secAnswer1.value || secQuestion2.value || secAnswer2.value)
+)
+
+const securityValid = computed(
+  () =>
+    !!(
+      secQuestion1.value &&
+      secQuestion2.value &&
+      secQuestion1.value !== secQuestion2.value &&
+      secAnswer1.value.trim().length >= 2 &&
+      secAnswer2.value.trim().length >= 2
+    )
+)
 
 const dialogVisible = computed({
   get: () => props.visible,
@@ -65,6 +92,9 @@ const canSubmit = computed(() => {
     if (pin.value && pin.value.length < 4) return false
   }
 
+  // If any security-question field is touched, all must be valid
+  if (securityProvided.value && !securityValid.value) return false
+
   return true
 })
 
@@ -76,10 +106,22 @@ const pinError = computed(() => {
   return null
 })
 
+function buildSecurityQuestions(): SecurityQuestionsInput | undefined {
+  if (!securityProvided.value || !securityValid.value) return undefined
+  return {
+    question1: secQuestion1.value,
+    answer1: secAnswer1.value.trim(),
+    question2: secQuestion2.value,
+    answer2: secAnswer2.value.trim()
+  }
+}
+
 function handleSubmit() {
   if (!canSubmit.value) return
 
   error.value = null
+
+  const securityQuestions = buildSecurityQuestions()
 
   if (isEditMode.value) {
     const updateData: UserUpdateInput = {
@@ -94,6 +136,10 @@ function handleSubmit() {
       updateData.pin = pin.value
     }
 
+    if (securityQuestions) {
+      updateData.securityQuestions = securityQuestions
+    }
+
     emit('save', updateData, false)
   } else {
     const createData: UserInput = {
@@ -104,6 +150,10 @@ function handleSubmit() {
       pin: pin.value,
       branch_id: 'default', // TODO: Get from current user's branch
       role_ids: selectedRoleIds.value
+    }
+
+    if (securityQuestions) {
+      createData.securityQuestions = securityQuestions
     }
 
     emit('save', createData, true)
@@ -128,6 +178,10 @@ function resetForm() {
   pin.value = ''
   confirmPin.value = ''
   selectedRoleIds.value = []
+  secQuestion1.value = ''
+  secAnswer1.value = ''
+  secQuestion2.value = ''
+  secAnswer2.value = ''
   error.value = null
 }
 
@@ -140,6 +194,10 @@ function populateForm() {
     selectedRoleIds.value = props.user.roles.map((r) => r.id)
     pin.value = ''
     confirmPin.value = ''
+    secQuestion1.value = ''
+    secAnswer1.value = ''
+    secQuestion2.value = ''
+    secAnswer2.value = ''
   } else {
     resetForm()
   }
@@ -288,6 +346,51 @@ watch(
         </Message>
 
         <small class="field-hint">PIN must be 4-6 numeric digits.</small>
+      </div>
+
+      <!-- Security Questions Section (optional, for PIN recovery) -->
+      <div class="pin-section">
+        <h4 class="section-title">Security Questions (optional)</h4>
+
+        <div class="form-field">
+          <label for="uf-sec-q1">Question 1</label>
+          <Select
+            id="uf-sec-q1"
+            v-model="secQuestion1"
+            :options="SECURITY_QUESTIONS"
+            :disabled="loading"
+            placeholder="Select a question"
+            class="w-full"
+          />
+          <InputText
+            v-model="secAnswer1"
+            :disabled="loading"
+            placeholder="Answer"
+            class="w-full"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="uf-sec-q2">Question 2</label>
+          <Select
+            id="uf-sec-q2"
+            v-model="secQuestion2"
+            :options="question2Options"
+            :disabled="loading"
+            placeholder="Select a different question"
+            class="w-full"
+          />
+          <InputText
+            v-model="secAnswer2"
+            :disabled="loading"
+            placeholder="Answer"
+            class="w-full"
+          />
+        </div>
+
+        <small class="field-hint">
+          Used to recover this account's PIN from the login screen. Leave blank to keep existing questions.
+        </small>
       </div>
     </div>
 

@@ -11,6 +11,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   submit: [credentials: { username: string; pin: string; terminalId: string }]
+  forgot: [username: string]
 }>()
 
 const username = ref('')
@@ -132,6 +133,15 @@ onMounted(() => {
         disabled
       />
     </div>
+
+    <Button
+      label="Forgot PIN?"
+      text
+      size="small"
+      class="forgot-link"
+      :disabled="loading"
+      @click="emit('forgot', username.trim().toLowerCase())"
+    />
   </div>
 </template>
 
@@ -238,5 +248,9 @@ onMounted(() => {
   height: 48px;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.forgot-link {
+  margin-top: 1rem;
 }
 </style>

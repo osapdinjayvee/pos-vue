@@ -937,6 +937,109 @@ const saveSystemSettings = async () => {
   }
 }
 
+// =====================
+// Backup & Restore (full database)
+// =====================
+const isBackingUp = ref(false)
+const isRestoring = ref(false)
+const restoreInputRef = ref<HTMLInputElement | null>(null)
+
+// SQLite files start with the ASCII header "SQLite format 3\0"
+const SQLITE_MAGIC = 'SQLite format 3\0'
+
+async function exportBackup() {
+  isBackingUp.value = true
+  try {
+    const data = await db.exportDatabase()
+    if (!data || data.length === 0) {
+      toast.add({ severity: 'error', summary: 'Backup Failed', detail: 'Could not read the database.', life: 4000 })
+      return
+    }
+
+    // Build a timestamped filename using LOCAL time (not UTC)
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
+    const filename = `zoomin-pos-backup-${stamp}.db`
+
+    const blob = new Blob([data], { type: 'application/x-sqlite3' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast.add({ severity: 'success', summary: 'Backup Saved', detail: `Downloaded ${filename}`, life: 4000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Backup Failed', detail: e?.message || 'Unexpected error.', life: 5000 })
+  } finally {
+    isBackingUp.value = false
+  }
+}
+
+function triggerRestore() {
+  restoreInputRef.value?.click()
+}
+
+function onRestoreFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  // Reset the input so selecting the same file again re-triggers change
+  input.value = ''
+  if (!file) return
+
+  confirm.require({
+    header: 'Restore Database',
+    message:
+      `This will REPLACE all current data with the contents of "${file.name}". ` +
+      `Any data not included in this backup will be lost. This cannot be undone. Continue?`,
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Restore & Replace',
+    rejectLabel: 'Cancel',
+    acceptClass: 'p-button-danger',
+    accept: () => restoreBackup(file)
+  })
+}
+
+async function restoreBackup(file: File) {
+  isRestoring.value = true
+  try {
+    const buffer = await file.arrayBuffer()
+    const data = new Uint8Array(buffer)
+
+    // Validate it's actually a SQLite database before importing
+    const header = new TextDecoder('latin1').decode(data.slice(0, 16))
+    if (header !== SQLITE_MAGIC) {
+      toast.add({
+        severity: 'error',
+        summary: 'Invalid Backup File',
+        detail: 'This file is not a valid Zoomin POS database backup.',
+        life: 5000
+      })
+      return
+    }
+
+    await db.importDatabase(data)
+
+    toast.add({
+      severity: 'success',
+      summary: 'Restore Complete',
+      detail: 'Database restored. Reloading…',
+      life: 2500
+    })
+
+    // Reload so every store/repository re-reads the restored database
+    setTimeout(() => window.location.reload(), 1200)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Restore Failed', detail: e?.message || 'Unexpected error.', life: 5000 })
+  } finally {
+    isRestoring.value = false
+  }
+}
+
 // Load all settings on mount
 onMounted(async () => {
   try {
@@ -1061,7 +1164,7 @@ onMounted(async () => {
 
                 <div class="form-group">
                   <label>Phone Number</label>
-                  <InputText v-model="businessInfo.phone" class="w-full" />
+                  <InputText v-model="businessInfo.phone" v-numeric-only inputmode="numeric" class="w-full" />
                 </div>
 
                 <div class="form-group full-width">
@@ -2067,6 +2170,62 @@ onMounted(async () => {
               <Divider />
 
               <div class="section-header">
+                <h3>Backup &amp; Restore</h3>
+                <p>Save a full copy of all your data to a file, or restore from a previous backup.</p>
+              </div>
+
+              <Message severity="info" :closable="false" class="mb-3">
+                Back up regularly and before app updates. A backup is a single
+                <strong>.db</strong> file containing your products, sales, customers, and settings —
+                keep it somewhere safe.
+              </Message>
+
+              <div class="backup-actions">
+                <div class="backup-card">
+                  <div class="backup-card-info">
+                    <i class="pi pi-download backup-card-icon"></i>
+                    <div>
+                      <label>Download Backup</label>
+                      <small>Export the entire database to a file you can keep.</small>
+                    </div>
+                  </div>
+                  <Button
+                    label="Download Backup"
+                    icon="pi pi-download"
+                    :loading="isBackingUp"
+                    @click="exportBackup"
+                  />
+                </div>
+
+                <div class="backup-card">
+                  <div class="backup-card-info">
+                    <i class="pi pi-upload backup-card-icon"></i>
+                    <div>
+                      <label>Restore from Backup</label>
+                      <small class="text-danger">Replaces ALL current data with the backup file. Cannot be undone.</small>
+                    </div>
+                  </div>
+                  <Button
+                    label="Restore…"
+                    icon="pi pi-upload"
+                    severity="secondary"
+                    outlined
+                    :loading="isRestoring"
+                    @click="triggerRestore"
+                  />
+                  <input
+                    ref="restoreInputRef"
+                    type="file"
+                    accept=".db,.sqlite,.sqlite3,application/x-sqlite3"
+                    class="hidden"
+                    @change="onRestoreFileSelected"
+                  />
+                </div>
+              </div>
+
+              <Divider />
+
+              <div class="section-header">
                 <h3>Notifications</h3>
               </div>
 
@@ -2392,6 +2551,56 @@ onMounted(async () => {
 
 .hidden {
   display: none;
+}
+
+.text-danger {
+  color: var(--p-red-500);
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.backup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.75rem;
+  background: var(--p-surface-0);
+}
+
+.backup-card-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.backup-card-info label {
+  display: block;
+  font-weight: 600;
+  color: var(--p-text-color);
+  margin-bottom: 0.125rem;
+}
+
+.backup-card-info small {
+  color: var(--p-text-muted-color);
+}
+
+.backup-card-icon {
+  font-size: 1.25rem;
+  color: var(--p-primary-color);
+  margin-top: 0.125rem;
+}
+
+@media (max-width: 640px) {
+  .backup-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .settings-page {

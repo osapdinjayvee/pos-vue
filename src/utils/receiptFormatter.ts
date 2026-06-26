@@ -10,6 +10,49 @@ function fmtAmt(amount: number): string {
 }
 
 /**
+ * Strip characters a thermal printer cannot render. The peso sign (₱, U+20B1)
+ * and other non-ASCII glyphs print as "?" on ESC/POS printers, so we remove
+ * the peso sign entirely and drop any remaining non-ASCII characters.
+ */
+function sanitizeForPrint(line: string): string {
+  return line
+    .replace(/₱/g, '')        // peso sign → removed
+    .replace(/[^\x00-\x7F]/g, '')  // any other non-ASCII → removed
+}
+
+/**
+ * Word-aware wrap: never splits a word across lines unless the word itself is
+ * longer than the line width (then it's hard-broken). Fixes "Mindoro" being
+ * cut into "M" / "indoro".
+ */
+export function wordWrap(text: string, width: number = RECEIPT_WIDTH, indent: string = ''): string[] {
+  const out: string[] = []
+  let line = ''
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const candidate = line ? `${line} ${word}` : word
+    if (candidate.length <= width) {
+      line = candidate
+      continue
+    }
+    if (line) out.push(line)
+    if (word.length > width) {
+      // Single word longer than the line — hard-break it
+      let w = word
+      const w2 = width - indent.length
+      while (w.length > width) {
+        out.push((out.length ? indent : '') + w.substring(0, w2))
+        w = w.substring(w2)
+      }
+      line = (out.length ? indent : '') + w
+    } else {
+      line = (out.length ? indent : '') + word
+    }
+  }
+  if (line) out.push(line)
+  return out.length ? out : ['']
+}
+
+/**
  * Receipt line width (characters) for thermal printer
  */
 export const RECEIPT_WIDTH = 42
@@ -71,19 +114,12 @@ function getTaxIndicator(taxType: string): string {
 export function formatLineItem(item: ReceiptLineItem, width: number = RECEIPT_WIDTH): string[] {
   const lines: string[] = []
 
-  // Product name (may wrap)
+  // Product name (wraps on word boundaries, never mid-word)
   const productName = item.variantName
     ? `${item.productName} - ${item.variantName}`
     : item.productName
 
-  if (productName.length > width) {
-    lines.push(productName.substring(0, width))
-    if (productName.length > width) {
-      lines.push('  ' + productName.substring(width, width * 2 - 2))
-    }
-  } else {
-    lines.push(productName)
-  }
+  lines.push(...wordWrap(productName, width, '  '))
 
   // Quantity x Unit Price = Line Total + Tax Indicator (V/E/Z)
   const qtyPrice = `  ${item.quantity} x ${fmtAmt(item.unitPrice)}`
@@ -346,7 +382,9 @@ export function formatReceipt(data: ReceiptData, width: number = RECEIPT_WIDTH):
   lines.push(centerText('Zoomin POS', width))
   lines.push('')
 
-  return lines
+  // Final pass: remove the peso sign and any other non-printable characters so
+  // the thermal printer never outputs "?" in their place.
+  return lines.map(sanitizeForPrint)
 }
 
 /**
@@ -361,9 +399,14 @@ export function receiptToText(data: ReceiptData, width?: number): string {
  */
 export function receiptToHTML(data: ReceiptData, width?: number): string {
   const lines = formatReceipt(data, width)
-  const htmlLines = lines.map(line =>
-    line.replace(/ /g, '&nbsp;')
-  )
+  // The lines are already wrapped/padded to the exact character width, so we
+  // render them verbatim with `white-space: pre` (no browser re-wrapping that
+  // would break words mid-character). Escape HTML-special characters only.
+  const escaped = lines
+    .map(line =>
+      line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    )
+    .join('\n')
 
   return `
 <!DOCTYPE html>
@@ -374,25 +417,22 @@ export function receiptToHTML(data: ReceiptData, width?: number): string {
     body {
       font-family: 'Courier New', Courier, monospace;
       font-size: 12px;
-      line-height: 1.2;
+      line-height: 1.25;
       margin: 0;
       padding: 10px;
-      width: 280px;
     }
     pre {
       margin: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
+      white-space: pre;
+      font: inherit;
     }
     @media print {
-      body {
-        width: auto;
-      }
+      body { width: auto; padding: 0; }
     }
   </style>
 </head>
 <body>
-  <pre>${htmlLines.join('\n')}</pre>
+  <pre>${escaped}</pre>
 </body>
 </html>
   `.trim()

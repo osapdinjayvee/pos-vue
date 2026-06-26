@@ -48,10 +48,14 @@ class ReceiptService {
     } catch {
       return {
         name: 'My POS Store',
+        tradeName: '',
         address: '123 Main Street, City, Province',
         tin: '000-000-000-000',
         branchCode: 'MAIN',
-        phoneNumber: '(02) 1234-5678'
+        phoneNumber: '(02) 1234-5678',
+        accreditationNumber: '',
+        dateAccredited: '',
+        ptuDateIssued: ''
       }
     }
   }
@@ -157,6 +161,9 @@ class ReceiptService {
       // Settings not available - use defaults
     }
 
+    // Compute item count (total quantity)
+    receiptData.itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+
     // Add customer info if transaction has customer_id
     if (transaction.customer_id) {
       try {
@@ -166,6 +173,11 @@ class ReceiptService {
           receiptData.customerName = customer.name
           if (customer.tax_id) {
             receiptData.customerTin = customer.tax_id
+          }
+          // Build customer address
+          const addrParts = [customer.address, customer.city].filter(Boolean)
+          if (addrParts.length) {
+            receiptData.customerAddress = addrParts.join(', ')
           }
         }
       } catch {
@@ -321,6 +333,24 @@ class ReceiptService {
     options: PrintReceiptOptions
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Bluetooth thermal printer routing
+      const settings = useSettingsStore()
+      const rcpt = settings.receiptConfig
+      if (rcpt?.connection_type === 'bluetooth' && rcpt?.bluetooth_device) {
+        const data = await this.generateReceiptData(transactionId, options)
+        if (!data) {
+          return { success: false, error: 'Failed to generate receipt' }
+        }
+        const { printerService } = await import('./printerService')
+        const escposOptions = {
+          paperWidth: (rcpt.paper_width === '58mm' ? '58mm' : '80mm') as '58mm' | '80mm',
+          autoCut: rcpt.auto_cut === 1,
+          openCashDrawer: rcpt.open_cash_drawer === 1,
+          cashDrawerPin: rcpt.cash_drawer_pin || 2
+        }
+        return await printerService.printReceipt(data, escposOptions)
+      }
+
       const html = await this.generateReceiptHTML(transactionId, options)
       if (!html) {
         return { success: false, error: 'Failed to generate receipt' }
@@ -332,19 +362,11 @@ class ReceiptService {
         return { success: false, error: 'Popup blocked. Please allow popups for printing.' }
       }
 
-      printWindow.document.write(html)
+      // Embed the print trigger inside the document so it fires reliably (the
+      // parent-side onload handler did not run consistently → receipt never
+      // printed). The toolbar lets the user re-print or close manually.
+      printWindow.document.write(this.injectReceiptControls(html, !options.silent))
       printWindow.document.close()
-
-      // Wait for content to load then print
-      printWindow.onload = () => {
-        if (!options.silent) {
-          printWindow.print()
-        }
-        // Close after printing (or immediately if silent)
-        setTimeout(() => {
-          printWindow.close()
-        }, options.silent ? 100 : 1000)
-      }
 
       return { success: true }
     } catch (error) {
@@ -417,7 +439,39 @@ class ReceiptService {
   }
 
   /**
-   * Preview receipt in a new window (without printing)
+   * Inject a Print/Close toolbar (and optional reliable auto-print) into a
+   * receipt HTML document shown in a popup window. The toolbar is hidden when
+   * printing. Auto-print is embedded in the document itself so it fires
+   * reliably across browser/Electron/WebView (the parent-side `onload`
+   * approach did not fire consistently).
+   */
+  private injectReceiptControls(html: string, autoPrint: boolean): string {
+    const toolbar = `
+      <div class="receipt-toolbar">
+        <button type="button" onclick="window.print()">🖨 Print</button>
+        <button type="button" onclick="window.close()">✕ Close</button>
+      </div>
+      <style>
+        .receipt-toolbar { position: sticky; top: 0; display: flex; gap: 8px;
+          padding: 8px; background: #f4f4f5; border-bottom: 1px solid #ddd; }
+        .receipt-toolbar button { flex: 1; padding: 8px 4px; font-size: 13px;
+          font-weight: 600; border: 1px solid #bbb; border-radius: 6px;
+          background: #fff; cursor: pointer; }
+        .receipt-toolbar button:active { background: #e4e4e7; }
+        @media print { .receipt-toolbar { display: none !important; } }
+      </style>`
+    const script = autoPrint
+      ? `<script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},250)})<\/script>`
+      : ''
+
+    let out = html
+    out = out.includes('<body>') ? out.replace('<body>', '<body>' + toolbar) : toolbar + out
+    out = out.includes('</body>') ? out.replace('</body>', script + '</body>') : out + script
+    return out
+  }
+
+  /**
+   * Preview receipt in a new window (with Print/Close controls)
    */
   async previewReceipt(
     transactionId: string,
@@ -434,7 +488,7 @@ class ReceiptService {
         return { success: false, error: 'Popup blocked. Please allow popups for preview.' }
       }
 
-      previewWindow.document.write(html)
+      previewWindow.document.write(this.injectReceiptControls(html, false))
       previewWindow.document.close()
 
       return { success: true }

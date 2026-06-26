@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
@@ -77,11 +77,8 @@ function formatCurrency(val: number): string {
       <!-- Amount -->
       <div>
         <label class="block text-sm font-medium mb-1">Payment Amount</label>
-        <InputNumber
+        <AmountInput
           v-model="amount"
-          mode="currency"
-          currency="PHP"
-          locale="en-PH"
           :min="0"
           :max="currentBalance"
           class="w-full"

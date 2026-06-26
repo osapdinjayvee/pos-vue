@@ -7,6 +7,7 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Dialog from 'primevue/dialog'
@@ -566,12 +567,9 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
 
         <div class="form-field" v-if="adjustmentType === 'receive'">
           <label for="cost">Unit Cost / Puhunan *</label>
-          <InputNumber
+          <AmountInput
             id="cost"
             v-model="adjustmentCost"
-            mode="currency"
-            currency="PHP"
-            locale="en-PH"
             :min="0"
             :disabled="inventoryLoading"
             class="w-full"

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { vatService } from '@/services/vatService'
 import type { CartItem, CartTotals, TaxType } from '@/types/transaction'
+import { normalizeTaxType } from '@/types/transaction'
 import type { DiscountType, EligibleDiscount } from '@/types/discount'
 import type { Product, ProductVariant } from '@/types'
 
@@ -126,12 +127,7 @@ export const useCartStore = defineStore('cart', () => {
       // Add new item
       const basePrice = variant?.price_override ?? product.price
       // Normalize tax_type to transaction-compatible values: vatable | exempt | zero_rated
-      const rawTax = product.tax_type || 'vatable'
-      const taxType: TaxType = rawTax === 'vat_exempt' || rawTax === 'vat-exempt'
-        ? 'exempt'
-        : rawTax === 'zero-rated'
-          ? 'zero_rated'
-          : rawTax as TaxType
+      const taxType: TaxType = normalizeTaxType(product.tax_type)
       const isWholesale = shouldApplyWholesale(product, quantity)
       const unitPrice = isWholesale ? product.wholesale_price! : basePrice
 

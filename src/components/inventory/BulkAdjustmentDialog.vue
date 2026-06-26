@@ -4,9 +4,11 @@ import Dialog from 'primevue/dialog'
 import AutoComplete from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
+import Message from 'primevue/message'
 import type { Product } from '@/types'
 
 interface BulkEntry {
@@ -26,12 +28,19 @@ const emit = defineEmits<{
 }>()
 
 const isProcessing = ref(false)
+const validationError = ref<string | null>(null)
 
 // Form state
 const entries = ref<BulkEntry[]>([])
 const adjustmentType = ref<string>('receive')
 const adjustmentReason = ref<string>('')
 const notes = ref('')
+
+// Unit cost is mandatory for Supplier Delivery / Purchase Order receipts
+const costRequired = computed(() =>
+  adjustmentType.value === 'receive' &&
+  (adjustmentReason.value === 'Supplier Delivery' || adjustmentReason.value === 'Purchase Order')
+)
 
 // Search state
 const searchQuery = ref('')
@@ -142,8 +151,14 @@ watch(() => props.visible, (visible) => {
     searchQuery.value = ''
     filteredProducts.value = []
     selectedSupplierId.value = null
+    validationError.value = null
   }
 })
+
+// Clear the validation message once the user starts fixing the inputs
+watch([adjustmentReason, entries], () => {
+  if (validationError.value) validationError.value = null
+}, { deep: true })
 
 // Reset reason when type changes
 watch(adjustmentType, () => {
@@ -217,7 +232,20 @@ function newStock(entry: BulkEntry): number {
 }
 
 async function handleSubmit() {
-  if (!hasValidEntries.value) return
+  // Validate with explicit error notifications (R39)
+  if (entriesToProcess.value.length === 0) {
+    validationError.value = 'Add at least one product with a quantity greater than 0.'
+    return
+  }
+  if (!adjustmentReason.value) {
+    validationError.value = 'Please select a reason for this adjustment.'
+    return
+  }
+  if (costRequired.value && entriesToProcess.value.some(e => !e.unitCost || e.unitCost <= 0)) {
+    validationError.value = `Unit cost is required for ${adjustmentReason.value}. Enter a cost for every product.`
+    return
+  }
+  validationError.value = null
   isProcessing.value = true
 
   const { variantRepository } = await import('@/repositories/variantRepository')
@@ -309,6 +337,10 @@ async function handleSubmit() {
     }"
   >
     <div class="bulk-adj-container">
+      <Message v-if="validationError" severity="error" :closable="false" icon="pi pi-exclamation-circle">
+        {{ validationError }}
+      </Message>
+
       <!-- Section 1: Type & Reason -->
       <div class="section">
         <div class="section-header">
@@ -378,7 +410,7 @@ async function handleSubmit() {
             showClear
           />
           <Button
-            :label="`Add All${selectedSupplierName ? '' : ''}`"
+            label="Add All by Supplier"
             icon="pi pi-plus-circle"
             size="small"
             :disabled="isProcessing || !selectedSupplierId || remainingBySupplier.length === 0"
@@ -488,12 +520,10 @@ async function handleSubmit() {
                 />
               </div>
               <div v-if="showCostColumn" class="input-group">
-                <label>COST</label>
-                <InputNumber
+                <label>COST{{ costRequired ? ' *' : '' }}</label>
+                <AmountInput
                   v-model="entry.unitCost"
-                  mode="currency"
-                  currency="PHP"
-                  locale="en-PH"
+                  allow-empty
                   :min="0"
                   :disabled="isProcessing"
                   :inputStyle="{ width: '5rem' }"
@@ -558,7 +588,7 @@ async function handleSubmit() {
           label="Apply Adjustment"
           icon="pi pi-check"
           :loading="isProcessing"
-          :disabled="!hasValidEntries"
+          :disabled="isProcessing"
           :severity="adjustmentType === 'damage' ? 'danger' : undefined"
           @click="handleSubmit"
         />

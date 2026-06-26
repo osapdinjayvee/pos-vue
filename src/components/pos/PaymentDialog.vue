@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import InputText from 'primevue/inputtext'
 import gcashIcon from '@/assets/icons/gcash-svgrepo-com.svg'
 import mayaIcon from '@/assets/icons/maya-svgrepo-com.svg'
@@ -516,11 +516,8 @@ function getMethodLabel(method: PaymentMethod): string {
           <!-- Split Amount (if split payment) -->
           <div v-if="isSplitPayment" class="mb-5">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Amount for this payment</label>
-            <InputNumber
+            <AmountInput
               v-model="splitAmount"
-              mode="currency"
-              currency="PHP"
-              locale="en-PH"
               :min="0"
               :max="remainingAmount"
               class="w-full"
@@ -545,14 +542,11 @@ function getMethodLabel(method: PaymentMethod): string {
             </div>
           </div>
 
-          <!-- Cash Payment -->
-          <div v-else-if="selectedMethod === 'cash'">
+          <!-- Cash Payment (hidden in split mode — the split amount input is used instead) -->
+          <div v-else-if="selectedMethod === 'cash' && !isSplitPayment">
             <label class="block text-sm font-medium text-neutral-700 mb-2">Cash Tendered</label>
-            <InputNumber
+            <AmountInput
               v-model="cashTendered"
-              mode="currency"
-              currency="PHP"
-              locale="en-PH"
               :min="0"
               class="w-full cash-tendered-input"
               inputClass="!text-4xl !font-extrabold !text-center !py-4 tabular-nums"

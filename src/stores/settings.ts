@@ -39,11 +39,14 @@ export const useSettingsStore = defineStore('settings', () => {
   // =====================
   const businessInfo = computed(() => ({
     name: businessConfig.value?.business_name || 'My POS Store',
+    tradeName: businessConfig.value?.trade_name || '',
     address: buildAddress(),
     tin: businessConfig.value?.tin || '000-000-000-000',
     branchCode: businessConfig.value?.branch_code || 'MAIN',
     phoneNumber: businessConfig.value?.phone || '',
     accreditationNumber: businessConfig.value?.accreditation_number || '',
+    dateAccredited: businessConfig.value?.date_accredited || '',
+    ptuDateIssued: businessConfig.value?.ptu_valid_from || '',
     logoUrl: businessConfig.value?.logo_url || ''
   }))
 

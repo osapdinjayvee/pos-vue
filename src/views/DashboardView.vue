@@ -77,7 +77,7 @@ async function loadInventoryStats() {
       COALESCE(SUM(p.stock * p.price), 0) as retail_value,
       COALESCE(SUM(CASE WHEN p.stock > 0 AND p.stock <= p.low_stock_threshold THEN 1 ELSE 0 END), 0) as low_stock,
       COALESCE(SUM(CASE WHEN p.stock = 0 THEN 1 ELSE 0 END), 0) as out_of_stock
-     FROM products p WHERE p.status != 'inactive'`
+     FROM products p WHERE p.status NOT IN ('inactive', 'archived')`
   )
 
   if (result) {
@@ -201,7 +201,7 @@ const inventoryStatsCards = computed<StatsData[]>(() => {
     {
       label: 'Expected Profit',
       value: formatCurrency(inv.expectedProfit),
-      icon: 'pi pi-trending-up',
+      icon: 'pi pi-arrow-up-right',
       trend: 0,
       trendLabel: `${inv.profitMargin.toFixed(1)}% margin`,
       color: 'green'
@@ -308,10 +308,10 @@ onMounted(async () => {
       <CustomerSummaryWidget />
     </div>
 
-    <!-- EIS -->
-    <div class="full-width-row">
+    <!-- EIS (hidden - online feature) -->
+    <!-- <div class="full-width-row">
       <EISDashboardWidget />
-    </div>
+    </div> -->
   </div>
 </template>
 

@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
@@ -157,11 +158,10 @@ function handleCancel() {
 
       <div v-if="movementType === 'receive'" class="form-field">
         <label for="unitCost">Unit Cost (optional)</label>
-        <InputNumber
+        <AmountInput
           id="unitCost"
           v-model="unitCost"
-          mode="currency"
-          currency="PHP"
+          allow-empty
           class="w-full"
           :disabled="isLoading"
         />

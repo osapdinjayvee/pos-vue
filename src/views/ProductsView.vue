@@ -154,6 +154,7 @@ const filteredProducts = computed(() => {
     result = result.filter(p =>
       p.name.toLowerCase().includes(query) ||
       p.sku.toLowerCase().includes(query) ||
+      (p.barcode?.toLowerCase().includes(query)) ||
       (p.category_name?.toLowerCase().includes(query))
     )
   }
@@ -307,63 +308,6 @@ const navigateToEdit = (product: DisplayProduct) => {
   router.push(`/products/${product.id}/edit`)
 }
 
-const confirmDelete = (product: DisplayProduct) => {
-  confirm.require({
-    message: `Are you sure you want to delete "${product.name}"?`,
-    header: 'Delete Product',
-    icon: 'pi pi-exclamation-triangle',
-    rejectProps: {
-      label: 'Cancel',
-      severity: 'secondary',
-      outlined: true
-    },
-    acceptProps: {
-      label: 'Delete',
-      severity: 'danger'
-    },
-    accept: async () => {
-      const success = await productStore.remove(product.id)
-      if (success) {
-        toast.add({
-          severity: 'success',
-          summary: 'Deleted',
-          detail: 'Product deleted successfully',
-          life: 3000
-        })
-        selectedProducts.value = selectedProducts.value.filter(p => p.id !== product.id)
-      } else {
-        // Delete failed (likely FK constraint) — offer archive instead
-        confirm.require({
-          message: `"${product.name}" cannot be deleted because it has sales history. Would you like to archive it instead? Archived products are hidden from the product list and POS but preserved for reports.`,
-          header: 'Archive Product?',
-          icon: 'pi pi-inbox',
-          rejectProps: {
-            label: 'Cancel',
-            severity: 'secondary',
-            outlined: true
-          },
-          acceptProps: {
-            label: 'Archive',
-            severity: 'warn'
-          },
-          accept: async () => {
-            const archived = await productStore.archive(product.id)
-            if (archived) {
-              toast.add({
-                severity: 'success',
-                summary: 'Archived',
-                detail: `"${product.name}" has been archived`,
-                life: 3000
-              })
-              selectedProducts.value = selectedProducts.value.filter(p => p.id !== product.id)
-            }
-          }
-        })
-      }
-    }
-  })
-}
-
 const confirmArchive = (product: DisplayProduct) => {
   confirm.require({
     message: `Archive "${product.name}"? It will be hidden from the product list and POS but preserved for reports.`,
@@ -405,28 +349,28 @@ const handleRestore = async (product: DisplayProduct) => {
   }
 }
 
-const confirmBulkDelete = () => {
+const confirmBulkArchive = () => {
   confirm.require({
-    message: `Are you sure you want to delete ${selectedProducts.value.length} products?`,
-    header: 'Delete Products',
-    icon: 'pi pi-exclamation-triangle',
+    message: `Archive ${selectedProducts.value.length} products? They will be hidden from the product list and POS but preserved for reports.`,
+    header: 'Archive Products',
+    icon: 'pi pi-inbox',
     rejectProps: {
       label: 'Cancel',
       severity: 'secondary',
       outlined: true
     },
     acceptProps: {
-      label: 'Delete All',
-      severity: 'danger'
+      label: 'Archive All',
+      severity: 'warn'
     },
     accept: async () => {
       const ids = selectedProducts.value.map(p => p.id)
-      const success = await productStore.bulkDelete(ids)
+      const success = await productStore.bulkUpdateStatus(ids, 'archived')
       if (success) {
         toast.add({
           severity: 'success',
-          summary: 'Deleted',
-          detail: `${ids.length} products deleted successfully`,
+          summary: 'Archived',
+          detail: `${ids.length} products archived`,
           life: 3000
         })
         selectedProducts.value = []
@@ -511,7 +455,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
           :selectedCount="selectedProducts.length"
           :activeFilterCount="activeFilterCount"
           @add="navigateToCreate"
-        @bulkDelete="confirmBulkDelete"
+        @bulkArchive="confirmBulkArchive"
         @bulkActivate="bulkSetStatus('active')"
         @bulkDeactivate="bulkSetStatus('inactive')"
         @bulkReceiveStock="openBulkReceiveDialog"
@@ -662,7 +606,7 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
             @select="toggleSelect"
             @view="viewProduct(toDisplayProduct(product))"
             @edit="navigateToEdit(toDisplayProduct(product))"
-            @delete="confirmDelete(toDisplayProduct(product))"
+            @archive="confirmArchive(toDisplayProduct(product))"
           />
         </div>
 
@@ -771,14 +715,6 @@ const handleBulkStockReceived = async (result: { success: number; failed: number
                       severity="warn"
                       @click.stop="confirmArchive(data)"
                       v-tooltip.top="'Archive'"
-                    />
-                    <Button
-                      icon="pi pi-trash"
-                      text
-                      rounded
-                      severity="danger"
-                      @click.stop="confirmDelete(data)"
-                      v-tooltip.top="'Delete'"
                     />
                   </template>
                 </div>

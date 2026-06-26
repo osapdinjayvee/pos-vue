@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -420,14 +420,9 @@ function handleCancel() {
               <label class="text-xs font-semibold text-neutral-500 uppercase tracking-wide block mb-2">
                 Opening Cash Amount
               </label>
-              <InputNumber
+              <AmountInput
                 v-model="cashAmount"
                 :min="0"
-                :min-fraction-digits="2"
-                :max-fraction-digits="2"
-                mode="currency"
-                currency="PHP"
-                locale="en-PH"
                 placeholder="0.00"
                 :disabled="isSubmitting"
                 class="w-full"
@@ -629,14 +624,9 @@ function handleCancel() {
               <label class="text-xs font-semibold text-neutral-500 uppercase tracking-wide block mb-2">
                 Closing Cash Count
               </label>
-              <InputNumber
+              <AmountInput
                 v-model="cashAmount"
                 :min="0"
-                :min-fraction-digits="2"
-                :max-fraction-digits="2"
-                mode="currency"
-                currency="PHP"
-                locale="en-PH"
                 placeholder="0.00"
                 :disabled="isSubmitting"
                 class="w-full"

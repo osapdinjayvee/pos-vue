@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-import InputNumber from 'primevue/inputnumber';
+import AmountInput from '@/components/common/AmountInput.vue';
 import InputText from 'primevue/inputtext';
 import SupervisorAuthDialog from '@/components/auth/SupervisorAuthDialog.vue';
 import { useCashDrawer } from '@/composables/useCashDrawer';
@@ -94,15 +94,10 @@ const handleSupervisorCancelled = () => {
     <div class="cash-paid-in-form">
       <div class="form-section">
         <label for="amount" class="form-label required">Amount</label>
-        <InputNumber
+        <AmountInput
           id="amount"
           v-model="amount"
-          mode="currency"
-          currency="PHP"
-          locale="en-PH"
           :min="0.01"
-          :min-fraction-digits="2"
-          :max-fraction-digits="2"
           placeholder="0.00"
           :disabled="isLoading"
           class="w-full"

@@ -17,6 +17,7 @@ import type {
   CartTotals,
   TaxType
 } from '@/types/transaction'
+import { normalizeTaxType } from '@/types/transaction'
 import type { PaymentInput, PaymentEntry } from '@/types/payment'
 import type { DiscountType } from '@/types/discount'
 import { transactionSyncService } from '@/services/transactionSyncService'
@@ -74,7 +75,7 @@ class TransactionService {
       const cartItems = data.items.map(item => ({
         unitPrice: item.unitPrice,
         quantity: item.quantity,
-        taxType: item.taxType,
+        taxType: normalizeTaxType(item.taxType),
         lineDiscount: item.discount || 0
       }))
 
@@ -138,10 +139,11 @@ class TransactionService {
 
       // 6. Create transaction items
       const itemInputs: TransactionItemInput[] = data.items.map(item => {
+        const taxType = normalizeTaxType(item.taxType)
         const itemVAT = calculateCartVAT([{
           unitPrice: item.unitPrice,
           quantity: item.quantity,
-          taxType: item.taxType,
+          taxType,
           lineDiscount: item.discount || 0
         }])
 
@@ -159,7 +161,7 @@ class TransactionService {
           discount: item.discount || 0,
           discount_name: item.discountName || null,
           discount_id: item.discountId || null,
-          tax_type: item.taxType,
+          tax_type: taxType,
           vatable_sales: itemVAT.vatableSales,
           vat_amount: itemVAT.vatAmount,
           vat_exempt_sales: itemVAT.vatExemptSales,
@@ -267,10 +269,10 @@ class TransactionService {
         }
       }
 
-      // 10. Enqueue for cloud sync (non-blocking)
-      transactionSyncService.enqueueTransaction(transaction.id, 'create').catch((e) =>
-        console.error('[TransactionService] Sync enqueue failed:', e)
-      )
+      // 10. Cloud sync (disabled - online feature)
+      // transactionSyncService.enqueueTransaction(transaction.id, 'create').catch((e) =>
+      //   console.error('[TransactionService] Sync enqueue failed:', e)
+      // )
 
       // 11. Trigger analytics aggregation for today (non-blocking, idempotent)
       import('@/services/analyticsAggregationService').then(async ({ analyticsAggregationService }) => {
@@ -281,12 +283,12 @@ class TransactionService {
         )
       }).catch(() => { /* module not available yet */ })
 
-      // 12. Enqueue for EIS submission (non-blocking)
-      import('@/services/eisService').then(({ eisService }) => {
-        eisService.enqueueTransaction(transaction.id).catch((e) =>
-          console.error('[TransactionService] EIS enqueue failed:', e)
-        )
-      }).catch(() => { /* module not available yet */ })
+      // 12. EIS submission (disabled - online feature)
+      // import('@/services/eisService').then(({ eisService }) => {
+      //   eisService.enqueueTransaction(transaction.id).catch((e) =>
+      //     console.error('[TransactionService] EIS enqueue failed:', e)
+      //   )
+      // }).catch(() => { /* module not available yet */ })
 
       return {
         success: true,
@@ -404,17 +406,17 @@ class TransactionService {
         console.error('[TransactionService] Credit charge reversal failed:', e)
       }
 
-      // Enqueue void for cloud sync (non-blocking)
-      transactionSyncService.enqueueVoid(transactionId).catch((e) =>
-        console.error('[TransactionService] Void sync enqueue failed:', e)
-      )
+      // Cloud sync (disabled - online feature)
+      // transactionSyncService.enqueueVoid(transactionId).catch((e) =>
+      //   console.error('[TransactionService] Void sync enqueue failed:', e)
+      // )
 
-      // Enqueue void for EIS submission (non-blocking)
-      import('@/services/eisService').then(({ eisService }) => {
-        eisService.enqueueVoid(transactionId).catch((e) =>
-          console.error('[TransactionService] EIS void enqueue failed:', e)
-        )
-      }).catch(() => { /* module not available yet */ })
+      // EIS void enqueue (disabled - online feature)
+      // import('@/services/eisService').then(({ eisService }) => {
+      //   eisService.enqueueVoid(transactionId).catch((e) =>
+      //     console.error('[TransactionService] EIS void enqueue failed:', e)
+      //   )
+      // }).catch(() => { /* module not available yet */ })
 
       return { success: true }
     } catch (error) {

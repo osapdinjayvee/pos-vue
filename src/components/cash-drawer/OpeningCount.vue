@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import { useCashDrawer } from '@/composables/useCashDrawer'
 
 interface Props {
@@ -79,15 +79,10 @@ async function handleConfirm() {
 
     <div class="body">
       <label class="amount-label" for="opening-amount">Amount (₱)</label>
-      <InputNumber
+      <AmountInput
         id="opening-amount"
         v-model="amount"
         :min="0"
-        :min-fraction-digits="2"
-        :max-fraction-digits="2"
-        mode="currency"
-        currency="PHP"
-        locale="en-PH"
         placeholder="0.00"
         :disabled="isLoading"
         class="amount-input"

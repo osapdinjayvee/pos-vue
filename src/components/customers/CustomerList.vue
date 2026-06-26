@@ -17,6 +17,7 @@ const emit = defineEmits<{
   edit: [customer: Customer]
   delete: [customer: Customer]
   view: [customer: Customer]
+  pay: [customer: Customer]
 }>()
 
 const customers = ref<Customer[]>([])
@@ -144,6 +145,16 @@ defineExpose({ loadCustomers })
       <Column header="Actions" headerStyle="width: 10rem">
         <template #body="{ data }">
           <div class="action-buttons">
+            <Button
+              v-if="data.current_balance > 0"
+              icon="pi pi-wallet"
+              text
+              rounded
+              severity="warn"
+              size="small"
+              @click="emit('pay', data)"
+              v-tooltip="'Receive Payment'"
+            />
             <Button
               icon="pi pi-eye"
               text

@@ -5,8 +5,6 @@
  */
 
 import db from '@/db/database'
-import { salesAggregateRepository } from '@/repositories/salesAggregateRepository'
-import { salesHourlyRepository } from '@/repositories/salesHourlyRepository'
 import type {
   TodayMetrics,
   SalesTrendPoint,
@@ -101,19 +99,31 @@ class AnalyticsService {
   }
 
   /**
-   * Get sales trend data points for a period
+   * Get sales trend data points for a period.
+   * Queries the transactions table live so it always reflects actual sales
+   * (the pre-aggregated tables are only populated when reports are generated).
    */
   async getSalesTrend(period: AnalyticsPeriod, branchId?: string, dateFrom?: string, dateTo?: string): Promise<SalesTrendPoint[]> {
     const { from, to } = this.resolvePeriodDates(period, dateFrom, dateTo)
+    const branchClause = branchId ? ' AND branch_id = ?' : ''
 
     if (period === 'today') {
-      // Hourly trend for today
-      const hourlyData = await salesHourlyRepository.getForDate(from, branchId)
+      // Live hourly trend for a single day
+      const params: any[] = [from]
+      if (branchId) params.push(branchId)
+      const rows = await db.query<{ hour: number; sales: number; transaction_count: number }>(
+        `SELECT CAST(strftime('%H', created_at) AS INTEGER) as hour,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END), 0) as sales,
+                COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN 1 ELSE 0 END), 0) as transaction_count
+         FROM transactions
+         WHERE date(created_at) = ?${branchClause}
+         GROUP BY hour`,
+        params
+      )
 
-      // Fill all 24 hours
       const points: SalesTrendPoint[] = []
       for (let h = 0; h < 24; h++) {
-        const match = hourlyData.find(d => d.hour === h)
+        const match = rows.find(r => r.hour === h)
         points.push({
           label: getHourLabel(h),
           sales: match?.sales || 0,
@@ -123,31 +133,95 @@ class AnalyticsService {
       return points
     }
 
-    // Daily trend for longer periods
-    const aggregates = await salesAggregateRepository.findAll({
-      branchId,
-      dateFrom: from,
-      dateTo: to
-    })
+    // Live daily trend for longer periods
+    const params: any[] = [from, to]
+    if (branchId) params.push(branchId)
+    const rows = await db.query<{ d: string; sales: number; transaction_count: number }>(
+      `SELECT date(created_at) as d,
+              COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END), 0) as sales,
+              COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN 1 ELSE 0 END), 0) as transaction_count
+       FROM transactions
+       WHERE date(created_at) >= ? AND date(created_at) <= ?${branchClause}
+       GROUP BY date(created_at)`,
+      params
+    )
+    const byDate = new Map(rows.map(r => [r.d, r]))
 
-    return aggregates.map(a => ({
-      label: new Date(a.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }),
-      sales: a.gross_sales,
-      transactionCount: a.transaction_count
-    })).reverse()
+    // Fill every day in the range so the chart is continuous (cap to a year)
+    const [sy, sm, sd] = from.split('-').map(Number)
+    const [ey, em, ed] = to.split('-').map(Number)
+    const start = new Date(sy!, sm! - 1, sd!)
+    const end = new Date(ey!, em! - 1, ed!)
+    const dayMs = 1000 * 60 * 60 * 24
+    const totalDays = Math.floor((end.getTime() - start.getTime()) / dayMs) + 1
+
+    const points: SalesTrendPoint[] = []
+    if (totalDays > 0 && totalDays <= 366) {
+      for (let i = 0; i < totalDays; i++) {
+        const d = new Date(start.getTime() + i * dayMs)
+        const match = byDate.get(toLocalDateStr(d))
+        points.push({
+          label: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }),
+          sales: match?.sales || 0,
+          transactionCount: match?.transaction_count || 0
+        })
+      }
+    } else {
+      for (const r of rows) {
+        points.push({
+          label: new Date(r.d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }),
+          sales: r.sales,
+          transactionCount: r.transaction_count
+        })
+      }
+    }
+    return points
   }
 
   /**
-   * Compare current period vs previous period
+   * Live gross + transaction totals for a date range (from the transactions table).
    */
-  async getPeriodComparison(period: AnalyticsPeriod, branchId?: string): Promise<PeriodComparisonData> {
-    const { from: currentFrom, to: currentTo } = this.resolvePeriodDates(period)
+  private async getLiveSummary(
+    dateFrom: string,
+    dateTo: string,
+    branchId?: string
+  ): Promise<{ totalGross: number; totalTransactions: number }> {
+    let sql = `
+      SELECT
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END), 0) as total_gross,
+        COALESCE(SUM(CASE WHEN status = 'completed' AND total_amount >= 0 THEN 1 ELSE 0 END), 0) as total_transactions
+      FROM transactions
+      WHERE date(created_at) >= ? AND date(created_at) <= ?
+    `
+    const params: any[] = [dateFrom, dateTo]
+    if (branchId) {
+      sql += ' AND branch_id = ?'
+      params.push(branchId)
+    }
+
+    const r = await db.getOne<{ total_gross: number; total_transactions: number }>(sql, params)
+    return {
+      totalGross: r?.total_gross || 0,
+      totalTransactions: r?.total_transactions || 0
+    }
+  }
+
+  /**
+   * Compare current period vs previous period (live from transactions).
+   */
+  async getPeriodComparison(
+    period: AnalyticsPeriod,
+    branchId?: string,
+    customFrom?: string,
+    customTo?: string
+  ): Promise<PeriodComparisonData> {
+    const { from: currentFrom, to: currentTo } = this.resolvePeriodDates(period, customFrom, customTo)
     const { from: previousFrom, to: previousTo } = this.getPreviousPeriodDates(period, currentFrom, currentTo)
 
-    const branch = branchId || 'branch-main'
-
-    const current = await salesAggregateRepository.getSummary(branch, currentFrom, currentTo)
-    const previous = await salesAggregateRepository.getSummary(branch, previousFrom, previousTo)
+    const [current, previous] = await Promise.all([
+      this.getLiveSummary(currentFrom, currentTo, branchId),
+      this.getLiveSummary(previousFrom, previousTo, branchId)
+    ])
 
     const grossChange = current.totalGross - previous.totalGross
     const grossChangePercent = previous.totalGross > 0

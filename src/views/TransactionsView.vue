@@ -26,7 +26,6 @@ import { vatService } from '@/services/vatService'
 import { PaymentMethodLabels } from '@/types/payment'
 import type { Transaction, TransactionItem } from '@/types/transaction'
 import type { Payment } from '@/types/payment'
-import ReturnDialog from '@/components/pos/ReturnDialog.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -66,10 +65,6 @@ const voidReason = ref('')
 const isVoiding = ref(false)
 const voidError = ref<string | null>(null)
 const SUPERVISOR_PIN = '1234'
-
-// Return dialog
-const showReturnDialog = ref(false)
-const returnOrNumber = ref('')
 
 // Helpers
 function isReturnTransaction(tx: Transaction): boolean {
@@ -200,12 +195,6 @@ function taxTypeSeverity(taxType: string): 'info' | 'warn' | 'secondary' {
   return 'secondary'
 }
 
-function getItemCount(tx: Transaction): string {
-  const detail = detailCache.value[tx.id]
-  if (detail) return String(detail.items.length)
-  return '\u2014'
-}
-
 // Actions
 async function handleReprint(tx: Transaction) {
   const result = await transactionStore.printReceipt(tx.id)
@@ -218,17 +207,6 @@ async function handleReprint(tx: Transaction) {
 
 async function handlePreview(tx: Transaction) {
   await transactionStore.previewReceipt(tx.id)
-}
-
-function openReturn(tx: Transaction) {
-  returnOrNumber.value = tx.or_number
-  showReturnDialog.value = true
-}
-
-function onReturnProcessed() {
-  showReturnDialog.value = false
-  toast.add({ severity: 'success', summary: 'Return Processed', detail: 'Return transaction has been created.', life: 3000 })
-  loadTransactions()
 }
 
 // Void flow
@@ -364,12 +342,6 @@ onMounted(() => {
           </template>
         </Column>
 
-        <Column header="Items" style="width: 80px">
-          <template #body="{ data }">
-            <span class="items-count">{{ getItemCount(data) }}</span>
-          </template>
-        </Column>
-
         <Column field="status" header="Status" sortable style="width: 110px">
           <template #body="{ data }">
             <Tag :value="data.status" :severity="statusSeverity(data.status)" class="status-tag" />
@@ -394,15 +366,6 @@ onMounted(() => {
                 severity="secondary"
                 @click="router.push({ name: 'transaction-detail', params: { id: data.id } })"
                 v-tooltip.top="'View Details'"
-              />
-              <Button
-                v-if="data.status === 'completed' && !isReturnTransaction(data)"
-                icon="pi pi-replay"
-                text
-                rounded
-                severity="warn"
-                @click="openReturn(data)"
-                v-tooltip.top="'Return'"
               />
             </div>
           </template>
@@ -564,14 +527,6 @@ onMounted(() => {
                 />
                 <div class="flex-1"></div>
                 <Button
-                  v-if="data.status === 'completed' && !isReturnTransaction(data)"
-                  label="Return"
-                  icon="pi pi-replay"
-                  severity="warn"
-                  size="small"
-                  @click="openReturn(data)"
-                />
-                <Button
                   v-if="data.status === 'completed' && voidingTxId !== data.id"
                   label="Void"
                   icon="pi pi-ban"
@@ -633,14 +588,6 @@ onMounted(() => {
         </template>
       </DataTable>
     </div>
-
-    <!-- Return Dialog -->
-    <ReturnDialog
-      :visible="showReturnDialog"
-      @update:visible="showReturnDialog = $event"
-      :initialOrNumber="returnOrNumber"
-      @processed="onReturnProcessed"
-    />
   </div>
 </template>
 

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import type { ProductVariant, DisplayVariant } from '@/types/inventory'
@@ -200,11 +200,10 @@ function formatCurrency(value: number): string {
         <div class="form-grid">
           <div class="form-field">
             <label for="priceOverride">Selling Price</label>
-            <InputNumber
+            <AmountInput
               id="priceOverride"
               v-model="form.price_override"
-              mode="currency"
-              currency="PHP"
+              allow-empty
               class="w-full"
               :disabled="loading"
             />
@@ -212,11 +211,10 @@ function formatCurrency(value: number): string {
           </div>
           <div class="form-field">
             <label for="costOverride">Cost Price</label>
-            <InputNumber
+            <AmountInput
               id="costOverride"
               v-model="form.cost_override"
-              mode="currency"
-              currency="PHP"
+              allow-empty
               class="w-full"
               :disabled="loading"
             />

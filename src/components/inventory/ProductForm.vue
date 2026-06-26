@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
@@ -9,6 +10,7 @@ import FileUpload from 'primevue/fileupload'
 import DatePicker from 'primevue/datepicker'
 import Message from 'primevue/message'
 import { useCategoryStore } from '@/stores/category'
+import { normalizeTaxType } from '@/types/transaction'
 import type { Product } from '@/repositories/productRepository'
 
 const props = defineProps<{
@@ -67,8 +69,8 @@ const statusOptions = [
 
 const taxTypeOptions = [
   { label: 'VATable (12%)', value: 'vatable' },
-  { label: 'VAT Exempt', value: 'vat-exempt' },
-  { label: 'Zero-rated', value: 'zero-rated' }
+  { label: 'VAT Exempt', value: 'exempt' },
+  { label: 'Zero-rated', value: 'zero_rated' }
 ]
 
 const categoryOptions = computed(() => categoryStore.categoryOptions)
@@ -91,7 +93,7 @@ watch(() => props.product, (product) => {
       cost: product.cost,
       low_stock_threshold: product.low_stock_threshold,
       status: product.status,
-      tax_type: product.tax_type,
+      tax_type: normalizeTaxType(product.tax_type),
       image: product.image || '',
       expiration_date: product.expiration_date || null
     }
@@ -246,11 +248,9 @@ function generateSku() {
       <div class="form-grid">
         <div class="form-field">
           <label for="price">Selling Price *</label>
-          <InputNumber
+          <AmountInput
             id="price"
             v-model="form.price"
-            mode="currency"
-            currency="PHP"
             class="w-full"
             :disabled="loading"
           />
@@ -258,11 +258,9 @@ function generateSku() {
 
         <div class="form-field">
           <label for="cost">Cost Price</label>
-          <InputNumber
+          <AmountInput
             id="cost"
             v-model="form.cost"
-            mode="currency"
-            currency="PHP"
             class="w-full"
             :disabled="loading"
           />

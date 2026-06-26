@@ -9,7 +9,7 @@ defineProps<{
 <template>
   <div class="stats-card">
     <div class="stats-card-header">
-      <div>
+      <div class="stats-card-content">
         <div class="stats-card-label">{{ data.label }}</div>
         <div class="stats-card-value">{{ data.value }}</div>
         <div v-if="data.subtitle" class="stats-card-subtitle">{{ data.subtitle }}</div>

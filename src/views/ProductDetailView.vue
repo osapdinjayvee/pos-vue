@@ -249,11 +249,18 @@ const editProduct = () => {
   }
 }
 
-const onMovementRecorded = (newStock: number) => {
-  if (product.value) {
-    product.value.stock = newStock
+const onMovementRecorded = async (_newStock: number) => {
+  // Re-fetch from the DB so the displayed stock matches the authoritative
+  // products.stock used by the inventory list/dashboard (the movement-derived
+  // value can drift from products.stock for single-variant products).
+  const productId = route.params.id as string
+  const refreshed = await productStore.fetchById(productId)
+  if (refreshed && product.value) {
+    product.value.stock = refreshed.stock
+    product.value.status = refreshed.status
   }
-  // Refresh the stock history
+  // Refresh variant stock totals and the stock history
+  await loadVariants(productId)
   stockHistoryRef.value?.refresh()
 }
 </script>

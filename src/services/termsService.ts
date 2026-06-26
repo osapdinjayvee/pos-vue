@@ -56,31 +56,46 @@ class TermsService {
   async accept(termsId: string, version: string, userId: string): Promise<boolean> {
     const acceptanceId = await termsRepository.saveAcceptance(termsId, version, userId)
 
-    // Try to sync immediately
-    try {
-      await httpClient.post('/terms/accept', {
-        terms_id: termsId,
-        version,
-        user_id: userId,
-        accepted_at: new Date().toISOString()
-      })
-      await termsRepository.markAcceptanceSynced(acceptanceId)
-    } catch {
-      // Enqueue for later sync (non-critical, ignore errors)
-      try {
-        await syncQueueRepository.create({
-          entity_type: 'terms_acceptance',
-          entity_id: acceptanceId,
-          operation: 'create',
-          payload: JSON.stringify({ terms_id: termsId, version, user_id: userId }),
-          priority: 5
-        })
-      } catch (syncErr) {
-        console.warn('Failed to enqueue terms acceptance for sync:', syncErr)
-      }
-    }
+    // Sync to the server in the BACKGROUND. The acceptance is already persisted
+    // locally, so onboarding must never block (and never hang on retries) while
+    // the network call is in flight — that caused the "accept twice" behaviour.
+    this.syncAcceptanceInBackground(acceptanceId, termsId, version, userId)
 
     return true
+  }
+
+  private syncAcceptanceInBackground(
+    acceptanceId: string,
+    termsId: string,
+    version: string,
+    userId: string
+  ): void {
+    httpClient
+      .post(
+        '/terms/accept',
+        {
+          terms_id: termsId,
+          version,
+          user_id: userId,
+          accepted_at: new Date().toISOString()
+        },
+        { timeout: 8000, _maxRetries: 0 }
+      )
+      .then(() => termsRepository.markAcceptanceSynced(acceptanceId))
+      .catch(() => {
+        // Enqueue for later sync (non-critical, ignore errors)
+        syncQueueRepository
+          .create({
+            entity_type: 'terms_acceptance',
+            entity_id: acceptanceId,
+            operation: 'create',
+            payload: JSON.stringify({ terms_id: termsId, version, user_id: userId }),
+            priority: 5
+          })
+          .catch((syncErr) => {
+            console.warn('Failed to enqueue terms acceptance for sync:', syncErr)
+          })
+      })
   }
 }
 

@@ -11,7 +11,10 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import CustomerList from '@/components/customers/CustomerList.vue'
 import CustomerForm from '@/components/customers/CustomerForm.vue'
+import CreditPaymentDialog from '@/components/crm/CreditPaymentDialog.vue'
 import { useCustomerStore } from '@/stores/customer'
+import { creditService } from '@/services/creditService'
+import { useAuthStore } from '@/stores/auth'
 import type { Customer, CustomerInput } from '@/types/order'
 
 const toast = useToast()
@@ -23,6 +26,10 @@ const searchQuery = ref('')
 const showCustomerForm = ref(false)
 const editingCustomer = ref<Customer | null>(null)
 const formLoading = ref(false)
+
+// Credit / utang payment
+const showCreditPayment = ref(false)
+const payingCustomer = ref<Customer | null>(null)
 
 const customerListRef = ref<InstanceType<typeof CustomerList> | null>(null)
 
@@ -104,6 +111,41 @@ function handleDeleteCustomer(customer: Customer) {
 function handleViewCustomer(customer: Customer) {
   router.push({ name: 'customer-detail', params: { id: customer.id } })
 }
+
+function handlePayCustomer(customer: Customer) {
+  payingCustomer.value = customer
+  showCreditPayment.value = true
+}
+
+async function handleCreditPayment(data: { amount: number; paymentMethod: string; referenceNumber?: string; notes?: string }) {
+  if (!payingCustomer.value) return
+  try {
+    const authStore = useAuthStore()
+    await creditService.receivePayment({
+      customerId: payingCustomer.value.id,
+      amount: data.amount,
+      paymentMethod: data.paymentMethod,
+      referenceNumber: data.referenceNumber,
+      notes: data.notes
+    }, authStore.currentUser?.id || 'system')
+    toast.add({
+      severity: 'success',
+      summary: 'Payment Received',
+      detail: `₱${data.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })} payment recorded`,
+      life: 3000
+    })
+    showCreditPayment.value = false
+    payingCustomer.value = null
+    customerListRef.value?.loadCustomers()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error instanceof Error ? error.message : 'Failed to process payment',
+      life: 5000
+    })
+  }
+}
 </script>
 
 <template>
@@ -135,6 +177,7 @@ function handleViewCustomer(customer: Customer) {
         @edit="handleEditCustomer"
         @delete="handleDeleteCustomer"
         @view="handleViewCustomer"
+        @pay="handlePayCustomer"
       />
     </div>
 
@@ -143,6 +186,13 @@ function handleViewCustomer(customer: Customer) {
       :customer="editingCustomer"
       :loading="formLoading"
       @save="handleSaveCustomer"
+    />
+
+    <CreditPaymentDialog
+      v-if="payingCustomer"
+      v-model:visible="showCreditPayment"
+      :customer="payingCustomer"
+      @submit="handleCreditPayment"
     />
   </div>
 </template>

@@ -4,7 +4,9 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
+import Select from 'primevue/select'
 import { useOnboarding } from '@/composables/useOnboarding'
+import { SECURITY_QUESTIONS } from '@/types/user'
 import type { AdminSetupInput } from '@/types/onboarding'
 
 const emit = defineEmits<{
@@ -20,7 +22,25 @@ const form = ref({
   lastName: '',
   email: '',
   pin: '',
-  confirmPin: ''
+  confirmPin: '',
+  securityQuestion1: '',
+  securityAnswer1: '',
+  securityQuestion2: '',
+  securityAnswer2: ''
+})
+
+const question2Options = computed(() =>
+  SECURITY_QUESTIONS.filter((q) => q !== form.value.securityQuestion1)
+)
+
+const securityValid = computed(() => {
+  return !!(
+    form.value.securityQuestion1 &&
+    form.value.securityQuestion2 &&
+    form.value.securityQuestion1 !== form.value.securityQuestion2 &&
+    form.value.securityAnswer1.trim().length >= 2 &&
+    form.value.securityAnswer2.trim().length >= 2
+  )
 })
 
 const isSaving = ref(false)
@@ -47,7 +67,8 @@ const isValid = computed(() => {
     form.value.pin.length >= 4 &&
     form.value.pin.length <= 6 &&
     pinIsDigitsOnly.value &&
-    form.value.pin === form.value.confirmPin
+    form.value.pin === form.value.confirmPin &&
+    securityValid.value
   )
 })
 
@@ -67,7 +88,13 @@ async function handleNext() {
       pin: form.value.pin,
       firstName: form.value.firstName,
       lastName: form.value.lastName,
-      email: form.value.email || undefined
+      email: form.value.email || undefined,
+      securityQuestions: {
+        question1: form.value.securityQuestion1,
+        answer1: form.value.securityAnswer1,
+        question2: form.value.securityQuestion2,
+        answer2: form.value.securityAnswer2
+      }
     }
     await onboarding.completeAdmin(data)
     emit('next')
@@ -186,6 +213,54 @@ async function handleNext() {
             <small v-if="pinMismatch" class="text-red-500">
               PINs do not match
             </small>
+          </div>
+
+          <!-- Account Recovery / Security Questions -->
+          <div class="flex flex-col gap-4 pt-4 border-t border-surface-200">
+            <div>
+              <h3 class="font-semibold text-surface-800">Account Recovery</h3>
+              <p class="text-sm text-surface-500">
+                Used to reset the admin PIN if it is forgotten. Choose two questions and answers you'll remember.
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="sec-q1" class="font-semibold text-surface-700">
+                Security Question 1 <span class="text-red-500">*</span>
+              </label>
+              <Select
+                id="sec-q1"
+                v-model="form.securityQuestion1"
+                :options="SECURITY_QUESTIONS"
+                placeholder="Select a question"
+                fluid
+              />
+              <InputText
+                v-model="form.securityAnswer1"
+                placeholder="Your answer"
+                fluid
+                class="mt-1"
+              />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="sec-q2" class="font-semibold text-surface-700">
+                Security Question 2 <span class="text-red-500">*</span>
+              </label>
+              <Select
+                id="sec-q2"
+                v-model="form.securityQuestion2"
+                :options="question2Options"
+                placeholder="Select a different question"
+                fluid
+              />
+              <InputText
+                v-model="form.securityAnswer2"
+                placeholder="Your answer"
+                fluid
+                class="mt-1"
+              />
+            </div>
           </div>
         </div>
       </div>

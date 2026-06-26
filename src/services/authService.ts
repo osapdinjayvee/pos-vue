@@ -6,7 +6,7 @@
 import { userRepository } from '@/repositories/userRepository'
 import { authLogRepository } from '@/repositories/authLogRepository'
 import { shiftRepository } from '@/repositories/shiftRepository'
-import { verifyPin } from '@/utils/crypto'
+import { verifyPin, verifyAnswer, hashPin, isValidPin } from '@/utils/crypto'
 import type {
   User,
   DisplayUser,
@@ -24,6 +24,19 @@ export interface AuthResult {
   permissions?: string[]
   error?: string
   requiresShift?: boolean
+}
+
+export interface RecoveryOptions {
+  found: boolean
+  username: string
+  hasSecurityQuestions: boolean
+  question1?: string
+  question2?: string
+}
+
+export interface RecoveryResult {
+  success: boolean
+  error?: string
 }
 
 class AuthService {
@@ -271,6 +284,166 @@ class AuthService {
     }
 
     return { authorized: true, supervisorId: user.id }
+  }
+
+  // =====================
+  // PIN Recovery (Forgot PIN)
+  // =====================
+
+  /**
+   * Look up the recovery options available for a username (used by the
+   * "Forgot PIN?" flow). Does not reveal answer hashes.
+   */
+  async getRecoveryOptions(username: string): Promise<RecoveryOptions> {
+    const uname = username.trim().toLowerCase()
+    const info = await userRepository.getSecurityInfo(uname)
+
+    if (!info || !info.is_active) {
+      return { found: false, username: uname, hasSecurityQuestions: false }
+    }
+
+    const hasSecurityQuestions = !!(
+      info.security_question_1 &&
+      info.security_answer_1_hash &&
+      info.security_question_2 &&
+      info.security_answer_2_hash
+    )
+
+    return {
+      found: true,
+      username: uname,
+      hasSecurityQuestions,
+      question1: info.security_question_1 || undefined,
+      question2: info.security_question_2 || undefined
+    }
+  }
+
+  /**
+   * Reset a user's PIN by answering their security questions.
+   * Shares the login lockout counter so answers cannot be brute-forced.
+   */
+  async recoverPinViaSecurityAnswers(
+    username: string,
+    answer1: string,
+    answer2: string,
+    newPin: string
+  ): Promise<RecoveryResult> {
+    const uname = username.trim().toLowerCase()
+
+    if (!isValidPin(newPin)) {
+      return { success: false, error: 'New PIN must be 4-6 digits.' }
+    }
+
+    const failedAttempts = await authLogRepository.countRecentFailures(
+      uname,
+      LOCKOUT_DURATION_MINUTES
+    )
+    if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      return {
+        success: false,
+        error: `Account locked. Try again in ${LOCKOUT_DURATION_MINUTES} minutes.`
+      }
+    }
+
+    const info = await userRepository.getSecurityInfo(uname)
+    if (
+      !info ||
+      !info.is_active ||
+      !info.security_answer_1_hash ||
+      !info.security_answer_2_hash
+    ) {
+      return {
+        success: false,
+        error: 'Security questions are not set up for this account.'
+      }
+    }
+
+    const ok1 = await verifyAnswer(answer1, info.security_answer_1_hash)
+    const ok2 = await verifyAnswer(answer2, info.security_answer_2_hash)
+
+    if (!ok1 || !ok2) {
+      await authLogRepository.logLoginFailure(
+        uname,
+        this.terminalId,
+        'Incorrect security answers (PIN recovery)'
+      )
+      return { success: false, error: 'One or more answers are incorrect.' }
+    }
+
+    const pinHash = await hashPin(newPin)
+    await userRepository.update(info.id, { pin_hash: pinHash } as Partial<User>)
+
+    return { success: true }
+  }
+
+  /**
+   * Reset a user's PIN with authorization from a supervisor/admin who enters
+   * their own credentials. An administrator's PIN can only be reset by another
+   * administrator (prevents privilege escalation).
+   */
+  async recoverPinViaAuthorizer(
+    targetUsername: string,
+    authorizerUsername: string,
+    authorizerPin: string,
+    newPin: string
+  ): Promise<RecoveryResult> {
+    const target = await userRepository.findByUsername(targetUsername.trim().toLowerCase())
+    if (!target) {
+      return { success: false, error: 'The account to reset was not found.' }
+    }
+
+    if (!isValidPin(newPin)) {
+      return { success: false, error: 'New PIN must be 4-6 digits.' }
+    }
+
+    const authorizer = await userRepository.findByUsername(
+      authorizerUsername.trim().toLowerCase()
+    )
+    if (!authorizer) {
+      return { success: false, error: 'Authorizer account not found.' }
+    }
+
+    const validPin = await verifyPin(authorizerPin, authorizer.pin_hash)
+    if (!validPin) {
+      await authLogRepository.logLoginFailure(
+        authorizerUsername.trim().toLowerCase(),
+        this.terminalId,
+        'Invalid authorizer PIN (PIN recovery)'
+      )
+      return { success: false, error: 'Invalid authorizer PIN.' }
+    }
+
+    const authorizerPerms = await userRepository.getUserPermissions(authorizer.id)
+    const authorizerRoleCodes = await userRepository.getUserRoleCodes(authorizer.id)
+    const authorizerIsAdmin =
+      authorizerPerms.includes('*') || authorizerRoleCodes.includes('admin')
+    // Elevated = admin, or a supervisor/manager role, or any explicit user-management permission.
+    const authorizerIsElevated =
+      authorizerIsAdmin ||
+      authorizerRoleCodes.includes('manager') ||
+      authorizerRoleCodes.includes('supervisor') ||
+      this.checkPermission(authorizerPerms, 'users.edit') ||
+      this.checkPermission(authorizerPerms, 'users.view')
+    const targetIsAdmin = await userRepository.isAdmin(target.id)
+
+    if (targetIsAdmin) {
+      if (!authorizerIsAdmin) {
+        return {
+          success: false,
+          error: 'Only an administrator can reset an administrator PIN.'
+        }
+      }
+    } else if (!authorizerIsElevated) {
+      return {
+        success: false,
+        error: 'You are not authorized to reset PINs. Ask a supervisor or admin.'
+      }
+    }
+
+    const pinHash = await hashPin(newPin)
+    await userRepository.update(target.id, { pin_hash: pinHash } as Partial<User>)
+
+    return { success: true }
   }
 
   /**

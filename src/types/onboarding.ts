@@ -123,6 +123,12 @@ export interface AdminSetupInput {
   firstName: string
   lastName: string
   email?: string
+  securityQuestions?: {
+    question1: string
+    answer1: string
+    question2: string
+    answer2: string
+  }
 }
 
 // Cashier creation input

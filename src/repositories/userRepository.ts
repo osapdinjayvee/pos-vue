@@ -122,6 +122,45 @@ class UserRepository extends BaseRepository<User> {
   }
 
   /**
+   * Get a user's security-question setup (questions + answer hashes).
+   * Returns null if the user does not exist.
+   */
+  async getSecurityInfo(username: string): Promise<{
+    id: string
+    is_active: number
+    security_question_1: string | null
+    security_answer_1_hash: string | null
+    security_question_2: string | null
+    security_answer_2_hash: string | null
+  } | null> {
+    return await db.getOne(
+      `SELECT id, is_active, security_question_1, security_answer_1_hash,
+              security_question_2, security_answer_2_hash
+       FROM ${this.tableName} WHERE username = ?`,
+      [username.toLowerCase()]
+    )
+  }
+
+  /**
+   * Store a user's security questions and answer hashes
+   */
+  async setSecurityQuestions(
+    userId: string,
+    question1: string,
+    answer1Hash: string,
+    question2: string,
+    answer2Hash: string
+  ): Promise<void> {
+    await db.execute(
+      `UPDATE ${this.tableName}
+       SET security_question_1 = ?, security_answer_1_hash = ?,
+           security_question_2 = ?, security_answer_2_hash = ?, updated_at = ?
+       WHERE id = ?`,
+      [question1, answer1Hash, question2, answer2Hash, db.getCurrentTimestamp(), userId]
+    )
+  }
+
+  /**
    * Update last login timestamp
    */
   async updateLastLogin(userId: string): Promise<void> {
@@ -157,6 +196,19 @@ class UserRepository extends BaseRepository<User> {
     )
 
     return roles.map(toDisplayRole)
+  }
+
+  /**
+   * Get the role codes assigned to a user (e.g. ['admin'], ['manager'])
+   */
+  async getUserRoleCodes(userId: string): Promise<string[]> {
+    const rows = await db.query<{ code: string }>(
+      `SELECT r.code FROM roles r
+       INNER JOIN user_roles ur ON ur.role_id = r.id
+       WHERE ur.user_id = ? AND r.is_active = 1`,
+      [userId]
+    )
+    return rows.map((r) => r.code)
   }
 
   /**

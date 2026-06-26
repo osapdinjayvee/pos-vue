@@ -375,6 +375,8 @@ function handleDiscountSelected(eligible: EligibleDiscount | null) {
 
 function handleProductSelectFromDrawer(product: Product, variant?: ProductVariant) {
   addToCart(product, variant)
+  // Return to the terminal after selecting an item
+  showProductBrowse.value = false
   focusBarcodeInput()
 }
 

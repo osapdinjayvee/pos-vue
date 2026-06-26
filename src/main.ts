@@ -30,6 +30,7 @@ import './assets/styles/main.css'
 
 import App from './App.vue'
 import router from './router'
+import { vNumericOnly } from './directives/numericOnly'
 
 const app = createApp(App)
 
@@ -46,6 +47,7 @@ app.use(PrimeVue, {
 app.use(ConfirmationService)
 app.use(ToastService)
 app.directive('tooltip', Tooltip)
+app.directive('numeric-only', vNumericOnly)
 
 // Set document title from env
 document.title = import.meta.env.VITE_APP_NAME || 'Zoomin POS'

@@ -75,6 +75,9 @@ export const useInventoryStore = defineStore('inventory', () => {
     isLoading.value = true
     error.value = null
     try {
+      // Generate expiring/expired batch alerts before reading them, otherwise
+      // expiry alerts are never created and never surface on the dashboard.
+      await inventoryService.checkBatchExpiry()
       alerts.value = await inventoryService.getActiveAlerts()
       alertCounts.value = await inventoryService.getAlertCounts()
     } catch (e: any) {

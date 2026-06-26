@@ -212,6 +212,11 @@ class DatabaseService {
       await this.recordMigration('024_credit_ledger')
     }
 
+    if (!migrations.includes('025_security_questions')) {
+      await this.runSecurityQuestionsMigration()
+      await this.recordMigration('025_security_questions')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
@@ -2232,6 +2237,32 @@ class DatabaseService {
     }
 
     console.log('[Migration] 023_device_registration completed')
+  }
+
+  /**
+   * Migration 025: Security questions for PIN recovery (Forgot PIN)
+   */
+  private async runSecurityQuestionsMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    const columns = [
+      { name: 'security_question_1', def: 'TEXT' },
+      { name: 'security_answer_1_hash', def: 'TEXT' },
+      { name: 'security_question_2', def: 'TEXT' },
+      { name: 'security_answer_2_hash', def: 'TEXT' }
+    ]
+
+    for (const col of columns) {
+      try {
+        await this.adapter.execute(
+          `ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`
+        )
+      } catch {
+        // Column may already exist
+      }
+    }
+
+    console.log('[Migration] 025_security_questions completed')
   }
 
   private async runCreditLedgerMigration(): Promise<void> {

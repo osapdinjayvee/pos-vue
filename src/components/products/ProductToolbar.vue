@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import Toolbar from 'primevue/toolbar'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import SelectButton from 'primevue/selectbutton'
@@ -18,7 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   add: []
-  bulkDelete: []
+  bulkArchive: []
   bulkActivate: []
   bulkDeactivate: []
   bulkReceiveStock: []
@@ -45,10 +44,9 @@ const bulkMenuItems = ref([
   },
   { separator: true },
   {
-    label: 'Delete Selected',
-    icon: 'pi pi-trash',
-    class: 'text-red-500',
-    command: () => emit('bulkDelete')
+    label: 'Archive Selected',
+    icon: 'pi pi-inbox',
+    command: () => emit('bulkArchive')
   }
 ])
 
@@ -63,116 +61,50 @@ const toggleBulkMenu = (event: Event) => {
 </script>
 
 <template>
-  <Toolbar class="product-toolbar">
-    <template #start>
-      <div class="toolbar-start">
-        <IconField>
-          <InputIcon class="pi pi-search" />
-          <InputText
-            v-model="search"
-            placeholder="Search products..."
-            class="search-input"
-          />
-        </IconField>
-      </div>
+  <IconField>
+    <InputIcon class="pi pi-search" />
+    <InputText v-model="search" placeholder="Search products..." />
+  </IconField>
+  <template v-if="selectedCount > 0">
+    <Button
+      label="Bulk Actions"
+      icon="pi pi-chevron-down"
+      iconPos="right"
+      severity="secondary"
+      outlined
+      @click="toggleBulkMenu"
+    />
+    <Menu ref="bulkMenu" :model="bulkMenuItems" :popup="true" />
+  </template>
+  <Button
+    icon="pi pi-filter"
+    severity="secondary"
+    outlined
+    :badge="activeFilterCount > 0 ? String(activeFilterCount) : undefined"
+    badgeSeverity="primary"
+    @click="emit('openFilters')"
+    v-tooltip.bottom="'Filters'"
+  />
+  <SelectButton
+    v-model="view"
+    :options="viewOptions"
+    optionValue="value"
+    :allowEmpty="false"
+  >
+    <template #option="{ option }">
+      <i :class="option.icon"></i>
     </template>
-
-    <template #end>
-      <div class="toolbar-end">
-        <template v-if="selectedCount > 0">
-          <Button
-            label="Bulk Actions"
-            icon="pi pi-chevron-down"
-            iconPos="right"
-            severity="secondary"
-            outlined
-            @click="toggleBulkMenu"
-          />
-          <Menu ref="bulkMenu" :model="bulkMenuItems" :popup="true" />
-        </template>
-        <Button
-          icon="pi pi-filter"
-          severity="secondary"
-          outlined
-          :badge="activeFilterCount > 0 ? String(activeFilterCount) : undefined"
-          badgeSeverity="primary"
-          @click="emit('openFilters')"
-          v-tooltip.bottom="'Filters'"
-        />
-        <SelectButton
-          v-model="view"
-          :options="viewOptions"
-          optionValue="value"
-          :allowEmpty="false"
-        >
-          <template #option="{ option }">
-            <i :class="option.icon"></i>
-          </template>
-        </SelectButton>
-        <Button
-          icon="pi pi-upload"
-          severity="secondary"
-          outlined
-          @click="emit('importCsv')"
-          v-tooltip.bottom="'Import CSV'"
-        />
-        <Button
-          label="Create"
-          icon="pi pi-plus"
-          @click="emit('add')"
-        />
-      </div>
-    </template>
-  </Toolbar>
+  </SelectButton>
+  <Button
+    icon="pi pi-upload"
+    severity="secondary"
+    outlined
+    @click="emit('importCsv')"
+    v-tooltip.bottom="'Import CSV'"
+  />
+  <Button
+    label="Create"
+    icon="pi pi-plus"
+    @click="emit('add')"
+  />
 </template>
-
-<style scoped>
-.product-toolbar {
-  margin-bottom: 1.5rem;
-  border-radius: 12px;
-}
-
-.toolbar-start {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  flex: 1;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 200px;
-}
-
-.toolbar-end {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-@media (max-width: 879.98px) {
-  .product-toolbar {
-    margin-bottom: 1rem;
-    border-radius: 8px;
-  }
-
-  .product-toolbar :deep(.p-toolbar-start),
-  .product-toolbar :deep(.p-toolbar-center),
-  .product-toolbar :deep(.p-toolbar-end) {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .search-input {
-    min-width: 120px;
-  }
-
-  .toolbar-end :deep(.p-button-label) {
-    display: none;
-  }
-
-  .toolbar-end {
-    gap: 0.375rem;
-  }
-}
-</style>

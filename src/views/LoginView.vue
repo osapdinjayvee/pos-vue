@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import LoginForm from '@/components/auth/LoginForm.vue'
+import ForgotPinDialog from '@/components/auth/ForgotPinDialog.vue'
 import { useAuth } from '@/composables/useAuth'
 import logoImg from '@/assets/img/logo.png'
 import logoWhiteImg from '@/assets/img/logo-white.png'
@@ -16,6 +17,23 @@ const appVersion = __APP_VERSION__
 
 const isLoading = ref(false)
 const terminalId = ref('POS-001')
+
+const showForgotPin = ref(false)
+const forgotPrefill = ref('')
+
+function openForgotPin(username: string) {
+  forgotPrefill.value = username
+  showForgotPin.value = true
+}
+
+function handleRecovered(username: string) {
+  toast.add({
+    severity: 'success',
+    summary: 'PIN Reset',
+    detail: `PIN updated for "${username}". You can now sign in.`,
+    life: 5000
+  })
+}
 
 async function handleLogin(credentials: {
   username: string
@@ -113,6 +131,7 @@ onMounted(() => {
           :loading="isLoading"
           :terminal-id="terminalId"
           @submit="handleLogin"
+          @forgot="openForgotPin"
         />
 
         <div class="form-footer">
@@ -120,6 +139,12 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <ForgotPinDialog
+      v-model:visible="showForgotPin"
+      :prefill-username="forgotPrefill"
+      @recovered="handleRecovered"
+    />
   </div>
 </template>
 

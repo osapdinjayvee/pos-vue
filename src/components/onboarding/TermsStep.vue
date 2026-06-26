@@ -107,7 +107,7 @@ async function handleAccept() {
     </div>
 
     <!-- Scrollable content -->
-    <div class="flex-1 overflow-y-auto pb-28">
+    <div class="flex-1 min-h-0 overflow-y-auto pb-4">
       <OnboardingConnectivityBanner />
 
       <Message v-if="fetchError" :severity="termsUnavailable ? 'warn' : 'error'" :closable="false" :icon="termsUnavailable ? 'pi pi-info-circle' : 'pi pi-times-circle'" class="w-full mb-3">
@@ -142,8 +142,8 @@ async function handleAccept() {
       ></div>
     </div>
 
-    <!-- Fixed bottom bar with checkbox + buttons -->
-    <div class="fixed bottom-0 left-0 right-0 bg-surface-50 border-t border-surface-200 px-4 py-3">
+    <!-- Bottom bar with checkbox + buttons -->
+    <div class="shrink-0 bg-surface-50 border-t border-surface-200 px-4 py-3">
       <div v-if="terms && !isFetching" class="flex items-start gap-3 mb-3">
         <Checkbox
           v-model="isAgreed"

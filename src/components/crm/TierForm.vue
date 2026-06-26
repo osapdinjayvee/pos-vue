@@ -4,6 +4,7 @@ import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Message from 'primevue/message'
 import type { MembershipTier, MembershipTierInput } from '@/types/tier'
@@ -172,11 +173,9 @@ function handleCancel() {
       <!-- Minimum Spend field -->
       <div class="form-field">
         <label for="min_spend">Minimum Spend (PHP)</label>
-        <InputNumber
+        <AmountInput
           id="min_spend"
           v-model="form.min_spend"
-          mode="currency"
-          currency="PHP"
           :min="0"
           class="w-full"
           :disabled="loading"

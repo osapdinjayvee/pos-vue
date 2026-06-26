@@ -25,15 +25,10 @@
       <div class="form-section">
         <div class="field">
           <label for="drop-amount">Drop Amount *</label>
-          <InputNumber
+          <AmountInput
             id="drop-amount"
             v-model="dropAmount"
-            mode="currency"
-            currency="PHP"
-            locale="en-PH"
             :min="0.01"
-            :minFractionDigits="2"
-            :maxFractionDigits="2"
             :disabled="isLoading"
             class="w-full"
             placeholder="0.00"
@@ -101,7 +96,7 @@
 import { ref, computed } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import InputText from 'primevue/inputtext'
 import SupervisorAuthDialog from '@/components/auth/SupervisorAuthDialog.vue'
 import { useCashDrawer } from '@/composables/useCashDrawer'

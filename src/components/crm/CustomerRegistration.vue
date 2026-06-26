@@ -120,6 +120,8 @@ function handleClose() {
         <InputText
           id="reg-phone"
           v-model="phone"
+          v-numeric-only
+          inputmode="numeric"
           placeholder="Phone number"
           :invalid="!!errors.phone"
           class="w-full"

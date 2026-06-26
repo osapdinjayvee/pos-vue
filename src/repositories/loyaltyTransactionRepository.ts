@@ -7,6 +7,38 @@ class LoyaltyTransactionRepository extends BaseRepository<LoyaltyTransaction> {
   protected idPrefix = 'ltx'
 
   /**
+   * Insert a loyalty transaction.
+   * Overrides BaseRepository.create because the loyalty_transactions table has
+   * NO `updated_at` column — the generic insert added it and silently failed,
+   * so earned points were never recorded (the error was swallowed by the
+   * non-blocking try/catch in transactionService).
+   */
+  async create(
+    data: Omit<LoyaltyTransaction, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<LoyaltyTransaction> {
+    const id = db.generateId(this.idPrefix)
+    const now = db.getCurrentTimestamp()
+    const d = data as any
+    await db.execute(
+      `INSERT INTO ${this.tableName}
+        (id, customer_id, type, points, balance_after, transaction_id, reason, created_at, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        d.customer_id,
+        d.type,
+        d.points,
+        d.balance_after,
+        d.transaction_id ?? null,
+        d.reason ?? null,
+        now,
+        d.synced_at ?? null
+      ]
+    )
+    return (await this.findById(id)) as LoyaltyTransaction
+  }
+
+  /**
    * Find loyalty transactions by customer
    */
   async findByCustomer(customerId: string, options?: QueryOptions): Promise<LoyaltyTransaction[]> {

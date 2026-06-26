@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import AmountInput from '@/components/common/AmountInput.vue'
 import { useCartStore } from '@/stores/cart'
 import { useSettingsStore } from '@/stores/settings'
 import { vatService } from '@/services/vatService'
@@ -114,6 +115,8 @@ function computeSavedDiscountAmount(d: Discount): number {
 }
 
 function applySavedDiscount(d: Discount) {
+  // Only one discount per transaction — must remove the current one first
+  if (hasDiscount.value) return
   if (d.type === 'percentage') {
     cartStore.applyPercentageDiscount(d.value, d.code || undefined)
   } else if (d.type === 'fixed_amount') {
@@ -204,7 +207,7 @@ function handleBack() {
           <!-- Current discount notice -->
           <div v-if="hasDiscount" class="disc-notice">
             <i class="pi pi-info-circle"></i>
-            <span>A discount is already applied. Selecting a new one will replace it.</span>
+            <span>A discount is already applied. Remove it before applying a different one.</span>
             <button class="disc-notice-remove" @click="removeCurrentDiscount">Remove</button>
           </div>
 
@@ -224,6 +227,7 @@ function handleBack() {
                     v-for="d in savedDiscounts"
                     :key="d.id"
                     class="disc-card"
+                    :disabled="hasDiscount"
                     @click="applySavedDiscount(d)"
                   >
                     <div class="disc-card-badge">{{ formatDiscountValue(d) }}</div>
@@ -248,22 +252,22 @@ function handleBack() {
                   <i class="pi pi-pencil"></i> Manual Discount
                 </h3>
                 <div class="disc-manual-grid">
-                  <button class="disc-manual-btn" @click="viewMode = 'senior'">
+                  <button class="disc-manual-btn" :disabled="hasDiscount" @click="viewMode = 'senior'">
                     <i class="pi pi-id-card"></i>
                     <span>Senior Citizen</span>
                     <small>{{ settingsStore.seniorDiscountPercent }}% off</small>
                   </button>
-                  <button class="disc-manual-btn" @click="viewMode = 'pwd'">
+                  <button class="disc-manual-btn" :disabled="hasDiscount" @click="viewMode = 'pwd'">
                     <i class="pi pi-heart"></i>
                     <span>PWD</span>
                     <small>{{ settingsStore.pwdDiscountPercent }}% off</small>
                   </button>
-                  <button class="disc-manual-btn" @click="viewMode = 'percentage'">
+                  <button class="disc-manual-btn" :disabled="hasDiscount" @click="viewMode = 'percentage'">
                     <i class="pi pi-percentage"></i>
                     <span>Percentage</span>
                     <small>Custom %</small>
                   </button>
-                  <button class="disc-manual-btn" @click="viewMode = 'fixed'">
+                  <button class="disc-manual-btn" :disabled="hasDiscount" @click="viewMode = 'fixed'">
                     <i class="pi pi-money-bill"></i>
                     <span>Fixed Amount</span>
                     <small>PHP value</small>
@@ -354,11 +358,8 @@ function handleBack() {
               <div class="disc-form">
                 <div class="disc-field">
                   <label>Discount Amount</label>
-                  <InputNumber
+                  <AmountInput
                     v-model="fixedValue"
-                    mode="currency"
-                    currency="PHP"
-                    locale="en-PH"
                     :min="0"
                     :max="subtotal"
                     class="w-full"
@@ -630,6 +631,12 @@ function handleBack() {
 }
 .disc-manual-btn:active {
   transform: scale(0.97);
+}
+.disc-card:disabled,
+.disc-manual-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 .disc-manual-btn i {
   font-size: 1.25rem;

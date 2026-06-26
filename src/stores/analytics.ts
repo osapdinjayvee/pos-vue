@@ -87,9 +87,12 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     isLoading.value = true
     error.value = null
     try {
+      const p = period || currentPeriod.value
       periodComparison.value = await analyticsService.getPeriodComparison(
-        period || currentPeriod.value,
-        branchId || selectedBranch.value
+        p,
+        branchId || selectedBranch.value,
+        p === 'custom' ? customDateFrom.value : undefined,
+        p === 'custom' ? customDateTo.value : undefined
       )
     } catch (e: any) {
       error.value = e.message || 'Failed to load period comparison'

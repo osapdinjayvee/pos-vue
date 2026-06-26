@@ -319,6 +319,8 @@ const isCurrentCustomer = (id: string) => props.currentCustomerId === id
             <InputText
               id="pos-reg-phone"
               v-model="regPhone"
+              v-numeric-only
+              inputmode="numeric"
               placeholder="Phone number"
               :invalid="!!regErrors.phone"
               class="w-full !text-base"

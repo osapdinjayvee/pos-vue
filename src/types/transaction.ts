@@ -213,6 +213,34 @@ export const TaxTypeLabels: Record<TaxType, string> = {
   zero_rated: 'Zero-Rated'
 }
 
+/**
+ * Normalize any tax_type string (legacy or canonical) to the canonical
+ * transaction value: 'vatable' | 'exempt' | 'zero_rated'.
+ * Products historically saved 'vat-exempt' / 'zero-rated' (hyphenated), which
+ * are NOT accepted by the transaction_items CHECK constraint — this maps them.
+ */
+export function normalizeTaxType(raw: string | null | undefined): TaxType {
+  switch ((raw || '').toLowerCase().trim()) {
+    case 'exempt':
+    case 'vat_exempt':
+    case 'vat-exempt':
+    case 'no_vat':
+    case 'non_vat':
+      return 'exempt'
+    case 'zero_rated':
+    case 'zero-rated':
+    case 'zerorated':
+      return 'zero_rated'
+    default:
+      return 'vatable'
+  }
+}
+
+/** Human-readable label for any tax_type string (legacy or canonical). */
+export function taxTypeLabel(raw: string | null | undefined): string {
+  return TaxTypeLabels[normalizeTaxType(raw)]
+}
+
 // Helper to convert DB transaction to display format
 export function toDisplayTransaction(
   tx: Transaction,

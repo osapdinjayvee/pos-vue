@@ -23,6 +23,9 @@ watch(() => route.path, (path) => {
   if (formRoutePatterns.some(p => path.includes(p))) {
     isCollapsed.value = true
   }
+  // Close the slide-in mobile menu after navigating (otherwise it stays open
+  // covering the content, which makes the menu feel non-functional on tablets).
+  closeMobileMenu()
 }, { immediate: true })
 const { initTheme } = useTheme()
 const { currentShift, hasOpenShift, startShift: startShiftAction, closeShift: closeShiftAction } = useShift()

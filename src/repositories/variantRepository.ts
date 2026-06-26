@@ -41,6 +41,20 @@ class VariantRepository extends BaseRepository<ProductVariant> {
     )
   }
 
+  /**
+   * Fetch active variants for many products at once (single query).
+   */
+  async findActiveByProductIds(productIds: string[]): Promise<ProductVariant[]> {
+    if (productIds.length === 0) return []
+    const placeholders = productIds.map(() => '?').join(',')
+    return await db.query<ProductVariant>(
+      `SELECT * FROM ${this.tableName}
+       WHERE product_id IN (${placeholders}) AND is_active = 1
+       ORDER BY display_order ASC, name ASC`,
+      productIds
+    )
+  }
+
   async findByBarcode(barcode: string): Promise<ProductVariant | null> {
     if (!barcode) return null
     return await db.getOne<ProductVariant>(
