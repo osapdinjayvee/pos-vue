@@ -245,7 +245,7 @@ onUnmounted(() => {
   margin: -0.5rem 0 0.25rem;
   font-size: 1.75rem;
   font-weight: 800;
-  color: #18181b;
+  color: var(--p-text-color);
   letter-spacing: -0.01em;
 }
 
@@ -253,7 +253,7 @@ onUnmounted(() => {
 .idle-address {
   margin: 0 0 0.25rem;
   font-size: 0.875rem;
-  color: #71717a;
+  color: var(--p-text-muted-color);
   max-width: 320px;
   line-height: 1.4;
 }
@@ -281,30 +281,30 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.375rem;
   padding: 0.3rem 0.75rem;
-  background: #f4f4f5;
+  background: var(--p-surface-100);
   border-radius: 9999px;
   font-size: 0.75rem;
-  color: #52525b;
+  color: var(--p-text-muted-color);
   font-weight: 500;
 }
 
 .idle-badge i {
   font-size: 0.625rem;
-  color: #a1a1aa;
+  color: var(--p-text-muted-color);
 }
 
 /* Clock */
 .idle-clock-section {
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #e4e4e7;
+  border-top: 1px solid var(--p-surface-200);
   min-width: 200px;
 }
 
 .idle-time {
   font-size: 2rem;
   font-weight: 700;
-  color: #18181b;
+  color: var(--p-text-color);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
@@ -312,7 +312,7 @@ onUnmounted(() => {
 .idle-date {
   margin-top: 0.25rem;
   font-size: 0.8125rem;
-  color: #a1a1aa;
+  color: var(--p-text-muted-color);
 }
 
 /* Slideshow (full-width mode) */

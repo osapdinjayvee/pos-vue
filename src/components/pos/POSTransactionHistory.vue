@@ -671,13 +671,13 @@ function handleClose() {
 <style scoped>
 .txh-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(229 229 229) transparent;
+  scrollbar-color: var(--p-surface-200) transparent;
 }
 .txh-scroll::-webkit-scrollbar {
   width: 4px;
 }
 .txh-scroll::-webkit-scrollbar-thumb {
-  background: rgb(229 229 229);
+  background: var(--p-surface-200);
   border-radius: 4px;
 }
 </style>

@@ -104,7 +104,7 @@ const getInitials = (name?: string) => {
 
 .preview-image {
   position: relative;
-  background: white;
+  background: var(--p-surface-0);
   display: flex;
   align-items: center;
   justify-content: center;

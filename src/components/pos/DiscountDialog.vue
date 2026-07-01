@@ -396,7 +396,7 @@ function handleBack() {
   inset: 0;
   z-index: 9998;
   display: flex;
-  background: white;
+  background: var(--p-surface-0);
 }
 
 .disc-page {
@@ -404,7 +404,7 @@ function handleBack() {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: white;
+  background: var(--p-surface-0);
   overflow: hidden;
   animation: disc-pop 0.2s ease both;
 }
@@ -424,7 +424,7 @@ function handleBack() {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 800;
-  color: #18181b;
+  color: var(--p-text-color);
 }
 
 .disc-back-btn,
@@ -436,15 +436,15 @@ function handleBack() {
   height: 2.25rem;
   border-radius: 0.625rem;
   border: none;
-  background: #f4f4f5;
-  color: #52525b;
+  background: var(--p-surface-100);
+  color: var(--p-text-muted-color);
   cursor: pointer;
   transition: all 0.15s;
   flex-shrink: 0;
 }
 .disc-back-btn:hover,
 .disc-close-btn:hover {
-  background: #e4e4e7;
+  background: var(--p-surface-200);
 }
 
 /* Subtotal bar */
@@ -453,19 +453,19 @@ function handleBack() {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  background: #fafafa;
+  background: var(--p-surface-50);
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
 .disc-subtotal-label {
   font-size: 0.8125rem;
-  color: #71717a;
+  color: var(--p-text-muted-color);
   font-weight: 500;
 }
 .disc-subtotal-value {
   font-size: 1.125rem;
   font-weight: 800;
-  color: #18181b;
+  color: var(--p-text-color);
   font-variant-numeric: tabular-nums;
 }
 
@@ -486,7 +486,7 @@ function handleBack() {
   padding: 0.25rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid #93c5fd;
-  background: white;
+  background: var(--p-surface-0);
   color: #3b82f6;
   font-size: 0.75rem;
   font-weight: 600;
@@ -520,7 +520,7 @@ function handleBack() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #a1a1aa;
+  color: var(--p-text-muted-color);
 }
 
 /* Discount cards grid */
@@ -537,8 +537,8 @@ function handleBack() {
   gap: 0.25rem;
   padding: 1rem 0.75rem;
   border-radius: 0.875rem;
-  border: 1.5px solid #e4e4e7;
-  background: white;
+  border: 1.5px solid var(--p-surface-200);
+  background: var(--p-surface-0);
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
@@ -569,13 +569,13 @@ function handleBack() {
 .disc-card-name {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #18181b;
+  color: var(--p-text-color);
   margin-top: 0.25rem;
 }
 
 .disc-card-type {
   font-size: 0.6875rem;
-  color: #a1a1aa;
+  color: var(--p-text-muted-color);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 600;
@@ -590,9 +590,9 @@ function handleBack() {
 
 .disc-card-code {
   font-size: 0.6875rem;
-  color: #71717a;
+  color: var(--p-text-muted-color);
   font-family: monospace;
-  background: #f4f4f5;
+  background: var(--p-surface-100);
   padding: 0.125rem 0.5rem;
   border-radius: 0.25rem;
   margin-top: 0.25rem;
@@ -620,14 +620,14 @@ function handleBack() {
   gap: 0.25rem;
   padding: 1rem 0.75rem;
   border-radius: 0.875rem;
-  border: 1.5px solid #e4e4e7;
-  background: white;
+  border: 1.5px solid var(--p-surface-200);
+  background: var(--p-surface-0);
   cursor: pointer;
   transition: all 0.15s;
 }
 .disc-manual-btn:hover {
-  border-color: #a1a1aa;
-  background: #fafafa;
+  border-color: var(--p-surface-300);
+  background: var(--p-surface-50);
 }
 .disc-manual-btn:active {
   transform: scale(0.97);
@@ -640,16 +640,16 @@ function handleBack() {
 }
 .disc-manual-btn i {
   font-size: 1.25rem;
-  color: #71717a;
+  color: var(--p-text-muted-color);
 }
 .disc-manual-btn span {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #18181b;
+  color: var(--p-text-color);
 }
 .disc-manual-btn small {
   font-size: 0.75rem;
-  color: #a1a1aa;
+  color: var(--p-text-muted-color);
 }
 
 /* Form views */
@@ -670,7 +670,7 @@ function handleBack() {
 .disc-field label {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #52525b;
+  color: var(--p-text-muted-color);
 }
 
 .disc-form-info {
@@ -712,7 +712,7 @@ function handleBack() {
 }
 .disc-preview span:first-child {
   font-size: 0.875rem;
-  color: #52525b;
+  color: var(--p-text-muted-color);
 }
 .disc-preview-amount {
   font-size: 1.125rem;

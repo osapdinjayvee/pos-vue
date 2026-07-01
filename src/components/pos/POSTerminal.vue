@@ -1385,13 +1385,13 @@ onUnmounted(() => {
 /* Cart scroll */
 .pos-cart-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(229 229 229) transparent;
+  scrollbar-color: var(--p-surface-200) transparent;
 }
 .pos-cart-scroll::-webkit-scrollbar {
   width: 4px;
 }
 .pos-cart-scroll::-webkit-scrollbar-thumb {
-  background: rgb(229 229 229);
+  background: var(--p-surface-200);
   border-radius: 4px;
 }
 
@@ -1473,7 +1473,7 @@ input[type="number"] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: white;
+  background: var(--p-surface-0);
   border-radius: 1.5rem;
   padding: 2.5rem 3rem 2rem;
   min-width: 380px;
@@ -1517,7 +1517,7 @@ input[type="number"] {
   margin: 0 0 0.25rem;
   font-size: 1.5rem;
   font-weight: 800;
-  color: #18181b;
+  color: var(--p-text-color);
   animation: fade-up 0.35s 0.7s ease both;
 }
 
@@ -1525,7 +1525,7 @@ input[type="number"] {
   margin: 0 0 0.25rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #71717a;
+  color: var(--p-text-muted-color);
   font-variant-numeric: tabular-nums;
   animation: fade-up 0.35s 0.8s ease both;
 }
@@ -1564,11 +1564,11 @@ input[type="number"] {
 }
 
 .success-btn-secondary {
-  background: #f4f4f5;
-  color: #52525b;
+  background: var(--p-surface-100);
+  color: var(--p-text-muted-color);
 }
 .success-btn-secondary:hover {
-  background: #e4e4e7;
+  background: var(--p-surface-200);
 }
 
 .success-btn-primary {
