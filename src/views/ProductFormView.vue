@@ -17,7 +17,6 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { ProductStatus, TaxType } from '@/types'
-import { normalizeTaxType } from '@/types/transaction'
 import ProductPreview from '@/components/products/ProductPreview.vue'
 import VariantList from '@/components/inventory/VariantList.vue'
 import VariantForm from '@/components/inventory/VariantForm.vue'
@@ -174,7 +173,7 @@ onMounted(async () => {
         stock: product.stock,
         low_stock_threshold: product.low_stock_threshold,
         status: product.status,
-        tax_type: normalizeTaxType(product.tax_type),
+        tax_type: product.tax_type || 'vatable',
         image: product.image || '',
         expiration_date: product.expiration_date ? new Date(product.expiration_date) : null,
         wholesale_price: product.wholesale_price || null,
@@ -262,7 +261,7 @@ const onSave = async () => {
   const formData = {
     ...form.value,
     supplier_id: form.value.supplier_id || null,
-    category_id: form.value.category_id || null,
+    category_id: form.value.category_id || undefined,
     expiration_date: formatDateForDb(form.value.expiration_date)
   }
 

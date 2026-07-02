@@ -521,75 +521,8 @@ const conflictResolutionOptions = [
   { label: 'Ask User', value: 'ask_user', description: 'Prompt user to resolve conflicts' }
 ]
 
-const isBackingUp = ref(false)
-const isRestoring = ref(false)
-
-const triggerBackup = async () => {
-  isBackingUp.value = true
-  try {
-    const data = await db.exportDatabase()
-    if (!data) {
-      toast.add({ severity: 'error', summary: 'Backup Failed', detail: 'Could not export database', life: 3000 })
-      return
-    }
-
-    const date = toLocalDateStr(new Date()).replace(/-/g, '')
-    const filename = `pos-backup-${date}.db`
-    const blob = new Blob([data], { type: 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    toast.add({ severity: 'success', summary: 'Backup Complete', detail: `Saved as ${filename}`, life: 3000 })
-  } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Backup Failed', detail: err.message || 'Unknown error', life: 5000 })
-  } finally {
-    isBackingUp.value = false
-  }
-}
-
 const triggerSync = () => {
   console.log('Triggering manual sync...')
-}
-
-const restoreBackup = () => {
-  confirm.require({
-    message: 'Restoring a backup will replace ALL current data. This cannot be undone. Are you sure?',
-    header: 'Restore Backup',
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    acceptLabel: 'Restore',
-    rejectLabel: 'Cancel',
-    accept: () => {
-      const input = document.createElement('input')
-      input.type = 'file'
-      input.accept = '.db,.sqlite,.backup'
-      input.onchange = async (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0]
-        if (!file) return
-
-        isRestoring.value = true
-        try {
-          const buffer = await file.arrayBuffer()
-          const data = new Uint8Array(buffer)
-          await db.importDatabase(data)
-          toast.add({ severity: 'success', summary: 'Restore Complete', detail: 'Database restored successfully. Reloading...', life: 3000 })
-          // Reload to reinitialize everything with restored data
-          setTimeout(() => window.location.reload(), 1500)
-        } catch (err: any) {
-          toast.add({ severity: 'error', summary: 'Restore Failed', detail: err.message || 'Invalid backup file', life: 5000 })
-        } finally {
-          isRestoring.value = false
-        }
-      }
-      input.click()
-    }
-  })
 }
 
 // Users & Roles (summary)
@@ -962,7 +895,7 @@ async function exportBackup() {
     const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
     const filename = `zoomin-pos-backup-${stamp}.db`
 
-    const blob = new Blob([data], { type: 'application/x-sqlite3' })
+    const blob = new Blob([data as BlobPart], { type: 'application/x-sqlite3' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -2438,8 +2371,7 @@ onMounted(async () => {
               </div>
 
               <div class="action-buttons">
-                <Button label="Backup Now" icon="pi pi-download" :loading="isBackingUp" :disabled="isRestoring" @click="triggerBackup" />
-                <Button label="Restore Backup" icon="pi pi-upload" outlined severity="danger" :loading="isRestoring" :disabled="isBackingUp" @click="restoreBackup" />
+                <Button label="Backup Now" icon="pi pi-download" :loading="isBackingUp" :disabled="isRestoring" @click="exportBackup" />
               </div>
 
               <Divider />

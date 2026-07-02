@@ -206,7 +206,7 @@ function getStockClass(product: Product): string {
     </div>
 
     <!-- Filter Tabs -->
-    <Tabs :value="activeFilter" @update:value="(v: FilterTab) => { activeFilter = v; onFilterChange() }" class="inventory-tabs">
+    <Tabs :value="activeFilter" @update:value="(v: string | number) => { activeFilter = v as FilterTab; onFilterChange() }" class="inventory-tabs">
       <TabList>
         <Tab value="all">All</Tab>
         <Tab value="low-stock">Low Stock</Tab>
