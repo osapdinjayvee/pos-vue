@@ -113,8 +113,8 @@ watch(() => props.progress.errors.length, async () => {
   gap: 0.75rem;
   padding: 1rem;
   border-radius: var(--p-border-radius);
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
 }
 
 .progress-header {
@@ -151,7 +151,7 @@ watch(() => props.progress.errors.length, async () => {
 }
 
 .detail-separator {
-  color: var(--p-surface-300);
+  color: var(--app-surface-300);
 }
 
 .error-panel {
@@ -172,7 +172,7 @@ watch(() => props.progress.errors.length, async () => {
   gap: 0.5rem;
   font-size: 0.8125rem;
   padding: 0.375rem 0;
-  border-bottom: 1px solid var(--p-surface-100);
+  border-bottom: 1px solid var(--app-surface-100);
 }
 
 .error-item:last-child {
@@ -203,7 +203,7 @@ watch(() => props.progress.errors.length, async () => {
   color: var(--p-text-muted-color);
   text-align: center;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-100);
+  border-top: 1px solid var(--app-surface-100);
   margin-top: 0.5rem;
 }
 </style>

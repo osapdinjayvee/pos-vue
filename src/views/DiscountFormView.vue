@@ -523,11 +523,11 @@ function toggleWeekday(day: number) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   padding: 0 1rem;
   min-height: 64px;
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   flex-wrap: wrap;
   gap: 0.75rem;
 }
@@ -565,8 +565,8 @@ function toggleWeekday(day: number) {
 }
 
 .form-card {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   padding: 1.5rem;
   overflow: hidden;
@@ -578,7 +578,7 @@ function toggleWeekday(day: number) {
   color: var(--p-text-color);
   margin: 0 0 1.25rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .form-grid {
@@ -621,9 +621,9 @@ function toggleWeekday(day: number) {
 .weekday-btn {
   min-width: 48px;
   height: 36px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   color: var(--p-text-muted-color);
   font-size: 0.8rem;
   font-weight: 500;

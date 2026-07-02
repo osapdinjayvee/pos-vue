@@ -199,7 +199,7 @@ const trendChartOptions = computed(() => ({
 
     <!-- Empty State -->
     <div v-else class="comparison-empty">
-      <i class="pi pi-search" style="font-size: 2rem; color: var(--p-surface-300);"></i>
+      <i class="pi pi-search" style="font-size: 2rem; color: var(--app-surface-300);"></i>
       <p>Search and select products above to compare</p>
     </div>
   </div>
@@ -254,8 +254,8 @@ const trendChartOptions = computed(() => ({
 .comparison-card {
   border-radius: 10px;
   padding: 1.25rem;
-  border: 1px solid var(--p-surface-200);
-  background: var(--p-surface-50);
+  border: 1px solid var(--app-surface-200);
+  background: var(--app-surface-50);
 }
 
 .comparison-card--a {
@@ -308,10 +308,10 @@ const trendChartOptions = computed(() => ({
 }
 
 .comparison-chart {
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: 10px;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
 }
 
 .comparison-chart-title {

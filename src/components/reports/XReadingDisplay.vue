@@ -120,9 +120,9 @@ const formattedORRange = computed(() =>
 
 <style scoped>
 .xreading-display {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.5rem;
 }
 
@@ -161,7 +161,7 @@ const formattedORRange = computed(() =>
 }
 
 .report-meta .separator {
-  color: var(--p-surface-300);
+  color: var(--app-surface-300);
 }
 
 .report-info-grid {
@@ -231,7 +231,7 @@ const formattedORRange = computed(() =>
 }
 
 .summary-row.total {
-  border-top: 2px solid var(--p-surface-200);
+  border-top: 2px solid var(--app-surface-200);
   padding-top: 0.5rem;
   margin-top: 0.25rem;
 }

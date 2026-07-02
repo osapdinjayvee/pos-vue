@@ -603,10 +603,10 @@ const onMovementRecorded = async (_newStock: number) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   padding: 1rem 1.5rem;
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .header-left {
@@ -834,7 +834,7 @@ const onMovementRecorded = async (_newStock: number) => {
 }
 
 .stat-item.highlight {
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   padding: 1rem;
   border-radius: 8px;
   grid-column: span 2;
@@ -899,7 +899,7 @@ const onMovementRecorded = async (_newStock: number) => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
   font-size: 0.875rem;
 }
@@ -936,7 +936,7 @@ const onMovementRecorded = async (_newStock: number) => {
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
   color: var(--p-text-muted-color);
   font-size: 0.875rem;

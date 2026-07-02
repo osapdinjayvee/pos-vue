@@ -93,7 +93,7 @@ function getAbcSeverity(abcClass: string): 'success' | 'info' | 'warn' {
       </div>
       <div v-else-if="classifications.length === 0" style="height: 300px; display: flex; align-items: center; justify-content: center;">
         <div class="empty-message">
-          <i class="pi pi-chart-pie" style="font-size: 2rem; color: var(--p-surface-300);"></i>
+          <i class="pi pi-chart-pie" style="font-size: 2rem; color: var(--app-surface-300);"></i>
           <p>No data for selected period</p>
         </div>
       </div>
@@ -125,7 +125,7 @@ function getAbcSeverity(abcClass: string): 'success' | 'info' | 'warn' {
       >
         <template #empty>
           <div class="empty-message">
-            <i class="pi pi-chart-pie" style="font-size: 2rem; color: var(--p-surface-300);"></i>
+            <i class="pi pi-chart-pie" style="font-size: 2rem; color: var(--app-surface-300);"></i>
             <p>No classification data available</p>
           </div>
         </template>

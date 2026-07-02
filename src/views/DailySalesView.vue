@@ -444,7 +444,7 @@ function goBack() {
     </template>
 
     <div v-else class="empty-state">
-      <i class="pi pi-chart-bar" style="font-size: 3rem; color: var(--p-surface-300)"></i>
+      <i class="pi pi-chart-bar" style="font-size: 3rem; color: var(--app-surface-300)"></i>
       <h3>No Sales Data</h3>
       <p>No sales transactions found for this date</p>
     </div>
@@ -498,9 +498,9 @@ function goBack() {
 }
 
 .summary-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.25rem;
   display: flex;
   align-items: center;
@@ -565,9 +565,9 @@ function goBack() {
 }
 
 .section-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.25rem;
   margin-bottom: 1rem;
 }
@@ -614,9 +614,9 @@ function goBack() {
   padding: 3rem;
   gap: 0.75rem;
   text-align: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .empty-state h3 {

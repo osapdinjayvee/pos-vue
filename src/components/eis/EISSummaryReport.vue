@@ -267,7 +267,7 @@ onMounted(loadReport)
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
   margin-top: 0.5rem;
 }

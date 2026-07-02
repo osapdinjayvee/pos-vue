@@ -108,7 +108,7 @@ const alertMessage = computed(() => {
   gap: 0.75rem;
   padding: 0.875rem;
   border-radius: 8px;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-left: 4px solid transparent;
 }
 

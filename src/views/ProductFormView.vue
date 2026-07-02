@@ -872,11 +872,11 @@ const totalVariantStock = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   padding: 0 1rem;
   min-height: 64px;
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   flex-wrap: wrap;
   gap: 0.75rem;
 }
@@ -919,8 +919,8 @@ const totalVariantStock = computed(() => {
 }
 
 .form-card {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   padding: 1.5rem;
   overflow: hidden;
@@ -932,7 +932,7 @@ const totalVariantStock = computed(() => {
   color: var(--p-text-color);
   margin: 0 0 1.25rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .form-grid {
@@ -997,7 +997,7 @@ const totalVariantStock = computed(() => {
 .variants-section {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .stock-display {
@@ -1005,7 +1005,7 @@ const totalVariantStock = computed(() => {
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 6px;
 }
 

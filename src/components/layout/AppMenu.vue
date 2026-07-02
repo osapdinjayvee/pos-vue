@@ -168,7 +168,7 @@ const collapsedItems = computed(() =>
 }
 
 .sidebar-nav:hover {
-  scrollbar-color: var(--p-surface-300) transparent;
+  scrollbar-color: var(--app-surface-300) transparent;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -185,7 +185,7 @@ const collapsedItems = computed(() =>
 }
 
 .sidebar-nav:hover::-webkit-scrollbar-thumb {
-  background: var(--p-surface-300);
+  background: var(--app-surface-300);
 }
 
 /* ── Section ── */
@@ -225,7 +225,7 @@ const collapsedItems = computed(() =>
 }
 
 .nav-link:hover {
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
 }
 
 .nav-link--active {

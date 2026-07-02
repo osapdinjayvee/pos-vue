@@ -185,7 +185,7 @@ const hasCompletedItems = computed(() => props.items.some((i) => i.status === 'c
 
 .entity-id {
   font-size: 0.75rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
 }

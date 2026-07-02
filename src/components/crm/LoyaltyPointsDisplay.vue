@@ -297,7 +297,7 @@ defineExpose({ refresh })
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0;
-  border-bottom: 1px solid var(--p-surface-100);
+  border-bottom: 1px solid var(--app-surface-100);
 }
 
 .activity-row:last-child {
@@ -311,7 +311,7 @@ defineExpose({ refresh })
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   flex-shrink: 0;
 }
 

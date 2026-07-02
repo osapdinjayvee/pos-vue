@@ -463,7 +463,7 @@ const formatDate = (dateStr: string) => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 6px;
   font-size: 0.875rem;
 }

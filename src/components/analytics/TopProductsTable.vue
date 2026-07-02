@@ -34,7 +34,7 @@ defineProps<{
     >
       <template #empty>
         <div class="empty-message">
-          <i class="pi pi-box" style="font-size: 2rem; color: var(--p-surface-300);"></i>
+          <i class="pi pi-box" style="font-size: 2rem; color: var(--app-surface-300);"></i>
           <p>No product data available</p>
         </div>
       </template>
@@ -117,7 +117,7 @@ defineProps<{
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   font-weight: 600;
   font-size: 0.8125rem;
   color: var(--p-surface-600);

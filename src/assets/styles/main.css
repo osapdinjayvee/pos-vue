@@ -51,8 +51,8 @@ body {
   top: 0;
   height: 100vh;
   width: 240px;
-  background: var(--p-surface-0);
-  border-right: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border-right: 1px solid var(--app-surface-200);
   transition: width 0.3s ease, transform 0.3s ease;
   z-index: 1000;
   display: flex;
@@ -71,7 +71,7 @@ body {
   flex-direction: column;
   height: 100vh;
   transition: margin-left 0.3s ease;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   width: calc(100% - 240px);
 }
 
@@ -146,7 +146,7 @@ body {
 .toolbar-search .p-inputtext {
   border-radius: 20px !important;
   background: transparent !important;
-  border: 1.5px solid var(--p-surface-200) !important;
+  border: 1.5px solid var(--app-surface-200) !important;
   padding: 0.5rem 0.75rem 0.5rem 2.25rem !important;
   font-size: var(--text-sm) !important;
   min-width: 180px;
@@ -299,7 +299,7 @@ body {
 
 /* Stats Card */
 .stats-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
   border: none;
@@ -416,7 +416,7 @@ body {
 
 /* Chart Card */
 .chart-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 16px;
   padding: 1.5rem;
   border: none;
@@ -439,7 +439,7 @@ body {
 
 /* Data Table Card */
 .table-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
   padding: 1.5rem;
   border: none;
@@ -473,14 +473,14 @@ body {
   gap: 1rem;
   padding: 0.75rem;
   border-radius: 8px;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
 }
 
 .product-avatar {
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,7 +550,7 @@ body {
 .app-dark .stats-card,
 .app-dark .chart-card,
 .app-dark .table-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
 }
 
 .app-dark .layout-main {
@@ -671,8 +671,8 @@ body {
   border-radius: 8px;
   padding: 0.375rem;
   margin-bottom: 1rem;
-  border: 1px solid var(--p-surface-200) !important;
-  background: var(--p-surface-0) !important;
+  border: 1px solid var(--app-surface-200) !important;
+  background: var(--app-surface-0) !important;
 }
 
 /* Hide the default bottom-border active bar */
@@ -699,7 +699,7 @@ body {
 }
 
 .p-tab:not(.p-tab-active):hover {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   color: var(--p-text-color) !important;
 }
 
@@ -764,8 +764,8 @@ body {
 
 /* Header */
 .p-dialog-header {
-  background: var(--p-surface-0) !important;
-  border-bottom: 1px solid var(--p-surface-100) !important;
+  background: var(--app-surface-0) !important;
+  border-bottom: 1px solid var(--app-surface-100) !important;
   padding: 1rem 1.25rem !important;
 }
 
@@ -777,7 +777,7 @@ body {
 /* Close button */
 .p-dialog-header-actions .p-button {
   border: none !important;
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   border-radius: 50% !important;
   width: 28px !important;
   height: 28px !important;
@@ -786,7 +786,7 @@ body {
 }
 
 .p-dialog-header-actions .p-button:hover {
-  background: var(--p-surface-200) !important;
+  background: var(--app-surface-200) !important;
   color: var(--p-text-color) !important;
 }
 
@@ -799,15 +799,15 @@ body {
 
 /* Content */
 .p-dialog-content {
-  background: var(--p-surface-0) !important;
+  background: var(--app-surface-0) !important;
   padding: 1.25rem !important;
   font-size: var(--text-base) !important;
 }
 
 /* Footer */
 .p-dialog-footer {
-  background: var(--p-surface-0) !important;
-  border-top: 1px solid var(--p-surface-100) !important;
+  background: var(--app-surface-0) !important;
+  border-top: 1px solid var(--app-surface-100) !important;
   padding: 0 !important;
   gap: 0 !important;
   display: flex !important;
@@ -825,7 +825,7 @@ body {
   flex: 1 !important;
   border-radius: 0 !important;
   border: none !important;
-  border-left: 1px solid var(--p-surface-100) !important;
+  border-left: 1px solid var(--app-surface-100) !important;
   padding: 0.875rem 1rem !important;
   font-size: var(--text-base) !important;
   font-weight: 400 !important;
@@ -842,11 +842,11 @@ body {
 }
 
 .p-dialog-footer .p-button:hover {
-  background: var(--p-surface-50) !important;
+  background: var(--app-surface-50) !important;
 }
 
 .p-dialog-footer .p-button:active {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   transform: none !important;
   opacity: 1 !important;
 }
@@ -935,9 +935,9 @@ body {
 .p-confirmdialog .p-dialog-footer {
   flex-direction: column !important;
   padding: 0 !important;
-  border-top: 1px solid var(--p-surface-200) !important;
+  border-top: 1px solid var(--app-surface-200) !important;
   gap: 0 !important;
-  background: var(--p-surface-0) !important;
+  background: var(--app-surface-0) !important;
   justify-content: stretch !important;
 }
 
@@ -945,7 +945,7 @@ body {
   width: 100% !important;
   border-radius: 0 !important;
   border: none !important;
-  border-bottom: 1px solid var(--p-surface-200) !important;
+  border-bottom: 1px solid var(--app-surface-200) !important;
   padding: 0.875rem !important;
   font-size: var(--text-base) !important;
   font-weight: 500 !important;
@@ -961,7 +961,7 @@ body {
 }
 
 .p-confirmdialog .p-dialog-footer .p-button:hover {
-  background: var(--p-surface-50) !important;
+  background: var(--app-surface-50) !important;
 }
 
 /* Reject = lighter */
@@ -985,7 +985,7 @@ body {
 
 /* ── Global Table Container (Floating Card) ── */
 .table-container {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 16px;
   border: none;
   box-shadow:
@@ -1003,8 +1003,8 @@ body {
 /* Table pagination bar (sits below table) */
 .table-pagination {
   flex-shrink: 0;
-  border-top: 1px solid var(--p-surface-100);
-  background: var(--p-surface-0);
+  border-top: 1px solid var(--app-surface-100);
+  background: var(--app-surface-0);
   border-radius: 0 0 16px 16px;
 }
 
@@ -1031,7 +1031,7 @@ body {
 
 .table-actions .p-button:hover {
   opacity: 1;
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   color: var(--p-text-color) !important;
 }
 
@@ -1051,7 +1051,7 @@ body {
 
 .empty-state i {
   font-size: 3.5rem;
-  color: var(--p-surface-300);
+  color: var(--app-surface-300);
   margin-bottom: 1rem;
 }
 
@@ -1087,9 +1087,9 @@ body {
 
 /* Header: subtle tinted background (theme variables so dark mode adapts) */
 .p-datatable-header-cell {
-  background: var(--p-surface-50) !important;
+  background: var(--app-surface-50) !important;
   border: none !important;
-  border-bottom: 1px solid var(--p-surface-200) !important;
+  border-bottom: 1px solid var(--app-surface-200) !important;
   padding: 0.625rem 1rem !important;
   font-size: var(--text-xs) !important;
   font-weight: 600 !important;
@@ -1102,7 +1102,7 @@ body {
 .p-datatable-row > td,
 .p-datatable-tbody > tr > td {
   border: none !important;
-  border-bottom: 1px solid var(--p-surface-200) !important;
+  border-bottom: 1px solid var(--app-surface-200) !important;
   padding: 0.75rem 1rem !important;
   font-size: var(--text-base) !important;
   vertical-align: middle !important;
@@ -1112,16 +1112,16 @@ body {
 
 /* Alternating rows — base surface, odd rows get a faint tint */
 .p-datatable-tbody > tr > td {
-  background: var(--p-surface-0) !important;
+  background: var(--app-surface-0) !important;
 }
 
 .p-datatable-tbody > tr:nth-child(odd):not(.p-datatable-row-selected):not(:hover) > td {
-  background: var(--p-surface-50) !important;
+  background: var(--app-surface-50) !important;
 }
 
 /* Subtle hover */
 .p-datatable-tbody > tr:not(.p-datatable-row-selected):hover > td {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
 }
 
 /* Selected row */
@@ -1156,21 +1156,21 @@ body {
 /* Built-in paginator inside DataTable */
 .p-datatable .p-paginator {
   border: none !important;
-  border-top: 1px solid var(--p-surface-100) !important;
-  background: var(--p-surface-0) !important;
+  border-top: 1px solid var(--app-surface-100) !important;
+  background: var(--app-surface-0) !important;
   padding: 0.625rem 1rem !important;
   font-size: var(--text-sm) !important;
 }
 
 /* Frozen columns border */
 .p-datatable-frozen-column {
-  border-right: 1px solid var(--p-surface-100) !important;
+  border-right: 1px solid var(--app-surface-100) !important;
 }
 
 /* Row expansion */
 .p-datatable-row-expansion > td {
-  background: var(--p-surface-50) !important;
-  border-bottom: 1px solid var(--p-surface-200) !important;
+  background: var(--app-surface-50) !important;
+  border-bottom: 1px solid var(--app-surface-200) !important;
   padding: 0 !important;
 }
 
@@ -1237,7 +1237,7 @@ body {
 }
 
 .p-button.p-button-text:hover {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
 }
 
 /* Outlined button — soft border */
@@ -1276,13 +1276,13 @@ body {
 
 /* Secondary severity — iOS gray tint */
 .p-button.p-button-secondary:not(.p-button-outlined):not(.p-button-text) {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   color: var(--p-text-color) !important;
   border: none !important;
 }
 
 .p-button.p-button-secondary:not(.p-button-outlined):not(.p-button-text):hover {
-  background: var(--p-surface-200) !important;
+  background: var(--app-surface-200) !important;
 }
 
 /* ═══════════════════════════════════════
@@ -1292,14 +1292,14 @@ body {
 /* Text input */
 .p-inputtext {
   border-radius: 10px !important;
-  border: 1.5px solid var(--p-surface-200) !important;
+  border: 1.5px solid var(--app-surface-200) !important;
   font-size: var(--text-base) !important;
   background: transparent !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .p-inputtext:hover {
-  border-color: var(--p-surface-300) !important;
+  border-color: var(--app-surface-300) !important;
 }
 
 .p-inputtext:focus,
@@ -1327,7 +1327,7 @@ body {
 /* Textarea */
 .p-textarea {
   border-radius: 10px !important;
-  border: 1.5px solid var(--p-surface-200) !important;
+  border: 1.5px solid var(--app-surface-200) !important;
   font-size: var(--text-base) !important;
   background: transparent !important;
 }
@@ -1346,7 +1346,7 @@ body {
   display: inline-flex !important;
   align-items: stretch !important;
   border-radius: 10px !important;
-  border: 1.5px solid var(--p-surface-200) !important;
+  border: 1.5px solid var(--app-surface-200) !important;
   background: transparent !important;
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
@@ -1355,7 +1355,7 @@ body {
 .p-datepicker:hover,
 .p-inputnumber:hover,
 .p-inputgroup:hover {
-  border-color: var(--p-surface-300) !important;
+  border-color: var(--app-surface-300) !important;
 }
 
 .p-datepicker:focus-within,
@@ -1383,14 +1383,14 @@ body {
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  background: var(--p-surface-50) !important;
+  background: var(--app-surface-50) !important;
   color: var(--p-text-muted-color) !important;
 }
 
 .p-datepicker .p-datepicker-dropdown:hover,
 .p-inputnumber .p-inputnumber-button:hover,
 .p-inputgroup .p-button:hover {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   color: var(--p-text-color) !important;
 }
 
@@ -1398,27 +1398,27 @@ body {
 .p-datepicker .p-datepicker-dropdown,
 .p-inputgroup .p-inputgroup-addon,
 .p-inputgroup .p-button {
-  border-left: 1px solid var(--p-surface-200) !important;
+  border-left: 1px solid var(--app-surface-200) !important;
 }
 
 /* InputNumber buttons stacked — top/bottom separator */
 .p-inputnumber-stacked .p-inputnumber-button-up {
-  border-bottom: 1px solid var(--p-surface-200) !important;
-  border-left: 1px solid var(--p-surface-200) !important;
+  border-bottom: 1px solid var(--app-surface-200) !important;
+  border-left: 1px solid var(--app-surface-200) !important;
 }
 
 .p-inputnumber-stacked .p-inputnumber-button-down {
-  border-left: 1px solid var(--p-surface-200) !important;
+  border-left: 1px solid var(--app-surface-200) !important;
 }
 
 /* InputNumber horizontal buttons */
 .p-inputnumber-horizontal .p-inputnumber-button {
-  border-left: 1px solid var(--p-surface-200) !important;
+  border-left: 1px solid var(--app-surface-200) !important;
 }
 
 .p-inputnumber-horizontal .p-inputnumber-button:first-child {
   border-left: none !important;
-  border-right: 1px solid var(--p-surface-200) !important;
+  border-right: 1px solid var(--app-surface-200) !important;
 }
 
 /* Keep active state clean inside groups */
@@ -1434,7 +1434,7 @@ body {
 
 .p-select {
   border-radius: 10px !important;
-  border: 1.5px solid var(--p-surface-200) !important;
+  border: 1.5px solid var(--app-surface-200) !important;
   background: transparent !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
   display: inline-flex !important;
@@ -1442,7 +1442,7 @@ body {
 }
 
 .p-select:hover {
-  border-color: var(--p-surface-300) !important;
+  border-color: var(--app-surface-300) !important;
 }
 
 .p-select.p-focus,
@@ -1473,7 +1473,7 @@ body {
 
 .p-select-option:hover,
 .p-select-option.p-focus {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
 }
 
 .p-select-option.p-selected {
@@ -1493,7 +1493,7 @@ body {
     0 0 0 0.5px rgba(0, 0, 0, 0.03),
     0 4px 20px rgba(0, 0, 0, 0.05) !important;
   overflow: hidden;
-  background: var(--p-surface-0) !important;
+  background: var(--app-surface-0) !important;
 }
 
 .p-card-title {
@@ -1524,27 +1524,27 @@ body {
 
 /* Softer tag colors — iOS tinted style */
 .p-tag-success {
-  background: color-mix(in srgb, #10b981 14%, var(--p-surface-0)) !important;
+  background: color-mix(in srgb, #10b981 14%, var(--app-surface-0)) !important;
   color: #059669 !important;
 }
 
 .p-tag-info {
-  background: color-mix(in srgb, #3b82f6 14%, var(--p-surface-0)) !important;
+  background: color-mix(in srgb, #3b82f6 14%, var(--app-surface-0)) !important;
   color: #2563eb !important;
 }
 
 .p-tag-warn {
-  background: color-mix(in srgb, #f59e0b 14%, var(--p-surface-0)) !important;
+  background: color-mix(in srgb, #f59e0b 14%, var(--app-surface-0)) !important;
   color: #d97706 !important;
 }
 
 .p-tag-danger {
-  background: color-mix(in srgb, #ef4444 14%, var(--p-surface-0)) !important;
+  background: color-mix(in srgb, #ef4444 14%, var(--app-surface-0)) !important;
   color: #dc2626 !important;
 }
 
 .p-tag-secondary {
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   color: var(--p-text-muted-color) !important;
 }
 
@@ -1584,7 +1584,7 @@ body {
 .p-toolbar {
   border-radius: 16px !important;
   border: none !important;
-  background: var(--p-surface-0) !important;
+  background: var(--app-surface-0) !important;
   padding: 0.75rem 1rem !important;
   box-shadow: 0 0 0 0.5px rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.05) !important;
 }
@@ -1699,4 +1699,67 @@ body {
 /* Block scroll when dialog is open */
 body.p-overflow-hidden {
   overflow: hidden !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Dark-mode surface variables
+   ─────────────────────────────────────────────────────────────
+   PrimeVue's --p-surface-0..300 are PRIMITIVE tokens that stay light in
+   both themes (surface-0 is always #fff). Throughout the app these were
+   used as CARD/PANEL BACKGROUNDS and BORDERS meant to darken in dark mode
+   (~180 usages across 73 files); left as-is they render as white islands
+   with invisible text under .app-dark. We cannot redefine the primitives
+   themselves — PrimeVue's semantic tokens (e.g. --p-text-color) reference
+   them, so overriding surface-0 would also break the text color.
+   Instead these --app-surface-* aliases flip here, and the app's own
+   `var(--p-surface-0/50/100/200/300)` usages are remapped to them. Steps
+   go lightest→least-dark to preserve elevation. */
+:root {
+  --app-surface-0: #ffffff;
+  --app-surface-50: #f8fafc;
+  --app-surface-100: #f1f5f9;
+  --app-surface-200: #e2e8f0;
+  --app-surface-300: #cbd5e1;
+}
+html.app-dark {
+  --app-surface-0: #18181b;   /* base card background */
+  --app-surface-50: #212124;  /* subtly raised */
+  --app-surface-100: #27272a; /* raised / inset fill */
+  --app-surface-200: #3f3f46; /* borders / emphasis fill */
+  --app-surface-300: #52525b; /* strong borders */
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Dark-mode remap for hardcoded Tailwind neutral utilities
+   ─────────────────────────────────────────────────────────────
+   The POS terminal and its dialogs use Tailwind utility classes
+   (bg-white, text-neutral-*, border-neutral-*) directly in markup.
+   These are fixed colors that don't flip under .app-dark, so in dark
+   mode they'd show dark text on dark surfaces (invisible) or light
+   islands. Remap them here to PrimeVue theme variables. These
+   selectors (.app-dark .bg-white) outrank the single-class Tailwind
+   utilities by specificity. Intentionally NOT remapped: text-white
+   and border-white (white-on-accent), bg-neutral-900 (already dark). */
+.app-dark .bg-white { background-color: var(--app-surface-0); }
+.app-dark .bg-neutral-50 { background-color: var(--app-surface-50); }
+.app-dark .bg-neutral-100 { background-color: var(--app-surface-100); }
+.app-dark .bg-neutral-200 { background-color: var(--app-surface-200); }
+.app-dark .bg-neutral-300 { background-color: var(--app-surface-300); }
+
+.app-dark .text-neutral-900,
+.app-dark .text-neutral-800,
+.app-dark .text-neutral-700 { color: var(--p-text-color); }
+.app-dark .text-neutral-600,
+.app-dark .text-neutral-500,
+.app-dark .text-neutral-400,
+.app-dark .text-neutral-300,
+.app-dark .text-neutral-200 { color: var(--p-text-muted-color); }
+
+.app-dark .border-neutral-50 { border-color: var(--app-surface-50); }
+.app-dark .border-neutral-100 { border-color: var(--app-surface-100); }
+.app-dark .border-neutral-200 { border-color: var(--app-surface-200); }
+.app-dark .border-neutral-300 { border-color: var(--app-surface-300); }
+
+.app-dark .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--app-surface-100);
 }

@@ -221,7 +221,7 @@ defineExpose({ focus })
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
   transition: all 0.15s ease;
 }
 
@@ -255,16 +255,16 @@ defineExpose({ focus })
   border-radius: 12px;
   border: none !important;
   box-shadow: none !important;
-  background: var(--p-surface-100) !important;
+  background: var(--app-surface-100) !important;
   color: var(--p-text-color) !important;
 }
 
 .pad-button:hover:not(:disabled) {
-  background: var(--p-surface-200) !important;
+  background: var(--app-surface-200) !important;
 }
 
 .pad-button:active:not(:disabled) {
-  background: var(--p-surface-300) !important;
+  background: var(--app-surface-300) !important;
 }
 
 .pad-button:deep(.p-button-label) {

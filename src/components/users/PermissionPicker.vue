@@ -220,9 +220,9 @@ watch(
 
 .full-access-section {
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .full-access-toggle {
@@ -291,9 +291,9 @@ watch(
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 6px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .permission-label {

@@ -216,8 +216,8 @@ const fullAddress = computed(() => {
 
 <style scoped>
 .customer-profile {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
@@ -257,8 +257,8 @@ const fullAddress = computed(() => {
   flex-wrap: wrap;
   gap: 1.25rem;
   padding: 0.75rem 0;
-  border-top: 1px solid var(--p-surface-100);
-  border-bottom: 1px solid var(--p-surface-100);
+  border-top: 1px solid var(--app-surface-100);
+  border-bottom: 1px solid var(--app-surface-100);
 }
 
 .contact-item {
@@ -350,8 +350,8 @@ const fullAddress = computed(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.875rem;
-  background: var(--p-surface-50);
-  border: 1px solid var(--p-surface-100);
+  background: var(--app-surface-50);
+  border: 1px solid var(--app-surface-100);
   border-radius: 10px;
 }
 

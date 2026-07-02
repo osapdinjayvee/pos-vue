@@ -335,8 +335,8 @@ function formatAttributes(attributes: Record<string, string>): string[] {
 }
 
 .variant-card {
-  background: var(--p-surface-50);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-50);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -346,8 +346,8 @@ function formatAttributes(attributes: Record<string, string>): string[] {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: var(--p-surface-100);
-  border-bottom: 1px solid var(--p-surface-200);
+  background: var(--app-surface-100);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .variant-card-header .variant-name {

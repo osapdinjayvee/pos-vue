@@ -107,8 +107,8 @@ const getDiscountPercent = (product: DisplayProduct) => {
 
 <style scoped>
 .product-card {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -139,7 +139,7 @@ const getDiscountPercent = (product: DisplayProduct) => {
 }
 
 .product-card-header :deep(.p-checkbox) {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }

@@ -215,10 +215,10 @@ function toggleSaveInput() {
 
 <style scoped>
 .report-builder {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -269,7 +269,7 @@ function toggleSaveInput() {
   gap: 0.75rem;
   flex-wrap: wrap;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-100);
+  border-top: 1px solid var(--app-surface-100);
 }
 
 .save-input-group {

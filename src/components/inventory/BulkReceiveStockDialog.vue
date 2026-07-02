@@ -233,7 +233,7 @@ const handleSubmit = async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   border-radius: 8px;
   flex-wrap: wrap;
 }
@@ -258,8 +258,8 @@ const handleSubmit = async () => {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem;
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
   transition: all 0.2s ease;
 }
@@ -287,7 +287,7 @@ const handleSubmit = async () => {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .product-image img {
@@ -343,7 +343,7 @@ const handleSubmit = async () => {
 
 .notes-field {
   padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .form-field {

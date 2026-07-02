@@ -279,8 +279,8 @@ onMounted(() => {
 }
 
 .detail-tabs {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -341,8 +341,8 @@ onMounted(() => {
 .stat-card {
   padding: 1rem;
   border-radius: 8px;
-  background: var(--p-surface-50);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-50);
+  border: 1px solid var(--app-surface-200);
 }
 
 .stat-card.stat-danger {

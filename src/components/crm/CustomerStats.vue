@@ -74,8 +74,8 @@ function formatCurrency(value: number): string {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: var(--p-surface-50);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-50);
+  border: 1px solid var(--app-surface-200);
   border-radius: 10px;
 }
 

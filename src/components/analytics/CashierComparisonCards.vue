@@ -117,8 +117,8 @@ function formatDiff(individual: number, team: number): string {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   padding: 1.5rem;
 }
@@ -128,7 +128,7 @@ function formatDiff(individual: number, team: number): string {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -180,7 +180,7 @@ function formatDiff(individual: number, team: number): string {
   font-size: 0.8125rem;
   font-weight: 600;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .comparison-indicator.indicator-positive {

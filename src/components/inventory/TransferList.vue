@@ -267,7 +267,7 @@ defineExpose({ loadTransfers })
   display: flex;
   justify-content: flex-end;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .summary-text {

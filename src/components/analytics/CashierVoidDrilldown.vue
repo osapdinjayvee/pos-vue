@@ -119,7 +119,7 @@ function onHide() {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 

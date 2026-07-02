@@ -406,7 +406,7 @@ function handleCancel() {
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   border-radius: 6px;
   font-size: 0.875rem;
 }

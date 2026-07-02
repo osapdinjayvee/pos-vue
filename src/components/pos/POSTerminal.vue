@@ -1268,7 +1268,7 @@ onUnmounted(() => {
       position="top"
       :style="{ width: '100vw', height: '100vh', maxHeight: '100vh', margin: 0 }"
       :contentStyle="{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }"
-      :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--p-surface-200); background: var(--p-primary-color)' } }"
+      :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--app-surface-200); background: var(--p-primary-color)' } }"
     >
       <template #header>
         <div class="flex items-center gap-3 w-full">
@@ -1303,7 +1303,7 @@ onUnmounted(() => {
       position="top"
       :style="{ width: '100vw', height: '100vh', maxHeight: '100vh', margin: 0 }"
       :contentStyle="{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }"
-      :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--p-surface-200); background: var(--p-orange-600)' } }"
+      :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--app-surface-200); background: var(--p-orange-600)' } }"
     >
       <template #header>
         <div class="flex items-center gap-3 w-full">
@@ -1385,13 +1385,13 @@ onUnmounted(() => {
 /* Cart scroll */
 .pos-cart-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--p-surface-200) transparent;
+  scrollbar-color: var(--app-surface-200) transparent;
 }
 .pos-cart-scroll::-webkit-scrollbar {
   width: 4px;
 }
 .pos-cart-scroll::-webkit-scrollbar-thumb {
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
   border-radius: 4px;
 }
 
@@ -1473,7 +1473,7 @@ input[type="number"] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 1.5rem;
   padding: 2.5rem 3rem 2rem;
   min-width: 380px;
@@ -1564,11 +1564,11 @@ input[type="number"] {
 }
 
 .success-btn-secondary {
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   color: var(--p-text-muted-color);
 }
 .success-btn-secondary:hover {
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
 }
 
 .success-btn-primary {

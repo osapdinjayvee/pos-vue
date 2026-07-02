@@ -176,7 +176,7 @@ function handleTest() {
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 

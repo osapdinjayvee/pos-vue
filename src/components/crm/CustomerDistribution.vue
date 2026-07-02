@@ -193,7 +193,7 @@ function getTierColor(tierName: string): string {
 .section-total {
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
   text-align: right;

@@ -82,7 +82,7 @@ defineExpose({ fetchReports })
     </div>
 
     <div v-else-if="savedReports.length === 0" class="empty-state">
-      <i class="pi pi-bookmark" style="font-size: 1.5rem; color: var(--p-surface-300);"></i>
+      <i class="pi pi-bookmark" style="font-size: 1.5rem; color: var(--app-surface-300);"></i>
       <p>No saved reports yet. Build a report and save it for quick access.</p>
     </div>
 
@@ -121,10 +121,10 @@ defineExpose({ fetchReports })
 
 <style scoped>
 .saved-reports-panel {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
   padding: 1.25rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .panel-header {
@@ -201,12 +201,12 @@ defineExpose({ fetchReports })
   justify-content: space-between;
   padding: 0.625rem 0.75rem;
   border-radius: 8px;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   transition: background 0.15s ease;
 }
 
 .report-item:hover {
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
 }
 
 .report-info {

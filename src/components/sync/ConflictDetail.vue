@@ -359,9 +359,9 @@ function applyRecommended() {
 .timestamp-comparison {
   margin-bottom: 1rem;
   padding: 0.75rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: var(--p-border-radius);
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
 }
 
 .timestamp-grid {
@@ -379,7 +379,7 @@ function applyRecommended() {
 }
 
 .timestamp-item.is-newer {
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
 }
 
 .timestamp-item i {
@@ -401,7 +401,7 @@ function applyRecommended() {
 
 /* Diff Table */
 .diff-table {
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: var(--p-border-radius);
   overflow: hidden;
   margin-bottom: 1rem;
@@ -410,7 +410,7 @@ function applyRecommended() {
 .diff-header {
   display: grid;
   grid-template-columns: 150px 1fr 1fr;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   font-weight: 600;
   font-size: 0.8125rem;
   text-transform: uppercase;
@@ -420,7 +420,7 @@ function applyRecommended() {
 .diff-row {
   display: grid;
   grid-template-columns: 150px 1fr 1fr;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .diff-cell {
@@ -478,7 +478,7 @@ function applyRecommended() {
 }
 
 .merge-table {
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: var(--p-border-radius);
   overflow: hidden;
 }
@@ -486,7 +486,7 @@ function applyRecommended() {
 .merge-header {
   display: grid;
   grid-template-columns: 150px 1fr 100px;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   font-weight: 600;
   font-size: 0.8125rem;
   text-transform: uppercase;
@@ -496,7 +496,7 @@ function applyRecommended() {
 .merge-row {
   display: grid;
   grid-template-columns: 150px 1fr 100px;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .merge-cell {
@@ -510,7 +510,7 @@ function applyRecommended() {
 .resolve-actions {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .action-buttons {

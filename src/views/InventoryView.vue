@@ -439,7 +439,7 @@ function getStockClass(product: Product): string {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -313,7 +313,7 @@ function handleClose() {
     position="top"
     :style="{ width: '100vw', height: '100vh', maxHeight: '100vh', margin: 0 }"
     :contentStyle="{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }"
-    :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--p-surface-200)' } }"
+    :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--app-surface-200)' } }"
     @hide="handleClose"
   >
     <template #header>
@@ -671,13 +671,13 @@ function handleClose() {
 <style scoped>
 .txh-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--p-surface-200) transparent;
+  scrollbar-color: var(--app-surface-200) transparent;
 }
 .txh-scroll::-webkit-scrollbar {
   width: 4px;
 }
 .txh-scroll::-webkit-scrollbar-thumb {
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
   border-radius: 4px;
 }
 </style>

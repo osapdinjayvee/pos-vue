@@ -28,7 +28,7 @@ const chartData = computed(() => ({
       backgroundColor: props.categoryData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
       hoverBackgroundColor: props.categoryData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
       borderWidth: 2,
-      borderColor: 'var(--p-surface-0)'
+      borderColor: 'var(--app-surface-0)'
     }
   ]
 }))
@@ -74,7 +74,7 @@ const chartOptions = computed(() => ({
     </div>
 
     <div v-else-if="categoryData.length === 0" class="chart-empty">
-      <i class="pi pi-chart-pie" style="font-size: 2rem; color: var(--p-surface-300);"></i>
+      <i class="pi pi-chart-pie" style="font-size: 2rem; color: var(--app-surface-300);"></i>
       <p class="text-muted">No category data available</p>
     </div>
 

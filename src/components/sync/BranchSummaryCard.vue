@@ -118,7 +118,7 @@ function formatLastSync(dateStr: string | null): string {
   justify-content: space-between;
   align-items: center;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .sync-label {

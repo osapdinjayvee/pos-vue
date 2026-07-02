@@ -172,7 +172,7 @@ onMounted(loadStats)
 
 .stat-primary {
   padding: 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -240,7 +240,7 @@ onMounted(loadStats)
   grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .stat-item {

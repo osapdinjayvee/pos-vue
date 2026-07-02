@@ -716,7 +716,7 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
 
 .current-stock-info {
   padding: 0.5rem 0.75rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   border-radius: 6px;
   font-size: 0.875rem;
   color: var(--p-text-muted-color);

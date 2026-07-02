@@ -137,7 +137,7 @@ const formattedEndTime = computed(() => {
 
 <style scoped>
 .shift-summary-card {
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .card-header {
@@ -145,8 +145,8 @@ const formattedEndTime = computed(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  background: var(--p-surface-50);
-  border-bottom: 1px solid var(--p-surface-200);
+  background: var(--app-surface-50);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .header-left {
@@ -211,7 +211,7 @@ const formattedEndTime = computed(() => {
   display: flex;
   gap: 2rem;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -243,7 +243,7 @@ const formattedEndTime = computed(() => {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px dashed var(--p-surface-200);
+  border-bottom: 1px dashed var(--app-surface-200);
 }
 
 .cash-row:last-child {
@@ -253,7 +253,7 @@ const formattedEndTime = computed(() => {
 .variance-row {
   padding-top: 0.75rem;
   margin-top: 0.25rem;
-  border-top: 2px solid var(--p-surface-200);
+  border-top: 2px solid var(--app-surface-200);
   border-bottom: none;
 }
 
@@ -269,7 +269,7 @@ const formattedEndTime = computed(() => {
 
 .variance-section {
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 

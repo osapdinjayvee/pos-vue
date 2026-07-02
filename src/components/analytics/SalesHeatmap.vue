@@ -52,7 +52,7 @@ function getCellStyle(dayIndex: number, hour: number): Record<string, string> {
   const cell = getCellForPosition(dayIndex, hour)
   if (!cell) {
     return {
-      backgroundColor: 'var(--p-surface-100)',
+      backgroundColor: 'var(--app-surface-100)',
       opacity: '1'
     }
   }
@@ -226,7 +226,7 @@ function handleClick(dayIndex: number, hour: number) {
   position: fixed;
   transform: translate(-50%, -100%);
   background: var(--p-surface-900);
-  color: var(--p-surface-0);
+  color: #fff;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-size: 0.75rem;

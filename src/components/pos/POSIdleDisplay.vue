@@ -281,7 +281,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.375rem;
   padding: 0.3rem 0.75rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   border-radius: 9999px;
   font-size: 0.75rem;
   color: var(--p-text-muted-color);
@@ -297,7 +297,7 @@ onUnmounted(() => {
 .idle-clock-section {
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
   min-width: 200px;
 }
 

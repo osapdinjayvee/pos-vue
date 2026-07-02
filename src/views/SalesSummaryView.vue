@@ -520,7 +520,7 @@ function goBack() {
     </template>
 
     <div v-else class="empty-state">
-      <i class="pi pi-chart-line" style="font-size: 3rem; color: var(--p-surface-300)"></i>
+      <i class="pi pi-chart-line" style="font-size: 3rem; color: var(--app-surface-300)"></i>
       <h3>No Sales Data</h3>
       <p>No transactions found for the selected period</p>
     </div>
@@ -549,9 +549,9 @@ function goBack() {
 }
 
 .summary-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.125rem 1.25rem;
   display: flex;
   align-items: center;
@@ -619,8 +619,8 @@ function goBack() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.875rem;
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
   font-size: 0.8125rem;
   color: var(--p-text-color);
@@ -648,9 +648,9 @@ function goBack() {
 }
 
 .section-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.25rem;
 }
 
@@ -675,7 +675,7 @@ function goBack() {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--p-surface-100);
+  border-bottom: 1px solid var(--app-surface-100);
 }
 
 .payment-row:last-child {
@@ -717,7 +717,7 @@ function goBack() {
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -777,9 +777,9 @@ function goBack() {
   padding: 3rem;
   gap: 0.75rem;
   text-align: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .empty-state h3 {

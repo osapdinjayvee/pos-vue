@@ -2514,8 +2514,8 @@ onMounted(async () => {
   height: 100px;
   object-fit: contain;
   border-radius: 8px;
-  border: 1px solid var(--p-surface-200);
-  background: var(--p-surface-50);
+  border: 1px solid var(--app-surface-200);
+  background: var(--app-surface-50);
   padding: 0.5rem;
 }
 
@@ -2532,7 +2532,7 @@ onMounted(async () => {
   gap: 0.5rem;
   width: 200px;
   height: 120px;
-  border: 2px dashed var(--p-surface-300);
+  border: 2px dashed var(--app-surface-300);
   border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
@@ -2569,9 +2569,9 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 1rem;
   padding: 1.25rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: 0.75rem;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
 }
 
 .backup-card-info {
@@ -2629,10 +2629,10 @@ onMounted(async () => {
 }
 
 .settings-section {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .section-header {
@@ -2701,7 +2701,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -2729,7 +2729,7 @@ onMounted(async () => {
 }
 
 .summary-card {
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
 }
 
 .summary-card :deep(.p-card-body) {
@@ -2776,7 +2776,7 @@ onMounted(async () => {
 }
 
 .payment-card {
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
 }
 
 .payment-card :deep(.p-card-body) {
@@ -2856,7 +2856,7 @@ onMounted(async () => {
   gap: 0.75rem;
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .w-full {
@@ -2897,9 +2897,9 @@ onMounted(async () => {
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .printer-status-card.connected {
@@ -2914,7 +2914,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
   color: var(--p-text-muted-color);
   font-size: 1.5rem;
 }
@@ -2950,9 +2950,9 @@ onMounted(async () => {
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .backup-icon {
@@ -3009,9 +3009,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.5rem;
   padding: 1rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .sync-status-item .label {
@@ -3072,7 +3072,7 @@ onMounted(async () => {
   position: relative;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   aspect-ratio: 16/9;
 }
 
@@ -3109,9 +3109,9 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
-  border: 2px dashed var(--p-surface-200);
+  border: 2px dashed var(--app-surface-200);
   text-align: center;
 }
 
@@ -3157,7 +3157,7 @@ onMounted(async () => {
   gap: 0.75rem;
   padding: 0.625rem 0.75rem;
   border-radius: 6px;
-  border: 1px solid var(--p-surface-200);
-  background: var(--p-surface-0);
+  border: 1px solid var(--app-surface-200);
+  background: var(--app-surface-0);
 }
 </style>

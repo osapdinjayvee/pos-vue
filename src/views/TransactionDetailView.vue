@@ -428,10 +428,10 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   padding: 1rem 1.5rem;
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .header-left {
@@ -524,12 +524,12 @@ onMounted(async () => {
 }
 
 .detail-card--discount {
-  background: color-mix(in srgb, var(--p-green-50) 50%, var(--p-surface-0));
+  background: color-mix(in srgb, var(--p-green-50) 50%, var(--app-surface-0));
   border: 1px solid var(--p-green-200);
 }
 
 .detail-card--return {
-  background: color-mix(in srgb, var(--p-orange-50) 50%, var(--p-surface-0));
+  background: color-mix(in srgb, var(--p-orange-50) 50%, var(--app-surface-0));
   border: 1px solid var(--p-orange-200);
 }
 
@@ -561,7 +561,7 @@ onMounted(async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -620,7 +620,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.625rem 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -705,7 +705,7 @@ onMounted(async () => {
 }
 
 .summary-total {
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
   padding-top: 0.5rem;
   margin-top: 0.25rem;
   font-weight: 600;

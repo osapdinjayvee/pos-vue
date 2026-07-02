@@ -96,15 +96,15 @@ const getInitials = (name?: string) => {
 }
 
 .preview-card {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .preview-image {
   position: relative;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,7 +218,7 @@ const getInitials = (name?: string) => {
   justify-content: space-between;
   align-items: center;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--p-surface-100);
+  border-top: 1px solid var(--app-surface-100);
 }
 
 .preview-price {

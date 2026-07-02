@@ -178,7 +178,7 @@ const successCount = props.result.created + props.result.updated
 }
 
 .result-card.secondary {
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   color: var(--p-text-muted-color);
 }
 
@@ -202,7 +202,7 @@ const successCount = props.result.created + props.result.updated
   justify-content: space-between;
   align-items: center;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .text-muted {

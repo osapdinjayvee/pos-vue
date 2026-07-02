@@ -219,7 +219,7 @@ function handleCancel() {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   border-radius: 8px;
 }
 

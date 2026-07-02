@@ -160,7 +160,7 @@ function goBack() {
       </div>
 
       <div v-else-if="zReadings.length === 0" class="empty-state">
-        <i class="pi pi-file-check" style="font-size: 3rem; color: var(--p-surface-300)"></i>
+        <i class="pi pi-file-check" style="font-size: 3rem; color: var(--app-surface-300)"></i>
         <h3>No Z-Readings Yet</h3>
         <p>Generate your first Z-Reading at end of business day</p>
         <Button
@@ -282,9 +282,9 @@ function goBack() {
 }
 
 .view-content {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.5rem;
 }
 

@@ -42,8 +42,8 @@ defineProps<{
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem 2rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--p-surface-200);
-  background: var(--p-surface-50);
+  border-bottom: 1px solid var(--app-surface-200);
+  background: var(--app-surface-50);
   font-size: 0.875rem;
 }
 

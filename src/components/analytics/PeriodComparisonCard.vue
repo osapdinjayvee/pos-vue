@@ -75,7 +75,7 @@ function formatChange(value: number): string {
   display: flex;
   flex-direction: column;
   padding: 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
   text-align: center;
 }

@@ -474,7 +474,7 @@ const formatDate = (dateString: string | undefined) => {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -539,9 +539,9 @@ const formatDate = (dateString: string | undefined) => {
 .icon-option {
   width: 40px;
   height: 40px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   display: flex;
   align-items: center;
   justify-content: center;

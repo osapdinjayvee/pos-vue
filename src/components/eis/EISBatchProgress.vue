@@ -46,7 +46,7 @@ const statusSeverity = computed(() => {
 <style scoped>
 .eis-batch-progress {
   padding: 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 

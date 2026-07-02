@@ -227,7 +227,7 @@ function getStockSeverity(stock: number, threshold: number) {
 }
 
 .product-placeholder {
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
   display: flex;
   align-items: center;
   justify-content: center;

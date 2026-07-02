@@ -224,7 +224,7 @@ const getRowFieldValue = (row: ValidatedRow, field: string): string => {
   flex-direction: column;
   align-items: center;
   padding: 0.75rem 1.25rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
   min-width: 80px;
 }
@@ -232,7 +232,7 @@ const getRowFieldValue = (row: ValidatedRow, field: string): string => {
 .summary-item.success { background: var(--p-green-50); }
 .summary-item.info { background: var(--p-blue-50); }
 .summary-item.danger { background: var(--p-red-50); }
-.summary-item.secondary { background: var(--p-surface-100); }
+.summary-item.secondary { background: var(--app-surface-100); }
 
 .summary-count {
   font-size: 1.25rem;
@@ -278,7 +278,7 @@ const getRowFieldValue = (row: ValidatedRow, field: string): string => {
   justify-content: space-between;
   align-items: center;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .text-muted {

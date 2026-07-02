@@ -131,7 +131,7 @@ function navigateTo(route: string) {
 }
 
 .report-icon--secondary {
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   color: var(--p-surface-600);
 }
 

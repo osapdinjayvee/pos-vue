@@ -210,8 +210,8 @@ onMounted(() => {
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
 }
 
@@ -244,15 +244,15 @@ onMounted(() => {
 }
 
 .section-card {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .section-header {
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .section-header h3 {

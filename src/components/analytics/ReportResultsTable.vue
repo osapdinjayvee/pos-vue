@@ -67,7 +67,7 @@ function getAlignStyle(type: string): string {
 
     <!-- Empty state when no result yet -->
     <div v-else-if="!result" class="empty-message">
-      <i class="pi pi-chart-bar" style="font-size: 2.5rem; color: var(--p-surface-300);"></i>
+      <i class="pi pi-chart-bar" style="font-size: 2.5rem; color: var(--app-surface-300);"></i>
       <p>Configure dimensions and measures, then click "Generate Report" to view results.</p>
     </div>
 

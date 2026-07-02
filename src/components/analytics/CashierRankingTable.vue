@@ -111,7 +111,7 @@ function onRowSelect(event: { data: CashierMetrics }) {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 50%;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   font-weight: 600;
   font-size: 0.8125rem;
   color: var(--p-text-color);

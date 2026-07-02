@@ -58,8 +58,8 @@ function fmt(n: number): string {
   padding: 1.5rem 1.25rem;
   text-align: center;
   flex-shrink: 0;
-  background: var(--p-surface-50);
-  border-bottom: 1px solid var(--p-surface-200);
+  background: var(--app-surface-50);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .pos-info-panel.has-txn {

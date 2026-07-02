@@ -52,9 +52,9 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.5rem;
   padding: 1.25rem 1rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: var(--p-border-radius);
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   cursor: pointer;
   transition: all 0.2s;
 }

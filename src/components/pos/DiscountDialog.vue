@@ -396,7 +396,7 @@ function handleBack() {
   inset: 0;
   z-index: 9998;
   display: flex;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
 }
 
 .disc-page {
@@ -404,7 +404,7 @@ function handleBack() {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   overflow: hidden;
   animation: disc-pop 0.2s ease both;
 }
@@ -436,7 +436,7 @@ function handleBack() {
   height: 2.25rem;
   border-radius: 0.625rem;
   border: none;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   color: var(--p-text-muted-color);
   cursor: pointer;
   transition: all 0.15s;
@@ -444,7 +444,7 @@ function handleBack() {
 }
 .disc-back-btn:hover,
 .disc-close-btn:hover {
-  background: var(--p-surface-200);
+  background: var(--app-surface-200);
 }
 
 /* Subtotal bar */
@@ -453,7 +453,7 @@ function handleBack() {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
@@ -486,7 +486,7 @@ function handleBack() {
   padding: 0.25rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid #93c5fd;
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   color: #3b82f6;
   font-size: 0.75rem;
   font-weight: 600;
@@ -537,8 +537,8 @@ function handleBack() {
   gap: 0.25rem;
   padding: 1rem 0.75rem;
   border-radius: 0.875rem;
-  border: 1.5px solid var(--p-surface-200);
-  background: var(--p-surface-0);
+  border: 1.5px solid var(--app-surface-200);
+  background: var(--app-surface-0);
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
@@ -592,7 +592,7 @@ function handleBack() {
   font-size: 0.6875rem;
   color: var(--p-text-muted-color);
   font-family: monospace;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   padding: 0.125rem 0.5rem;
   border-radius: 0.25rem;
   margin-top: 0.25rem;
@@ -620,14 +620,14 @@ function handleBack() {
   gap: 0.25rem;
   padding: 1rem 0.75rem;
   border-radius: 0.875rem;
-  border: 1.5px solid var(--p-surface-200);
-  background: var(--p-surface-0);
+  border: 1.5px solid var(--app-surface-200);
+  background: var(--app-surface-0);
   cursor: pointer;
   transition: all 0.15s;
 }
 .disc-manual-btn:hover {
-  border-color: var(--p-surface-300);
-  background: var(--p-surface-50);
+  border-color: var(--app-surface-300);
+  background: var(--app-surface-50);
 }
 .disc-manual-btn:active {
   transform: scale(0.97);

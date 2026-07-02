@@ -388,8 +388,8 @@ function generateSku() {
 }
 
 .form-section {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
   padding: 1.25rem;
 }
@@ -400,7 +400,7 @@ function generateSku() {
   font-weight: 600;
   color: var(--p-text-color);
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .form-grid {
@@ -450,7 +450,7 @@ function generateSku() {
   height: 150px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .image-preview img {
@@ -475,7 +475,7 @@ function generateSku() {
   justify-content: flex-end;
   gap: 0.75rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 @media (max-width: 640px) {

@@ -189,7 +189,7 @@ const handleNext = async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
   font-size: 0.875rem;
 }
@@ -210,7 +210,7 @@ const handleNext = async () => {
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.2s;
@@ -237,7 +237,7 @@ const handleNext = async () => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 8px;
 }
 
@@ -251,7 +251,7 @@ const handleNext = async () => {
   justify-content: space-between;
   align-items: center;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .text-muted {

@@ -336,7 +336,7 @@ function formatCurrency(value: number): string {
   color: var(--p-text-color);
   margin: 0;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid var(--app-surface-200);
 }
 
 .section-hint {

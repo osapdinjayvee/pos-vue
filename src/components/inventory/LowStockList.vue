@@ -220,7 +220,7 @@ function refreshAlerts() {
   gap: 1rem;
   padding-top: 1rem;
   margin-top: 1rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 .summary-item {

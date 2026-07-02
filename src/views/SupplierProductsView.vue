@@ -201,16 +201,16 @@ function goToProduct(product: Product) {
 }
 
 .products-content {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.5rem;
 }
 
 .stat-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 12px;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
   padding: 1.25rem 1.5rem;
 }
 

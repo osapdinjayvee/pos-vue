@@ -224,7 +224,7 @@ function formatDate(dateStr: string | null): string {
   font-size: 0.875rem;
   color: var(--p-text-muted-color);
   padding: 0.25rem 0.5rem;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   border-radius: 4px;
 }
 

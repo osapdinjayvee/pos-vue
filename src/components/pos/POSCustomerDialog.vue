@@ -159,7 +159,7 @@ const isCurrentCustomer = (id: string) => props.currentCustomerId === id
     position="top"
     :style="{ width: '100vw', height: '100vh', maxHeight: '100vh', margin: 0 }"
     :contentStyle="{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }"
-    :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--p-surface-200)' } }"
+    :pt="{ root: { style: 'border-radius: 0; max-height: 100vh' }, header: { style: 'padding: 0.75rem 1rem; border-bottom: 1px solid var(--app-surface-200)' } }"
     @hide="handleClose"
   >
     <template #header>

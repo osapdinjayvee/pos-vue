@@ -270,8 +270,8 @@ onMounted(() => {
 }
 
 .tiers-table-card {
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-surface-200);
+  background: var(--app-surface-0);
+  border: 1px solid var(--app-surface-200);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -283,7 +283,7 @@ onMounted(() => {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 50%;
-  background: var(--p-surface-100);
+  background: var(--app-surface-100);
   font-size: 0.8125rem;
   font-weight: 600;
 }

@@ -58,7 +58,7 @@ const nextTierName = computed(() => {
 
 <style scoped>
 .tier-progress-card {
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
   border-radius: 10px;
   padding: 1rem;
   border: 1px solid var(--p-surface-border);

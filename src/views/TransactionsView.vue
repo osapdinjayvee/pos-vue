@@ -664,7 +664,7 @@ onMounted(() => {
 /* Expansion content */
 .expansion-content {
   padding: 1rem 1.5rem 1.5rem;
-  background: var(--p-surface-50);
+  background: var(--app-surface-50);
 }
 
 .expansion-loading {
@@ -683,19 +683,19 @@ onMounted(() => {
 }
 
 .detail-card {
-  background: var(--p-surface-0);
+  background: var(--app-surface-0);
   border-radius: 10px;
   padding: 1rem;
-  border: 1px solid var(--p-surface-200);
+  border: 1px solid var(--app-surface-200);
 }
 
 .detail-card--discount {
-  background: color-mix(in srgb, var(--p-green-50) 50%, var(--p-surface-0));
+  background: color-mix(in srgb, var(--p-green-50) 50%, var(--app-surface-0));
   border-color: var(--p-green-200);
 }
 
 .detail-card--return {
-  background: color-mix(in srgb, var(--p-orange-50) 50%, var(--p-surface-0));
+  background: color-mix(in srgb, var(--p-orange-50) 50%, var(--app-surface-0));
   border-color: var(--p-orange-200);
 }
 
@@ -847,7 +847,7 @@ onMounted(() => {
 }
 
 .summary-total {
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
   padding-top: 0.5rem;
   margin-top: 0.25rem;
   font-weight: 600;
@@ -870,14 +870,14 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--p-surface-200);
+  border-top: 1px solid var(--app-surface-200);
 }
 
 /* Void form */
 .void-form {
   margin-top: 1rem;
   padding: 1rem;
-  background: color-mix(in srgb, var(--p-red-50) 50%, var(--p-surface-0));
+  background: color-mix(in srgb, var(--p-red-50) 50%, var(--app-surface-0));
   border: 1px solid var(--p-red-200);
   border-radius: 10px;
 }
