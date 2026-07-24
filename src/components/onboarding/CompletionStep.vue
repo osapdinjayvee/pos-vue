@@ -53,28 +53,28 @@ async function handleLaunch() {
 
       <div class="flex flex-col gap-3 text-left max-w-sm w-full">
         <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-          <i class="pi pi-check text-green-600"></i>
-          <span class="text-surface-700">License verified</span>
+          <i class="pi pi-check text-green-700"></i>
+          <span class="text-green-800">License verified</span>
         </div>
         <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-          <i class="pi pi-check text-green-600"></i>
-          <span class="text-surface-700">Business information saved</span>
+          <i class="pi pi-check text-green-700"></i>
+          <span class="text-green-800">Business information saved</span>
         </div>
         <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-          <i class="pi pi-check text-green-600"></i>
-          <span class="text-surface-700">Admin account created</span>
+          <i class="pi pi-check text-green-700"></i>
+          <span class="text-green-800">Admin account created</span>
         </div>
         <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-          <i class="pi pi-check text-green-600"></i>
-          <span class="text-surface-700">Cashier accounts ready</span>
+          <i class="pi pi-check text-green-700"></i>
+          <span class="text-green-800">Cashier accounts ready</span>
         </div>
         <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-          <i class="pi pi-check text-green-600"></i>
-          <span class="text-surface-700">Terms accepted</span>
+          <i class="pi pi-check text-green-700"></i>
+          <span class="text-green-800">Terms accepted</span>
         </div>
         <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-          <i class="pi pi-check text-green-600"></i>
-          <span class="text-surface-700">Privacy policy accepted</span>
+          <i class="pi pi-check text-green-700"></i>
+          <span class="text-green-800">Privacy policy accepted</span>
         </div>
       </div>
 
