@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import Stepper from 'primevue/stepper'
 import StepPanels from 'primevue/steppanels'
 import StepPanel from 'primevue/steppanel'
@@ -46,15 +46,12 @@ function getPrevStep(current: string): string | null {
 
 onMounted(async () => {
   await onboarding.load()
+  // Resume at the furthest persisted step. After this, the Stepper's
+  // activateCallback (via each step's @next/@back) is the single driver of the
+  // active panel. A watcher that also mirrored the store's currentStep used to
+  // fight activateCallback, which is what made accepting terms take two taps.
   activeStep.value = onboarding.currentStep.value
   isReady.value = true
-})
-
-// Sync activeStep with store when store changes externally
-watch(() => onboarding.currentStep.value, (newStep) => {
-  if (newStep && newStep !== activeStep.value) {
-    activeStep.value = newStep
-  }
 })
 </script>
 

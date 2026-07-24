@@ -74,21 +74,22 @@ async function loadTerms() {
 }
 
 async function handleAccept() {
-  if (!canAccept.value) return
-
-  // If terms unavailable, just skip ahead
-  if (termsUnavailable.value) {
-    emit('next')
-    return
-  }
-
-  if (!terms.value) return
+  if (!canAccept.value || isAccepting.value) return
 
   isAccepting.value = true
   acceptError.value = null
 
   try {
-    await onboarding.acceptTerms(terms.value.id, terms.value.version, 'user-admin')
+    if (termsUnavailable.value || !terms.value) {
+      // Terms couldn't load — still persist the step so resume doesn't return
+      // here, then move on.
+      await onboarding.skipTerms()
+    } else {
+      await onboarding.acceptTerms(terms.value.id, terms.value.version, 'user-admin')
+    }
+    // Always advance on the first click. acceptTerms records best-effort and
+    // never throws for a failed remote sync, so the wizard is never trapped on
+    // this screen (the "accept twice" report).
     emit('next')
   } catch (err: any) {
     acceptError.value = err.message || 'Failed to accept terms'

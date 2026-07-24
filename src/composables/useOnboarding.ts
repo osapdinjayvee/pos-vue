@@ -103,7 +103,23 @@ export function useOnboarding() {
   }
 
   async function acceptTerms(termsId: string, version: string, userId: string) {
-    await termsService.accept(termsId, version, userId)
+    // Recording the acceptance must never block advancing the wizard: a slow or
+    // failed local write here was the "accept twice" behaviour. termsService
+    // already persists locally and syncs in the background, but we still guard
+    // so the step advance always runs on the first click.
+    try {
+      await termsService.accept(termsId, version, userId)
+    } catch (err) {
+      console.error('[onboarding] recording terms acceptance failed:', err)
+    }
+    await store.setStep('privacy')
+  }
+
+  /**
+   * Advance past terms when they could not be loaded (offline). Persists the
+   * step so resuming onboarding does not drop the user back on this screen.
+   */
+  async function skipTerms() {
     await store.setStep('privacy')
   }
 
@@ -140,6 +156,7 @@ export function useOnboarding() {
     fetchPrivacyPolicy,
     getCachedPrivacy,
     acceptTerms,
+    skipTerms,
     acceptPrivacy,
     completeOnboarding
   }

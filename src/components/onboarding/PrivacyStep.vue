@@ -73,19 +73,14 @@ async function loadPrivacy() {
 }
 
 async function handleAccept() {
-  if (!canAccept.value) return
-
-  if (privacyUnavailable.value) {
-    emit('next')
-    return
-  }
-
-  if (!privacy.value) return
+  if (!canAccept.value || isAccepting.value) return
 
   isAccepting.value = true
   acceptError.value = null
 
   try {
+    // acceptPrivacy just persists the step, so it also covers the
+    // privacy-unavailable case. Always advance on the first click.
     await onboarding.acceptPrivacy()
     emit('next')
   } catch (err: any) {
