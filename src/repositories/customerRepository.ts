@@ -100,6 +100,22 @@ class CustomerRepository extends BaseRepository<Customer> {
   }
 
   /**
+   * Archive / reactivate a customer.
+   *
+   * Customers are never hard-deleted — sales history references them and a
+   * removed record would orphan orders and credit ledger entries. Archiving
+   * flips is_active; the list keeps showing archived customers (tagged
+   * Inactive) so they remain reachable to reactivate.
+   */
+  async setActive(id: string, active: boolean): Promise<Customer | null> {
+    await db.execute(
+      `UPDATE ${this.tableName} SET is_active = ?, updated_at = ? WHERE id = ?`,
+      [active ? 1 : 0, db.getCurrentTimestamp(), id]
+    )
+    return await this.findById(id)
+  }
+
+  /**
    * Update customer balance
    */
   async updateBalance(id: string, amount: number): Promise<Customer | null> {

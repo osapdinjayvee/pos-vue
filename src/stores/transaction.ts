@@ -200,7 +200,9 @@ export const useTransactionStore = defineStore('transaction', () => {
     })
   }
 
-  async function previewReceipt(transactionId: string): Promise<{ success: boolean; error?: string }> {
+  async function previewReceipt(
+    transactionId: string
+  ): Promise<{ success: boolean; text?: string; error?: string }> {
     return await receiptService.previewReceipt(transactionId, {
       cashierName: cashierName.value
     })

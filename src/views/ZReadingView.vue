@@ -102,8 +102,18 @@ function handleViewReading(reading: DisplayZReading) {
   showReadingDialog.value = true
 }
 
-function handleExportCSV() {
-  exportZReadingsCSV()
+async function handleExportCSV() {
+  const result = await exportZReadingsCSV()
+  if (!result.success) {
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: result.error || 'Could not save the CSV file.',
+      life: 5000
+    })
+    return
+  }
+
   toast.add({
     severity: 'info',
     summary: 'Export',

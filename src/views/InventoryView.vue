@@ -121,7 +121,7 @@ function viewProduct(product: Product) {
 }
 
 // Export functionality
-function handleExport() {
+async function handleExport() {
   const columns: ExportColumn[] = [
     { field: 'name', header: 'Product Name' },
     { field: 'sku', header: 'SKU' },
@@ -145,7 +145,16 @@ function handleExport() {
   const dateStr = toLocalDateStr()
   const filename = `inventory-${activeFilter.value}-${dateStr}`
 
-  exportToCsv(filteredProducts.value, filename, columns)
+  const result = await exportToCsv(filteredProducts.value, filename, columns)
+  if (!result.success) {
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: result.error || 'Could not save the CSV file.',
+      life: 5000
+    })
+    return
+  }
 
   toast.add({
     severity: 'success',

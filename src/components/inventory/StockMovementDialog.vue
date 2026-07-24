@@ -7,6 +7,7 @@ import AmountInput from '@/components/common/AmountInput.vue'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
+import ExpiryDateField from './ExpiryDateField.vue'
 import { useInventory } from '@/composables/useInventory'
 import type { MovementType } from '@/types/inventory'
 
@@ -30,6 +31,7 @@ const movementType = ref<'receive' | 'adjustment'>('receive')
 const quantity = ref<number>(1)
 const reason = ref('')
 const unitCost = ref<number | null>(null)
+const expiryDate = ref<string | null>(null)
 
 const movementTypeOptions = [
   { label: 'Receive Stock', value: 'receive' },
@@ -71,6 +73,7 @@ watch(() => props.visible, (visible) => {
     quantity.value = 1
     reason.value = ''
     unitCost.value = null
+    expiryDate.value = null
     clearError()
   }
 })
@@ -82,6 +85,7 @@ async function handleSubmit() {
   if (movementType.value === 'receive') {
     result = await receiveStock(props.variantId, Math.abs(quantity.value), {
       unitCost: unitCost.value ?? undefined,
+      expiryDate: expiryDate.value,
       reason: reason.value || 'Stock received'
     })
   } else {
@@ -116,6 +120,7 @@ function handleCancel() {
     v-model:visible="dialogVisible"
     :header="`Stock Movement - ${productName}`"
     :style="{ width: '450px' }"
+    :breakpoints="{ '640px': '100vw' }"
     :modal="true"
     :closable="!isLoading"
   >
@@ -166,6 +171,12 @@ function handleCancel() {
           :disabled="isLoading"
         />
       </div>
+
+      <ExpiryDateField
+        v-if="movementType === 'receive'"
+        v-model="expiryDate"
+        :disabled="isLoading"
+      />
 
       <div class="form-field">
         <label for="reason">{{ isAdjustment ? 'Reason (required)' : 'Notes (optional)' }}</label>

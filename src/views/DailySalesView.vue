@@ -236,7 +236,7 @@ async function loadDailyReport() {
   }
 }
 
-function handleExportCSV() {
+async function handleExportCSV() {
   if (!salesData.value) return
 
   const dateStr = toLocalDateStr(selectedDate.value)
@@ -261,7 +261,17 @@ function handleExportCSV() {
     { key: 'value', header: 'Value', formatter: (v) => String(v) }
   ])
 
-  downloadCSV(csv, `daily-sales-${dateStr}`)
+  const result = await downloadCSV(csv, `daily-sales-${dateStr}`)
+  if (!result.success) {
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: result.error || 'Could not save the CSV file.',
+      life: 5000
+    })
+    return
+  }
+
   toast.add({
     severity: 'info',
     summary: 'Export',

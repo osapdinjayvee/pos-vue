@@ -19,6 +19,7 @@ import { useInventory } from '@/composables/useInventory'
 import { formatCurrency } from '@/utils/format'
 import type { DisplayStockMovement } from '@/types/inventory'
 import BulkAdjustmentDialog from '@/components/inventory/BulkAdjustmentDialog.vue'
+import ExpiryDateField from '@/components/inventory/ExpiryDateField.vue'
 
 const toast = useToast()
 const productStore = useProductStore()
@@ -41,6 +42,7 @@ const adjustmentType = ref<string>('receive')
 const adjustmentReason = ref<string>('')
 const adjustmentQuantity = ref<number>(1)
 const adjustmentCost = ref<number | null>(null)
+const adjustmentExpiry = ref<string | null>(null)
 const adjustmentNotes = ref('')
 
 // Bulk adjustment dialog
@@ -143,6 +145,7 @@ function openCreateDialog() {
   adjustmentReason.value = ''
   adjustmentQuantity.value = 1
   adjustmentCost.value = null
+  adjustmentExpiry.value = null
   adjustmentNotes.value = ''
   showCreateDialog.value = true
 }
@@ -254,6 +257,7 @@ async function handleCreateAdjustment() {
     if (adjustmentType.value === 'receive' || adjustmentType.value === 'return') {
       result = await receiveStock(variant.id, Math.abs(adjustmentQuantity.value), {
         unitCost: adjustmentCost.value ?? undefined,
+        expiryDate: adjustmentExpiry.value,
         reason: reason || adjustmentType.value
       })
     } else if (adjustmentType.value === 'damage') {
@@ -575,6 +579,13 @@ async function handleBulkCompleted(result: { success: number; failed: number }) 
             class="w-full"
           />
           <small class="hint">Base cost price per unit</small>
+        </div>
+
+        <div class="form-field" v-if="adjustmentType === 'receive' || adjustmentType === 'return'">
+          <ExpiryDateField
+            v-model="adjustmentExpiry"
+            :disabled="inventoryLoading"
+          />
         </div>
 
         <div class="form-field">

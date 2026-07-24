@@ -3,6 +3,7 @@ import { stockMovementRepository } from '@/repositories/stockMovementRepository'
 import { stockAlertRepository } from '@/repositories/stockAlertRepository'
 import { variantRepository } from '@/repositories/variantRepository'
 import { batchRepository } from '@/repositories/batchRepository'
+import { daysFromToday, toLocalDateStr } from '@/utils/dateHelpers'
 import type {
   StockMovement,
   StockMovementInput,
@@ -26,6 +27,22 @@ import {
   getStockDeficit,
   validateMovementQuantity
 } from '@/utils/stockCalculator'
+
+/**
+ * Options for receiving stock. Shared by the service, the inventory store, and
+ * the useInventory composable so a new option only has to be declared once.
+ */
+export interface ReceiveStockOptions {
+  batchId?: string
+  /** YYYY-MM-DD. Ignored when an explicit batchId is supplied. */
+  expiryDate?: string | null
+  supplierId?: string | null
+  unitCost?: number
+  reason?: string
+  userId?: string
+  terminalId?: string
+  branchId?: string
+}
 
 export interface StockCheckResult {
   variantId: string
@@ -82,22 +99,29 @@ class InventoryService {
 
   /**
    * Receive stock (add inventory)
+   *
+   * Passing `expiryDate` attaches the incoming stock to a batch with that date,
+   * reusing an existing one where possible. This is what makes expiry alerts
+   * possible for goods entered through the normal receiving flows rather than
+   * only through the product's Batches card.
    */
   async receiveStock(
     variantId: string,
     quantity: number,
-    options?: {
-      batchId?: string
-      unitCost?: number
-      reason?: string
-      userId?: string
-      terminalId?: string
-      branchId?: string
-    }
+    options?: ReceiveStockOptions
   ): Promise<MovementResult> {
     try {
       if (quantity <= 0) {
         return { success: false, newStock: 0, error: 'Quantity must be positive' }
+      }
+
+      let batchId = options?.batchId
+      if (!batchId && options?.expiryDate) {
+        batchId = await this.resolveBatchForExpiry(
+          variantId,
+          options.expiryDate,
+          options.supplierId ?? null
+        )
       }
 
       const movement = await stockMovementRepository.recordReceive(
@@ -107,7 +131,7 @@ class InventoryService {
         options?.terminalId || this.defaultTerminalId,
         options?.branchId || this.defaultBranchId,
         {
-          batchId: options?.batchId,
+          batchId,
           unitCost: options?.unitCost,
           reason: options?.reason
         }
@@ -116,10 +140,48 @@ class InventoryService {
       const newStock = await this.getStock(variantId)
       await this.updateStockAlert(variantId)
 
+      // Surface the new expiry immediately rather than waiting for the next
+      // dashboard visit to reconcile alerts.
+      if (batchId && !options?.batchId) {
+        await this.checkBatchExpiry()
+      }
+
       return { success: true, movement, newStock }
     } catch (error: any) {
       return { success: false, newStock: 0, error: error.message }
     }
+  }
+
+  /**
+   * Find the variant's batch for a given expiry date, creating one if needed.
+   *
+   * Deliveries of the same product with the same expiry belong together, so we
+   * reuse the batch instead of accumulating a near-duplicate per delivery.
+   */
+  private async resolveBatchForExpiry(
+    variantId: string,
+    expiryDate: string,
+    supplierId: string | null
+  ): Promise<string> {
+    const existing = await batchRepository.findByVariantAndExpiry(variantId, expiryDate)
+    if (existing) return existing.id
+
+    const batch = await batchRepository.createBatch({
+      variant_id: variantId,
+      batch_number: this.generateBatchNumber(expiryDate),
+      expiry_date: expiryDate,
+      received_date: toLocalDateStr(),
+      supplier_id: supplierId
+    })
+
+    return batch.id
+  }
+
+  /** Readable, collision-resistant batch label derived from the expiry date. */
+  private generateBatchNumber(expiryDate: string): string {
+    const compact = expiryDate.replace(/-/g, '')
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase()
+    return `EXP${compact}-${suffix}`
   }
 
   /**
@@ -460,25 +522,45 @@ class InventoryService {
   }
 
   /**
-   * Check batch expiry and create alerts
+   * Reconcile expiry alerts against the current batch data.
+   *
+   * A variant can hold several batches, so we alert on its worst one (already
+   * expired beats expiring soon, and the nearest expiry wins within each).
+   * Variants that no longer have an expiring batch — sold through, corrected,
+   * or deleted — get their expiry alert cleared, otherwise stale warnings stay
+   * on the dashboard forever.
    */
   async checkBatchExpiry(daysWarning: number = 7): Promise<void> {
-    const expiringBatches = await batchRepository.findExpiringSoon(daysWarning)
+    // Worst (lowest) days-remaining per variant. Expired batches report a
+    // negative value, so a plain minimum gives expired precedence automatically.
+    const worstByVariant = new Map<string, number>()
 
-    for (const batch of expiringBatches) {
-      const expiryDate = new Date(batch.expiry_date!)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-      await stockAlertRepository.createExpiryAlert(batch.variant_id, daysUntilExpiry)
+    const record = (variantId: string, days: number) => {
+      const current = worstByVariant.get(variantId)
+      if (current === undefined || days < current) {
+        worstByVariant.set(variantId, days)
+      }
     }
 
-    // Check for already expired batches
-    const expiredBatches = await batchRepository.findExpired()
+    for (const batch of await batchRepository.findExpired()) {
+      // Clamp to -1: the alert only distinguishes expired from expiring.
+      record(batch.variant_id, Math.min(-1, daysFromToday(batch.expiry_date!)))
+    }
 
-    for (const batch of expiredBatches) {
-      await stockAlertRepository.createExpiryAlert(batch.variant_id, -1)
+    for (const batch of await batchRepository.findExpiringSoon(daysWarning)) {
+      record(batch.variant_id, daysFromToday(batch.expiry_date!))
+    }
+
+    for (const [variantId, days] of worstByVariant) {
+      await stockAlertRepository.createExpiryAlert(variantId, days, daysWarning)
+    }
+
+    // Clear alerts for variants that are no longer affected.
+    const staleAlerts = await stockAlertRepository.findExpiryAlerts()
+    for (const alert of staleAlerts) {
+      if (!worstByVariant.has(alert.variant_id)) {
+        await stockAlertRepository.removeExpiryAlerts(alert.variant_id)
+      }
     }
   }
 

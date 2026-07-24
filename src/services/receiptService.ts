@@ -21,6 +21,7 @@ import type {
 } from '@/types/receipt'
 import type { Transaction, TransactionItem } from '@/types/transaction'
 import { useSettingsStore } from '@/stores/settings'
+import { Capacitor } from '@capacitor/core'
 
 export interface GenerateReceiptOptions {
   business?: BusinessInfo
@@ -33,6 +34,24 @@ export interface GenerateReceiptOptions {
 export interface PrintReceiptOptions extends GenerateReceiptOptions {
   copies?: number
   silent?: boolean
+}
+
+/**
+ * Decide whether a receipt should go to the Bluetooth thermal printer.
+ *
+ * A saved device is sufficient on native: Bluetooth is the only transport the
+ * mobile build implements (there is no USB/network/serial code path), and
+ * configs written before the connection type was persisted correctly still
+ * carry the 'usb' default. Requiring connection_type to match would leave those
+ * installs silently unable to print while the Settings test print — which
+ * bypasses this config entirely — kept working.
+ */
+export function shouldUseBluetooth(
+  config: { connection_type?: string; bluetooth_device?: string } | null | undefined,
+  isNative: boolean
+): boolean {
+  if (!config?.bluetooth_device) return false
+  return config.connection_type === 'bluetooth' || isNative
 }
 
 class ReceiptService {
@@ -326,17 +345,28 @@ class ReceiptService {
   }
 
   /**
-   * Print receipt (opens browser print dialog)
+   * Print a receipt.
+   *
+   * Routing:
+   *  - Bluetooth thermal printer, when one is configured (the only path that
+   *    works on the Android tablet build).
+   *  - Otherwise, on web/Electron, an off-screen iframe + window.print().
+   *
+   * We deliberately never call window.open() here. Capacitor's Android WebView
+   * runs with setSupportMultipleWindows(false), so window.open loads the
+   * receipt *in place of the app* — no back button, and window.close() is a
+   * no-op, which is exactly the "have to kill the app" bug QA reported.
    */
   async printReceipt(
     transactionId: string,
     options: PrintReceiptOptions
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Bluetooth thermal printer routing
+      // Bluetooth thermal printer routing — see shouldUseBluetooth().
       const settings = useSettingsStore()
       const rcpt = settings.receiptConfig
-      if (rcpt?.connection_type === 'bluetooth' && rcpt?.bluetooth_device) {
+
+      if (rcpt && shouldUseBluetooth(rcpt, Capacitor.isNativePlatform())) {
         const data = await this.generateReceiptData(transactionId, options)
         if (!data) {
           return { success: false, error: 'Failed to generate receipt' }
@@ -351,30 +381,82 @@ class ReceiptService {
         return await printerService.printReceipt(data, escposOptions)
       }
 
+      // No printer configured. On native there is no system print dialog to
+      // fall back to, so say so plainly instead of failing silently.
+      if (Capacitor.isNativePlatform()) {
+        return {
+          success: false,
+          error: 'No printer connected. Go to Settings > Printer & Receipt to connect a Bluetooth printer.'
+        }
+      }
+
       const html = await this.generateReceiptHTML(transactionId, options)
       if (!html) {
         return { success: false, error: 'Failed to generate receipt' }
       }
 
-      // Create print window
-      const printWindow = window.open('', '_blank', 'width=350,height=600')
-      if (!printWindow) {
-        return { success: false, error: 'Popup blocked. Please allow popups for printing.' }
-      }
-
-      // Embed the print trigger inside the document so it fires reliably (the
-      // parent-side onload handler did not run consistently → receipt never
-      // printed). The toolbar lets the user re-print or close manually.
-      printWindow.document.write(this.injectReceiptControls(html, !options.silent))
-      printWindow.document.close()
-
-      return { success: true }
+      return await this.printHtmlViaIframe(html)
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error printing receipt'
       }
     }
+  }
+
+  /**
+   * Render HTML into an off-screen iframe and invoke the browser print dialog.
+   * Works in Electron and browsers without opening (or being blocked as) a popup.
+   */
+  private printHtmlViaIframe(html: string): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      let settled = false
+      const finish = (result: { success: boolean; error?: string }) => {
+        if (settled) return
+        settled = true
+        resolve(result)
+      }
+
+      const iframe = document.createElement('iframe')
+      iframe.setAttribute('aria-hidden', 'true')
+      iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;'
+
+      iframe.onload = () => {
+        try {
+          const win = iframe.contentWindow
+          if (!win) {
+            finish({ success: false, error: 'Failed to prepare print document' })
+            return
+          }
+          win.focus()
+          win.print()
+          finish({ success: true })
+        } catch (error) {
+          finish({
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to open print dialog'
+          })
+        } finally {
+          // Keep the iframe alive briefly — removing it while the print dialog
+          // is still reading the document cancels the job in some engines.
+          setTimeout(() => {
+            if (iframe.parentNode) document.body.removeChild(iframe)
+          }, 1000)
+        }
+      }
+
+      document.body.appendChild(iframe)
+
+      const doc = iframe.contentWindow?.document
+      if (!doc) {
+        if (iframe.parentNode) document.body.removeChild(iframe)
+        finish({ success: false, error: 'Failed to prepare print document' })
+        return
+      }
+      doc.open()
+      doc.write(html)
+      doc.close()
+    })
   }
 
   /**
@@ -439,59 +521,27 @@ class ReceiptService {
   }
 
   /**
-   * Inject a Print/Close toolbar (and optional reliable auto-print) into a
-   * receipt HTML document shown in a popup window. The toolbar is hidden when
-   * printing. Auto-print is embedded in the document itself so it fires
-   * reliably across browser/Electron/WebView (the parent-side `onload`
-   * approach did not fire consistently).
-   */
-  private injectReceiptControls(html: string, autoPrint: boolean): string {
-    const toolbar = `
-      <div class="receipt-toolbar">
-        <button type="button" onclick="window.print()">🖨 Print</button>
-        <button type="button" onclick="window.close()">✕ Close</button>
-      </div>
-      <style>
-        .receipt-toolbar { position: sticky; top: 0; display: flex; gap: 8px;
-          padding: 8px; background: #f4f4f5; border-bottom: 1px solid #ddd; }
-        .receipt-toolbar button { flex: 1; padding: 8px 4px; font-size: 13px;
-          font-weight: 600; border: 1px solid #bbb; border-radius: 6px;
-          background: #fff; cursor: pointer; }
-        .receipt-toolbar button:active { background: #e4e4e7; }
-        @media print { .receipt-toolbar { display: none !important; } }
-      </style>`
-    const script = autoPrint
-      ? `<script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},250)})<\/script>`
-      : ''
-
-    let out = html
-    out = out.includes('<body>') ? out.replace('<body>', '<body>' + toolbar) : toolbar + out
-    out = out.includes('</body>') ? out.replace('</body>', script + '</body>') : out + script
-    return out
-  }
-
-  /**
-   * Preview receipt in a new window (with Print/Close controls)
+   * Build the receipt preview.
+   *
+   * Returns the rendered receipt text rather than opening a window — the caller
+   * shows it in an in-app dialog (ReceiptPreviewDialog). The old popup-window
+   * approach was unusable on Android: the WebView replaced the app with the
+   * receipt and offered no way back.
+   *
+   * Formatted at the configured paper width so the preview matches what the
+   * thermal printer will actually produce.
    */
   async previewReceipt(
     transactionId: string,
     options: GenerateReceiptOptions
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; text?: string; error?: string }> {
     try {
-      const html = await this.generateReceiptHTML(transactionId, options)
-      if (!html) {
+      const data = await this.generateReceiptData(transactionId, options)
+      if (!data) {
         return { success: false, error: 'Failed to generate receipt' }
       }
 
-      const previewWindow = window.open('', '_blank', 'width=350,height=600')
-      if (!previewWindow) {
-        return { success: false, error: 'Popup blocked. Please allow popups for preview.' }
-      }
-
-      previewWindow.document.write(this.injectReceiptControls(html, false))
-      previewWindow.document.close()
-
-      return { success: true }
+      return { success: true, text: receiptToText(data, this.getReceiptWidth()) }
     } catch (error) {
       return {
         success: false,

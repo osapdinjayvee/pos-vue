@@ -9,10 +9,57 @@ class StockAlertRepository extends BaseRepository<StockAlert> {
   protected tableName = 'stock_alerts'
   protected idPrefix = 'alt'
 
+  /** Stock-level alerts and expiry alerts are tracked independently per variant. */
+  private static readonly STOCK_LEVEL_TYPES: AlertType[] = ['low_stock', 'out_of_stock']
+  private static readonly EXPIRY_TYPES: AlertType[] = ['expiring_soon', 'expired']
+
   async findByVariantId(variantId: string): Promise<StockAlert | null> {
     return await db.getOne<StockAlert>(
       `SELECT * FROM ${this.tableName} WHERE variant_id = ?`,
       [variantId]
+    )
+  }
+
+  async findByVariantAndType(variantId: string, alertType: AlertType): Promise<StockAlert | null> {
+    return await db.getOne<StockAlert>(
+      `SELECT * FROM ${this.tableName} WHERE variant_id = ? AND alert_type = ?`,
+      [variantId, alertType]
+    )
+  }
+
+  /**
+   * Find a variant's alert within one family (stock-level or expiry), so a
+   * low-stock update never inspects or destroys an expiry alert.
+   */
+  private async findByVariantInTypes(variantId: string, types: AlertType[]): Promise<StockAlert | null> {
+    const placeholders = types.map(() => '?').join(', ')
+    return await db.getOne<StockAlert>(
+      `SELECT * FROM ${this.tableName} WHERE variant_id = ? AND alert_type IN (${placeholders})`,
+      [variantId, ...types]
+    )
+  }
+
+  private async removeByVariantInTypes(variantId: string, types: AlertType[]): Promise<boolean> {
+    const placeholders = types.map(() => '?').join(', ')
+    const result = await db.execute(
+      `DELETE FROM ${this.tableName} WHERE variant_id = ? AND alert_type IN (${placeholders})`,
+      [variantId, ...types]
+    )
+    return result.changes > 0
+  }
+
+  /** Clear a variant's expiry alerts (used when nothing is expiring any more). */
+  async removeExpiryAlerts(variantId: string): Promise<boolean> {
+    return this.removeByVariantInTypes(variantId, StockAlertRepository.EXPIRY_TYPES)
+  }
+
+  /** Every expiry alert currently on record, regardless of acknowledgement. */
+  async findExpiryAlerts(): Promise<StockAlert[]> {
+    const types = StockAlertRepository.EXPIRY_TYPES
+    const placeholders = types.map(() => '?').join(', ')
+    return await db.query<StockAlert>(
+      `SELECT * FROM ${this.tableName} WHERE alert_type IN (${placeholders})`,
+      [...types]
     )
   }
 
@@ -75,17 +122,19 @@ class StockAlertRepository extends BaseRepository<StockAlert> {
 
   async createOrUpdate(data: StockAlertInput): Promise<StockAlert> {
     const now = db.getCurrentTimestamp()
-    const existing = await this.findByVariantId(data.variant_id)
+    // Keyed on (variant, type) — matching only on variant_id used to convert a
+    // variant's low-stock alert into an expiry alert and vice versa.
+    const existing = await this.findByVariantAndType(data.variant_id, data.alert_type)
 
     if (existing) {
       // Update existing alert
       await db.execute(
         `UPDATE ${this.tableName}
-         SET alert_type = ?, current_value = ?, threshold = ?, acknowledged = 0, acknowledged_by = NULL, acknowledged_at = NULL, updated_at = ?
-         WHERE variant_id = ?`,
-        [data.alert_type, data.current_value, data.threshold, now, data.variant_id]
+         SET current_value = ?, threshold = ?, acknowledged = 0, acknowledged_by = NULL, acknowledged_at = NULL, updated_at = ?
+         WHERE variant_id = ? AND alert_type = ?`,
+        [data.current_value, data.threshold, now, data.variant_id, data.alert_type]
       )
-      return await this.findByVariantId(data.variant_id) as StockAlert
+      return await this.findByVariantAndType(data.variant_id, data.alert_type) as StockAlert
     } else {
       // Create new alert
       const id = db.generateId(this.idPrefix)
@@ -131,60 +180,57 @@ class StockAlertRepository extends BaseRepository<StockAlert> {
     return result.changes > 0
   }
 
+  /**
+   * Reconcile the variant's stock-level alert.
+   *
+   * Only touches low_stock/out_of_stock rows. It previously operated on "the"
+   * alert for the variant, so a healthy stock level deleted the variant's
+   * expiry alert — the single biggest reason expiry warnings never appeared.
+   */
   async updateStockLevel(variantId: string, currentValue: number, threshold: number): Promise<void> {
-    const now = db.getCurrentTimestamp()
-    const existing = await this.findByVariantId(variantId)
+    const types = StockAlertRepository.STOCK_LEVEL_TYPES
 
-    if (currentValue <= 0) {
-      // Out of stock
-      if (existing) {
-        await db.execute(
-          `UPDATE ${this.tableName}
-           SET alert_type = 'out_of_stock', current_value = ?, threshold = ?, updated_at = ?
-           WHERE variant_id = ?`,
-          [currentValue, threshold, now, variantId]
-        )
-      } else {
-        await this.createOrUpdate({
-          variant_id: variantId,
-          alert_type: 'out_of_stock',
-          current_value: currentValue,
-          threshold
-        })
-      }
-    } else if (currentValue <= threshold) {
-      // Low stock
-      if (existing) {
-        await db.execute(
-          `UPDATE ${this.tableName}
-           SET alert_type = 'low_stock', current_value = ?, threshold = ?, updated_at = ?
-           WHERE variant_id = ?`,
-          [currentValue, threshold, now, variantId]
-        )
-      } else {
-        await this.createOrUpdate({
-          variant_id: variantId,
-          alert_type: 'low_stock',
-          current_value: currentValue,
-          threshold
-        })
-      }
-    } else {
-      // Stock is healthy, remove any existing alert
-      if (existing) {
-        await this.removeByVariant(variantId)
-      }
+    if (currentValue > threshold) {
+      // Stock is healthy — clear stock-level alerts, leave expiry alerts alone.
+      await this.removeByVariantInTypes(variantId, types)
+      return
     }
+
+    const alertType: AlertType = currentValue <= 0 ? 'out_of_stock' : 'low_stock'
+
+    // Drop the opposite stock-level state so a variant never shows both.
+    const stale = types.filter(t => t !== alertType)
+    if (stale.length) {
+      await this.removeByVariantInTypes(variantId, stale)
+    }
+
+    await this.createOrUpdate({
+      variant_id: variantId,
+      alert_type: alertType,
+      current_value: currentValue,
+      threshold
+    })
   }
 
-  async createExpiryAlert(variantId: string, daysUntilExpiry: number): Promise<StockAlert> {
+  async createExpiryAlert(
+    variantId: string,
+    daysUntilExpiry: number,
+    warningDays: number = 7
+  ): Promise<StockAlert> {
     const alertType: AlertType = daysUntilExpiry < 0 ? 'expired' : 'expiring_soon'
+
+    // A batch that has tipped from "expiring soon" to "expired" should not leave
+    // the softer alert behind.
+    const stale = StockAlertRepository.EXPIRY_TYPES.filter(t => t !== alertType)
+    if (stale.length) {
+      await this.removeByVariantInTypes(variantId, stale)
+    }
 
     return this.createOrUpdate({
       variant_id: variantId,
       alert_type: alertType,
       current_value: daysUntilExpiry,
-      threshold: 7 // Default expiry warning days
+      threshold: warningDays
     })
   }
 

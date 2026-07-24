@@ -233,10 +233,15 @@ onMounted(() => {
                   <h4>Notes</h4>
                   <p>{{ customerDetail.customer.notes }}</p>
                 </div>
-                <div class="info-section">
-                  <h4>Credit</h4>
-                  <p>Credit Limit: ₱{{ customerDetail.customer.credit_limit.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
-                  <p>Current Balance: ₱{{ customerDetail.customer.current_balance.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
+                <!-- Credit limit/balance intentionally omitted here — it lives in
+                     the Credit tab. Duplicating it (QA row 117) just added a
+                     second, drift-prone copy of the same numbers. -->
+                <div
+                  v-if="!customerDetail.customer.address && !customerDetail.customer.tax_id && !customerDetail.customer.notes"
+                  class="info-empty"
+                >
+                  <i class="pi pi-info-circle"></i>
+                  <span>No additional information on file.</span>
                 </div>
               </div>
             </TabPanel>
@@ -322,6 +327,14 @@ onMounted(() => {
 .info-section p {
   margin: 0 0 0.25rem;
   color: var(--p-text-color);
+}
+
+.info-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+  color: var(--p-text-muted-color);
 }
 
 .credit-tab {

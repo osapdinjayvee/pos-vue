@@ -217,6 +217,11 @@ class DatabaseService {
       await this.recordMigration('025_security_questions')
     }
 
+    if (!migrations.includes('026_stock_alerts_per_type')) {
+      await this.runStockAlertsPerTypeMigration()
+      await this.recordMigration('026_stock_alerts_per_type')
+    }
+
     // Safety net: if localStorage DB was corrupted/stale, re-run critical table creation
     await this.ensureCriticalTables()
   }
@@ -538,7 +543,7 @@ class DatabaseService {
     await this.adapter.execute(`
       CREATE TABLE IF NOT EXISTS stock_alerts (
         id TEXT PRIMARY KEY,
-        variant_id TEXT NOT NULL UNIQUE,
+        variant_id TEXT NOT NULL,
         alert_type TEXT NOT NULL CHECK (alert_type IN ('low_stock', 'out_of_stock', 'expiring_soon', 'expired')),
         current_value REAL NOT NULL,
         threshold REAL NOT NULL,
@@ -547,6 +552,7 @@ class DatabaseService {
         acknowledged_at TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        UNIQUE (variant_id, alert_type),
         FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
       )
     `)
@@ -2263,6 +2269,73 @@ class DatabaseService {
     }
 
     console.log('[Migration] 025_security_questions completed')
+  }
+
+  /**
+   * stock_alerts originally carried UNIQUE(variant_id), so a variant could hold
+   * only one alert. Stock-level and expiry alerts therefore overwrote each
+   * other, and the "stock is healthy" branch deleted the variant's expiry alert
+   * outright — which is the normal state for something about to expire. Expiry
+   * alerts could never survive, so they never reached the dashboard.
+   *
+   * Rebuild with UNIQUE(variant_id, alert_type) so the two kinds coexist.
+   */
+  private async runStockAlertsPerTypeMigration(): Promise<void> {
+    if (!this.adapter) throw new Error('Database not connected')
+
+    // Nothing to migrate if the table has not been created yet — the current
+    // schema in runInventoryMigration already has the correct constraint.
+    const table = await this.adapter.getOne<{ name: string }>(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='stock_alerts'`
+    )
+    if (!table) {
+      console.log('[Migration] 026_stock_alerts_per_type skipped (table not present)')
+      return
+    }
+
+    await this.adapter.execute(`
+      CREATE TABLE IF NOT EXISTS stock_alerts_new (
+        id TEXT PRIMARY KEY,
+        variant_id TEXT NOT NULL,
+        alert_type TEXT NOT NULL CHECK (alert_type IN ('low_stock', 'out_of_stock', 'expiring_soon', 'expired')),
+        current_value REAL NOT NULL,
+        threshold REAL NOT NULL,
+        acknowledged INTEGER DEFAULT 0,
+        acknowledged_by TEXT,
+        acknowledged_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (variant_id, alert_type),
+        FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
+      )
+    `)
+
+    // Existing rows are unique on variant_id alone, so they satisfy the new
+    // composite constraint without any de-duplication.
+    await this.adapter.execute(`
+      INSERT OR IGNORE INTO stock_alerts_new
+        (id, variant_id, alert_type, current_value, threshold, acknowledged,
+         acknowledged_by, acknowledged_at, created_at, updated_at)
+      SELECT id, variant_id, alert_type, current_value, threshold, acknowledged,
+             acknowledged_by, acknowledged_at, created_at, updated_at
+      FROM stock_alerts
+    `)
+
+    await this.adapter.execute('DROP TABLE stock_alerts')
+    await this.adapter.execute('ALTER TABLE stock_alerts_new RENAME TO stock_alerts')
+
+    // Indexes were dropped with the old table.
+    await this.adapter.execute(
+      'CREATE INDEX IF NOT EXISTS idx_alert_variant ON stock_alerts(variant_id)'
+    )
+    await this.adapter.execute(
+      'CREATE INDEX IF NOT EXISTS idx_alert_type ON stock_alerts(alert_type)'
+    )
+    await this.adapter.execute(
+      'CREATE INDEX IF NOT EXISTS idx_alert_acknowledged ON stock_alerts(acknowledged)'
+    )
+
+    console.log('[Migration] 026_stock_alerts_per_type completed')
   }
 
   private async runCreditLedgerMigration(): Promise<void> {

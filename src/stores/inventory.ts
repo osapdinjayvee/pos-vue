@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { inventoryService } from '@/services/inventoryService'
+import { inventoryService, type ReceiveStockOptions } from '@/services/inventoryService'
 import { stockMovementRepository } from '@/repositories/stockMovementRepository'
 import type { StockMovement, DisplayStockMovement, DisplayStockAlert, MovementType } from '@/types/inventory'
 
@@ -91,14 +91,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   async function receiveStock(
     variantId: string,
     quantity: number,
-    options?: {
-      batchId?: string
-      unitCost?: number
-      reason?: string
-      userId?: string
-      terminalId?: string
-      branchId?: string
-    }
+    options?: ReceiveStockOptions
   ) {
     isLoading.value = true
     error.value = null

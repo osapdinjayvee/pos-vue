@@ -109,6 +109,42 @@ class CustomerService {
       lifetime_spend: newSpend
     } as Partial<Customer>)
   }
+
+  /**
+   * Archive a customer (soft-deactivate).
+   *
+   * Blocked while the customer owes money: archiving would drop them out of
+   * active views and lose sight of an unsettled utang. Settle the balance first.
+   */
+  async archiveCustomer(customerId: string): Promise<Customer> {
+    const customer = await customerRepository.findById(customerId)
+    if (!customer) {
+      throw new Error('Customer not found')
+    }
+
+    if ((customer.current_balance ?? 0) > 0) {
+      throw new Error(
+        'This customer has an outstanding balance. Settle it before archiving.'
+      )
+    }
+
+    const updated = await customerRepository.setActive(customerId, false)
+    if (!updated) {
+      throw new Error('Failed to archive customer')
+    }
+    return updated
+  }
+
+  /**
+   * Reactivate an archived customer.
+   */
+  async reactivateCustomer(customerId: string): Promise<Customer> {
+    const updated = await customerRepository.setActive(customerId, true)
+    if (!updated) {
+      throw new Error('Failed to reactivate customer')
+    }
+    return updated
+  }
 }
 
 export const customerService = new CustomerService()

@@ -301,7 +301,7 @@ const paymentMethodLabel: Record<string, string> = {
   points: 'Loyalty Points'
 }
 
-function handleExportCSV() {
+async function handleExportCSV() {
   if (dailyData.value.length === 0) return
 
   const csv = toCSV(dailyData.value as unknown as Record<string, unknown>[], [
@@ -319,7 +319,17 @@ function handleExportCSV() {
   ])
 
   const { start, end } = getDateRange()
-  downloadCSV(csv, `sales-summary-${start}-to-${end}`)
+  const result = await downloadCSV(csv, `sales-summary-${start}-to-${end}`)
+  if (!result.success) {
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: result.error || 'Could not save the CSV file.',
+      life: 5000
+    })
+    return
+  }
+
   toast.add({
     severity: 'info',
     summary: 'Exported',

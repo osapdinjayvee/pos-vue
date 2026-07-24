@@ -41,6 +41,20 @@ class BatchRepository extends BaseRepository<Batch> {
     return await db.getOne<Batch>(sql, params)
   }
 
+  /**
+   * A variant's batch for an exact expiry date, so repeat deliveries of the
+   * same goods roll into one batch rather than creating near-duplicates.
+   */
+  async findByVariantAndExpiry(variantId: string, expiryDate: string): Promise<Batch | null> {
+    return await db.getOne<Batch>(
+      `SELECT * FROM ${this.tableName}
+       WHERE variant_id = ? AND expiry_date = ?
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [variantId, expiryDate]
+    )
+  }
+
   async findExpiringSoon(daysUntilExpiry: number = 7): Promise<Batch[]> {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() + daysUntilExpiry)

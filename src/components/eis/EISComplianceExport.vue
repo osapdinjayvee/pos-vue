@@ -7,6 +7,7 @@ import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { eisSubmissionRepository } from '@/repositories/eisSubmissionRepository'
 import { eisService } from '@/services/eisService'
+import { saveCsvFile } from '@/utils/fileDownload'
 
 const router = useRouter()
 const toast = useToast()
@@ -70,14 +71,13 @@ async function exportReport() {
     })
 
     const csv = [headers.join(','), ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
     const monthStr = `${selectedMonth.value.getFullYear()}-${String(selectedMonth.value.getMonth() + 1).padStart(2, '0')}`
-    a.href = url
-    a.download = `EIS-Compliance-${monthStr}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const result = await saveCsvFile(csv, `EIS-Compliance-${monthStr}`)
+
+    if (!result.success) {
+      toast.add({ severity: 'error', summary: 'Export Failed', detail: result.error || 'Could not save the CSV file.', life: 4000 })
+      return
+    }
 
     toast.add({ severity: 'success', summary: 'Exported', detail: `${submitted.length} records exported.`, life: 3000 })
   } catch (e) {

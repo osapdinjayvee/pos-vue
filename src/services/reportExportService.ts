@@ -5,23 +5,25 @@
  */
 
 import type { ReportColumn } from '@/types/analytics'
+import { saveCsvFile, type SaveFileResult } from '@/utils/fileDownload'
 
 class ReportExportService {
   /**
-   * Export report data to a CSV file and trigger a browser download.
+   * Export report data to a CSV file and hand it to the user (download on
+   * web/desktop, share sheet on Android where blob downloads no-op).
    *
    * @param data    - Array of row objects
    * @param columns - Column definitions for headers and field mapping
    * @param filename - The download filename (without extension)
    */
-  exportToCsv(
+  async exportToCsv(
     data: Record<string, any>[],
     columns: ReportColumn[],
     filename: string
-  ): void {
+  ): Promise<SaveFileResult> {
     if (!data.length || !columns.length) {
       console.warn('[ReportExportService] No data or columns to export')
-      return
+      return { success: false, error: 'No data to export' }
     }
 
     // Build header row
@@ -38,20 +40,7 @@ class ReportExportService {
       rows.push(values.join(','))
     }
 
-    const csvContent = rows.join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-
-    // Trigger download via temp anchor element
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `${filename}.csv`)
-    document.body.appendChild(link)
-    link.click()
-
-    // Cleanup
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    return saveCsvFile(rows.join('\n'), filename)
   }
 
   /**

@@ -4,7 +4,9 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import { useToast } from 'primevue/usetoast'
 import { useProductStore } from '@/stores/product'
+import VariantSelectDialog from './VariantSelectDialog.vue'
 import { variantRepository } from '@/repositories/variantRepository'
+import { hasSelectableVariants, selectableVariants } from '@/utils/variants'
 import { vatService } from '@/services/vatService'
 import { taxTypeLabel } from '@/types/transaction'
 import type { Product, ProductVariant } from '@/types'
@@ -19,15 +21,20 @@ const emit = defineEmits<{
   (e: 'select', product: Product, variant?: ProductVariant): void
 }>()
 
+/** A product with its active variants attached by enrichWithVariants. */
+type ProductWithVariants = Product & { variants?: ProductVariant[] }
+
 const toast = useToast()
 const productStore = useProductStore()
 
 const searchQuery = ref('')
-const searchResults = ref<Product[]>([])
-const allProducts = ref<Product[]>([])
+const searchResults = ref<ProductWithVariants[]>([])
+const allProducts = ref<ProductWithVariants[]>([])
 const isSearching = ref(false)
 const isLoading = ref(false)
 const searchInputRef = ref<any>(null)
+const showVariantPicker = ref(false)
+const variantPickerProduct = ref<ProductWithVariants | null>(null)
 
 let searchTimeout: number | null = null
 
@@ -44,24 +51,44 @@ watch(() => props.visible, async (visible) => {
     } else {
       searchResults.value = []
     }
-    // Load all products for tile display
-    if (allProducts.value.length === 0) {
-      isLoading.value = true
-      try {
-        await productStore.loadProducts()
-        allProducts.value = await enrichWithVariants(productStore.products)
-      } catch {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load products', life: 3000 })
-      } finally {
-        isLoading.value = false
-      }
-    }
+    await refreshProducts()
     setTimeout(() => searchInputRef.value?.$el?.focus(), 200)
   } else {
     searchQuery.value = ''
     searchResults.value = []
+    // Don't leave the variant picker orphaned if the drawer is dismissed.
+    showVariantPicker.value = false
+    variantPickerProduct.value = null
   }
 })
+
+/**
+ * Reload the tile list every time the drawer opens.
+ *
+ * This used to load once and keep the result for the component's lifetime.
+ * The drawer stays mounted for the whole POS session, so a product edited
+ * elsewhere — notably adding variants — never appeared until the app was
+ * restarted, which is exactly the "variants don't show" report.
+ *
+ * The previous list stays on screen while the refresh runs, so reopening is
+ * still instant and only a genuinely empty list shows the skeleton.
+ */
+async function refreshProducts() {
+  const isFirstLoad = allProducts.value.length === 0
+  if (isFirstLoad) isLoading.value = true
+
+  try {
+    await productStore.loadProducts()
+    allProducts.value = await enrichWithVariants(productStore.products)
+  } catch {
+    // Keep whatever is already displayed rather than blanking the grid.
+    if (isFirstLoad) {
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load products', life: 3000 })
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function handleSearchInput(value: string | undefined) {
   const query = value || ''
@@ -92,6 +119,15 @@ function handleProductSelect(product: Product, variant?: ProductVariant) {
   emit('select', product, variant)
 }
 
+function openVariantPicker(product: Product) {
+  variantPickerProduct.value = product
+  showVariantPicker.value = true
+}
+
+function handleVariantSelect(product: Product, variant: ProductVariant) {
+  handleProductSelect(product, variant)
+}
+
 function handleClose() {
   emit('update:visible', false)
 }
@@ -100,12 +136,13 @@ function formatPrice(price: number): string {
   return vatService.formatCurrency(price)
 }
 
-function getProductVariants(product: Product): ProductVariant[] {
-  return (product as any).variants || []
+/** Variants the cashier can actually choose between — see utils/variants. */
+function getProductVariants(product: ProductWithVariants): ProductVariant[] {
+  return selectableVariants(product.variants)
 }
 
-function hasVariants(product: Product): boolean {
-  return getProductVariants(product).length > 0
+function hasVariants(product: ProductWithVariants): boolean {
+  return hasSelectableVariants(product.variants)
 }
 
 /**
@@ -114,7 +151,7 @@ function hasVariants(product: Product): boolean {
  * them here in a single query. We do NOT rely on the product's `has_variants`
  * flag (it can be stale), so variants always show whenever they exist.
  */
-async function enrichWithVariants(products: Product[]): Promise<Product[]> {
+async function enrichWithVariants(products: Product[]): Promise<ProductWithVariants[]> {
   if (products.length === 0) return products
 
   const variants = await variantRepository.findActiveByProductIds(products.map(p => p.id))
@@ -129,7 +166,7 @@ async function enrichWithVariants(products: Product[]): Promise<Product[]> {
 
   return products.map((p) => {
     const v = variantMap.get(p.id)
-    return v ? ({ ...p, variants: v } as Product) : p
+    return v ? { ...p, variants: v } : p
   })
 }
 </script>
@@ -217,37 +254,33 @@ async function enrichWithVariants(products: Product[]): Promise<Product[]> {
               </div>
             </button>
 
-            <!-- Product with variants -->
-            <div v-else class="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-              <div class="p-3">
-                <div
-                  v-if="product.image"
-                  class="w-full aspect-square rounded-lg bg-cover bg-center mb-2"
-                  :style="{ backgroundImage: `url(${product.image})` }"
-                />
-                <div
-                  v-else
-                  class="w-full aspect-square rounded-lg bg-neutral-100 flex items-center justify-center mb-2"
-                >
-                  <i class="pi pi-box text-2xl text-neutral-300"></i>
-                </div>
-                <div class="font-semibold text-sm text-neutral-900 leading-tight line-clamp-2">{{ product.name }}</div>
-                <div class="text-xs text-neutral-400 mt-0.5">{{ getProductVariants(product).length }} variants</div>
+            <!-- Product with variants — tapping opens the variant picker -->
+            <button
+              v-else
+              @click="openVariantPicker(product)"
+              class="bg-white rounded-xl border border-neutral-200 p-3 text-left hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group relative"
+            >
+              <div
+                v-if="product.image"
+                class="w-full aspect-square rounded-lg bg-cover bg-center mb-2"
+                :style="{ backgroundImage: `url(${product.image})` }"
+              />
+              <div
+                v-else
+                class="w-full aspect-square rounded-lg bg-neutral-100 flex items-center justify-center mb-2 group-hover:bg-blue-50 transition-colors"
+              >
+                <i class="pi pi-box text-2xl text-neutral-300 group-hover:text-blue-400 transition-colors"></i>
               </div>
-              <div class="border-t border-neutral-100">
-                <button
-                  v-for="variant in getProductVariants(product)"
-                  :key="variant.id"
-                  @click="handleProductSelect(product, variant)"
-                  class="w-full flex justify-between items-center px-3 py-2 text-left hover:bg-neutral-50 cursor-pointer border-b border-neutral-50 last:border-b-0 transition-colors"
-                >
-                  <span class="text-xs text-neutral-700 truncate">{{ variant.name }}</span>
-                  <span class="text-xs font-semibold shrink-0 ml-2" style="color: var(--p-primary-color)">
-                    {{ formatPrice(variant.price_override ?? product.price) }}
-                  </span>
-                </button>
+              <div class="font-semibold text-sm text-neutral-900 leading-tight line-clamp-2">{{ product.name }}</div>
+              <div class="text-xs text-neutral-400 mt-0.5 truncate" v-if="product.sku">{{ product.sku }}</div>
+              <div class="font-bold text-sm mt-1.5" style="color: var(--p-primary-color)">
+                {{ formatPrice(product.price) }}
               </div>
-            </div>
+              <div class="mt-1 flex items-center gap-1 text-[10px] font-semibold" style="color: var(--p-primary-color)">
+                <i class="pi pi-sliders-h text-[10px]"></i>
+                {{ getProductVariants(product).length }} options
+              </div>
+            </button>
           </template>
         </div>
 
@@ -266,4 +299,11 @@ async function enrichWithVariants(products: Product[]): Promise<Product[]> {
       </div>
     </div>
   </Dialog>
+
+  <VariantSelectDialog
+    v-model:visible="showVariantPicker"
+    :product="variantPickerProduct"
+    :variants="variantPickerProduct ? getProductVariants(variantPickerProduct) : []"
+    @select="handleVariantSelect"
+  />
 </template>

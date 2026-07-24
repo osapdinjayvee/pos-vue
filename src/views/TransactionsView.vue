@@ -22,6 +22,8 @@ import { toLocalDateStr } from '@/utils/dateHelpers'
 import { transactionItemRepository } from '@/repositories/transactionItemRepository'
 import { paymentRepository } from '@/repositories/paymentRepository'
 import { useTransactionStore } from '@/stores/transaction'
+import { useReceiptPreview } from '@/composables/useReceiptPreview'
+import ReceiptPreviewDialog from '@/components/pos/ReceiptPreviewDialog.vue'
 import { vatService } from '@/services/vatService'
 import { PaymentMethodLabels } from '@/types/payment'
 import type { Transaction, TransactionItem } from '@/types/transaction'
@@ -31,6 +33,7 @@ const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const transactionStore = useTransactionStore()
+const receiptPreview = useReceiptPreview()
 
 // Date range filter — use start of today (midnight) to avoid timezone display issues
 const today = new Date()
@@ -206,7 +209,7 @@ async function handleReprint(tx: Transaction) {
 }
 
 async function handlePreview(tx: Transaction) {
-  await transactionStore.previewReceipt(tx.id)
+  await receiptPreview.open(tx.id)
 }
 
 // Void flow
@@ -271,6 +274,13 @@ onMounted(() => {
   <div class="transactions-page">
     <Toast />
     <ConfirmDialog />
+
+    <ReceiptPreviewDialog
+      v-model:visible="receiptPreview.visible.value"
+      :text="receiptPreview.text.value"
+      :loading="receiptPreview.loading.value"
+      @print="receiptPreview.print"
+    />
 
     <div class="view-header">
       <div class="header-left">

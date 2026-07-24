@@ -13,6 +13,7 @@ import { useEIS } from '@/composables/useEIS'
 import { eisSubmissionRepository } from '@/repositories/eisSubmissionRepository'
 import type { EISSubmission, EISSubmissionStatus } from '@/types/eis'
 import { toLocalDateStr } from '@/utils/dateHelpers'
+import { saveCsvFile } from '@/utils/fileDownload'
 
 const toast = useToast()
 const {
@@ -103,13 +104,13 @@ async function handleExport() {
     [s.or_number, s.created_at, s.status, s.bir_reference || '', s.attempts].join(',')
   )
   const csv = [headers.join(','), ...rows].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `eis-submissions-${toLocalDateStr()}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  const result = await saveCsvFile(csv, `eis-submissions-${toLocalDateStr()}`)
+
+  if (!result.success) {
+    toast.add({ severity: 'error', summary: 'Export Failed', detail: result.error || 'Could not save the CSV file.', life: 4000 })
+    return
+  }
+
   toast.add({ severity: 'success', summary: 'Exported', detail: `${filteredSubmissions.value.length} rows.`, life: 3000 })
 }
 

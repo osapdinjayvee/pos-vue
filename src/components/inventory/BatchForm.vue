@@ -167,6 +167,7 @@ function generateBatchNumber() {
     v-model:visible="dialogVisible"
     :header="isEditMode ? 'Edit Batch' : 'Add Batch'"
     :style="{ width: '500px' }"
+    :breakpoints="{ '640px': '100vw' }"
     :modal="true"
     :closable="!loading"
   >
@@ -350,5 +351,19 @@ function generateBatchNumber() {
 
 .w-full {
   width: 100%;
+}
+
+/* Date pickers side by side are too cramped to tap accurately on a tablet in
+   portrait, so stack every field below the mobile breakpoint. */
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-form :deep(.p-inputtext),
+  .batch-form :deep(.p-datepicker-input),
+  .batch-form :deep(.p-select) {
+    min-height: 2.75rem;
+  }
 }
 </style>

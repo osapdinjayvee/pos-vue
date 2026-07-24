@@ -13,6 +13,8 @@ import { transactionRepository } from '@/repositories/transactionRepository'
 import { transactionItemRepository } from '@/repositories/transactionItemRepository'
 import { paymentRepository } from '@/repositories/paymentRepository'
 import { useTransactionStore } from '@/stores/transaction'
+import { useReceiptPreview } from '@/composables/useReceiptPreview'
+import ReceiptPreviewDialog from './ReceiptPreviewDialog.vue'
 import { vatService } from '@/services/vatService'
 import { PaymentMethodLabels } from '@/types/payment'
 import type { Transaction, TransactionItem } from '@/types/transaction'
@@ -30,6 +32,7 @@ const emit = defineEmits<{
 }>()
 
 const transactionStore = useTransactionStore()
+const receiptPreview = useReceiptPreview()
 
 // Filter state
 const filterDate = ref<Date>(new Date())
@@ -153,15 +156,14 @@ async function selectTransaction(tx: Transaction) {
 
 async function handleReprint() {
   if (!selectedTx.value) return
-  const result = await transactionStore.printReceipt(selectedTx.value.id)
-  if (!result.success) {
-    // Toast would be nice here but we don't have direct access; the caller handles it
-  }
+  // Delegates to the shared preview composable so print failures (e.g. no
+  // printer configured) surface as a toast instead of being swallowed.
+  await receiptPreview.printFor(selectedTx.value.id)
 }
 
 async function handlePreview() {
   if (!selectedTx.value) return
-  await transactionStore.previewReceipt(selectedTx.value.id)
+  await receiptPreview.open(selectedTx.value.id)
 }
 
 function startVoid() {
@@ -666,6 +668,13 @@ function handleClose() {
       </div>
     </div>
   </Dialog>
+
+  <ReceiptPreviewDialog
+    v-model:visible="receiptPreview.visible.value"
+    :text="receiptPreview.text.value"
+    :loading="receiptPreview.loading.value"
+    @print="receiptPreview.print"
+  />
 </template>
 
 <style scoped>

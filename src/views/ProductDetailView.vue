@@ -20,6 +20,8 @@ import { inventoryService } from '@/services/inventoryService'
 import type { DisplayVariant } from '@/types/inventory'
 import { toDisplayVariant } from '@/types/inventory'
 import VariantList from '@/components/inventory/VariantList.vue'
+import ProductBatchesCard from '@/components/inventory/ProductBatchesCard.vue'
+import ConfirmDialog from 'primevue/confirmdialog'
 
 const route = useRoute()
 const router = useRouter()
@@ -263,10 +265,19 @@ const onMovementRecorded = async (_newStock: number) => {
   await loadVariants(productId)
   stockHistoryRef.value?.refresh()
 }
+
+/**
+ * Adding a batch with an initial quantity records a stock receive, so the
+ * displayed totals and history need the same refresh as a manual movement.
+ */
+const handleBatchesChanged = async () => {
+  await onMovementRecorded(0)
+}
 </script>
 
 <template>
   <Toast />
+  <ConfirmDialog />
   <input
     ref="fileInput"
     type="file"
@@ -411,6 +422,30 @@ const onMovementRecorded = async (_newStock: number) => {
             <div v-else class="empty-history">
               <i class="pi pi-info-circle"></i>
               <span>No stock history available</span>
+            </div>
+          </template>
+        </Card>
+
+        <!-- Batches & Expiry Card -->
+        <Card class="detail-card">
+          <template #title>
+            <div class="card-title">
+              <i class="pi pi-calendar-clock"></i>
+              Batches &amp; Expiry
+            </div>
+          </template>
+          <template #content>
+            <!-- Keyed by variant: useBatches binds its variant id at setup. -->
+            <ProductBatchesCard
+              v-if="defaultVariantId"
+              :key="defaultVariantId"
+              :variant-id="defaultVariantId"
+              :variant-name="product.name"
+              @changed="handleBatchesChanged"
+            />
+            <div v-else class="empty-history">
+              <i class="pi pi-info-circle"></i>
+              <span>Expiry tracking unavailable for this product</span>
             </div>
           </template>
         </Card>

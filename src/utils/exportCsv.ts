@@ -3,6 +3,8 @@
  * Generates and downloads CSV files from data arrays
  */
 
+import { saveCsvFile, type SaveFileResult } from './fileDownload'
+
 export interface ExportColumn {
   field: string
   header: string
@@ -10,16 +12,17 @@ export interface ExportColumn {
 }
 
 /**
- * Export data to CSV file and trigger browser download
+ * Export data to a CSV file and hand it to the user (download on web/desktop,
+ * share sheet on Android — blob downloads no-op inside the WebView).
  * @param data - Array of objects to export
  * @param filename - Name of the file (without .csv extension)
  * @param columns - Column definitions with field, header, and optional formatter
  */
-export function exportToCsv(
+export async function exportToCsv(
   data: any[],
   filename: string,
   columns: ExportColumn[]
-): void {
+): Promise<SaveFileResult> {
   // Generate header row
   const headers = columns.map(c => escapeValue(c.header)).join(',')
 
@@ -35,16 +38,7 @@ export function exportToCsv(
   // Combine headers and rows
   const csv = [headers, ...rows].join('\n')
 
-  // Create blob and trigger download
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `${filename}.csv`
-  link.style.display = 'none'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(link.href)
+  return saveCsvFile(csv, filename)
 }
 
 /**

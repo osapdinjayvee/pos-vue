@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import FileUpload, { type FileUploadSelectEvent } from 'primevue/fileupload'
 import RadioButton from 'primevue/radiobutton'
 import Message from 'primevue/message'
+import { useToast } from 'primevue/usetoast'
 import type { CsvImportConfig } from '@/config/csvImportConfigs'
 import type { ImportMode } from '@/services/csvImportService'
 import { readFileAsText, parseCsv, downloadCsvTemplate } from '@/utils/csvParser'
@@ -15,6 +16,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   next: [data: { headers: string[]; rows: Record<string, string>[]; mode: ImportMode }]
 }>()
+
+const toast = useToast()
 
 const importMode = ref<ImportMode>('create')
 const selectedFile = ref<File | null>(null)
@@ -41,8 +44,23 @@ const onFileSelect = (event: FileUploadSelectEvent) => {
   selectedFile.value = file
 }
 
-const handleDownloadTemplate = () => {
-  downloadCsvTemplate(props.config.fields, props.config.templateFilename)
+const isDownloadingTemplate = ref(false)
+
+const handleDownloadTemplate = async () => {
+  isDownloadingTemplate.value = true
+  try {
+    const result = await downloadCsvTemplate(props.config.fields, props.config.templateFilename)
+    if (!result.success) {
+      toast.add({
+        severity: 'error',
+        summary: 'Download Failed',
+        detail: result.error || 'Could not save the template file.',
+        life: 5000
+      })
+    }
+  } finally {
+    isDownloadingTemplate.value = false
+  }
 }
 
 const handleNext = async () => {
@@ -142,6 +160,7 @@ const handleNext = async () => {
         severity="secondary"
         outlined
         size="small"
+        :loading="isDownloadingTemplate"
         @click="handleDownloadTemplate"
       />
       <span class="text-muted">Download a CSV template with the correct column headers</span>

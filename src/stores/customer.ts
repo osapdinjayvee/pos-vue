@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { customerRepository } from '@/repositories/customerRepository'
+import { customerService } from '@/services/customerService'
 import type { Customer, CustomerInput, CustomerType } from '@/types/order'
 import type { QueryOptions } from '@/repositories/baseRepository'
 
@@ -158,24 +159,49 @@ export const useCustomerStore = defineStore('customer', () => {
     }
   }
 
-  async function remove(id: string): Promise<boolean> {
+  /**
+   * Archive a customer (soft-deactivate). Throws with a user-facing message
+   * when blocked by an outstanding balance, so the view can surface it.
+   */
+  async function archive(id: string): Promise<Customer> {
     isLoading.value = true
     error.value = null
     try {
-      const success = await customerRepository.delete(id)
-      if (success) {
-        customers.value = customers.value.filter(c => c.id !== id)
-        if (currentCustomer.value?.id === id) {
-          currentCustomer.value = null
-        }
-      }
-      return success
+      const updated = await customerService.archiveCustomer(id)
+      applyCustomerUpdate(updated)
+      return updated
     } catch (e: any) {
-      error.value = e.message || 'Failed to delete customer'
-      console.error('Error deleting customer:', e)
-      return false
+      error.value = e.message || 'Failed to archive customer'
+      throw e
     } finally {
       isLoading.value = false
+    }
+  }
+
+  /**
+   * Reactivate an archived customer.
+   */
+  async function reactivate(id: string): Promise<Customer> {
+    isLoading.value = true
+    error.value = null
+    try {
+      const updated = await customerService.reactivateCustomer(id)
+      applyCustomerUpdate(updated)
+      return updated
+    } catch (e: any) {
+      error.value = e.message || 'Failed to reactivate customer'
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /** Replace a customer in the loaded list (and current selection) in place. */
+  function applyCustomerUpdate(updated: Customer): void {
+    const idx = customers.value.findIndex(c => c.id === updated.id)
+    if (idx >= 0) customers.value[idx] = updated
+    if (currentCustomer.value?.id === updated.id) {
+      currentCustomer.value = updated
     }
   }
 
@@ -214,7 +240,8 @@ export const useCustomerStore = defineStore('customer', () => {
     fetchById,
     create,
     update,
-    remove,
+    archive,
+    reactivate,
     setFilters,
     clearFilters,
     clearError,

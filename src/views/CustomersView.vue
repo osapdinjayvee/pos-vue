@@ -14,6 +14,7 @@ import CustomerForm from '@/components/customers/CustomerForm.vue'
 import CreditPaymentDialog from '@/components/crm/CreditPaymentDialog.vue'
 import { useCustomerStore } from '@/stores/customer'
 import { creditService } from '@/services/creditService'
+import { formatCurrency } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
 import type { Customer, CustomerInput } from '@/types/order'
 
@@ -77,35 +78,67 @@ async function handleSaveCustomer(data: CustomerInput) {
   }
 }
 
-function handleDeleteCustomer(customer: Customer) {
+function handleArchiveCustomer(customer: Customer) {
+  // Guard the blocked case before the confirm so the user gets the reason
+  // instead of a dialog that then fails.
+  if ((customer.current_balance ?? 0) > 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Outstanding Balance',
+      detail: `${customer.name} still owes ${formatCurrency(customer.current_balance)}. Settle the balance before archiving.`,
+      life: 6000
+    })
+    return
+  }
+
   confirm.require({
-    message: `Are you sure you want to delete "${customer.name}"?`,
-    header: 'Delete Customer',
-    icon: 'pi pi-exclamation-triangle',
+    message: `Archive "${customer.name}"? They will be marked inactive but their history is kept, and you can reactivate them anytime.`,
+    header: 'Archive Customer',
+    icon: 'pi pi-inbox',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptClass: 'p-button-danger',
-    acceptLabel: 'Delete',
+    acceptLabel: 'Archive',
     rejectLabel: 'Cancel',
     accept: async () => {
       try {
-        await customerStore.remove(customer.id)
+        await customerStore.archive(customer.id)
         toast.add({
           severity: 'success',
-          summary: 'Success',
-          detail: 'Customer deleted successfully',
+          summary: 'Archived',
+          detail: `${customer.name} has been archived.`,
           life: 3000
         })
         customerListRef.value?.loadCustomers()
       } catch (error) {
         toast.add({
           severity: 'error',
-          summary: 'Error',
-          detail: error instanceof Error ? error.message : 'Failed to delete customer',
+          summary: 'Could Not Archive',
+          detail: error instanceof Error ? error.message : 'Failed to archive customer',
           life: 5000
         })
       }
     }
   })
+}
+
+async function handleReactivateCustomer(customer: Customer) {
+  try {
+    await customerStore.reactivate(customer.id)
+    toast.add({
+      severity: 'success',
+      summary: 'Reactivated',
+      detail: `${customer.name} is active again.`,
+      life: 3000
+    })
+    customerListRef.value?.loadCustomers()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Could Not Reactivate',
+      detail: error instanceof Error ? error.message : 'Failed to reactivate customer',
+      life: 5000
+    })
+  }
 }
 
 function handleViewCustomer(customer: Customer) {
@@ -175,7 +208,8 @@ async function handleCreditPayment(data: { amount: number; paymentMethod: string
         :search="searchQuery"
         @add="handleAddCustomer"
         @edit="handleEditCustomer"
-        @delete="handleDeleteCustomer"
+        @archive="handleArchiveCustomer"
+        @reactivate="handleReactivateCustomer"
         @view="handleViewCustomer"
         @pay="handlePayCustomer"
       />

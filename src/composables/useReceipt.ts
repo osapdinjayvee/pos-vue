@@ -117,11 +117,11 @@ export function useReceipt() {
     }
   }
 
-  // Preview receipt
+  // Preview receipt — returns the rendered text for an in-app preview dialog
   async function previewReceipt(
     transactionId: string,
     cashierName: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; text?: string; error?: string }> {
     try {
       return await receiptService.previewReceipt(transactionId, {
         cashierName

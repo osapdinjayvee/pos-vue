@@ -141,15 +141,25 @@ async function handleDeleteSaved(id: string) {
 /**
  * Export current report results to CSV.
  */
-function handleExportCsv() {
+async function handleExportCsv() {
   if (!reportResult.value || !reportResult.value.data.length) return
 
   const filename = `custom-report-${toLocalDateStr()}`
-  reportExportService.exportToCsv(
+  const result = await reportExportService.exportToCsv(
     reportResult.value.data,
     reportResult.value.columns,
     filename
   )
+
+  if (!result.success) {
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: result.error || 'Could not save the CSV file.',
+      life: 5000
+    })
+    return
+  }
 
   toast.add({
     severity: 'success',

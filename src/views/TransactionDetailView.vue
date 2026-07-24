@@ -10,6 +10,8 @@ import { transactionRepository } from '@/repositories/transactionRepository'
 import { transactionItemRepository } from '@/repositories/transactionItemRepository'
 import { paymentRepository } from '@/repositories/paymentRepository'
 import { useTransactionStore } from '@/stores/transaction'
+import { useReceiptPreview } from '@/composables/useReceiptPreview'
+import ReceiptPreviewDialog from '@/components/pos/ReceiptPreviewDialog.vue'
 import { vatService } from '@/services/vatService'
 import { PaymentMethodLabels } from '@/types/payment'
 import type { Transaction, TransactionItem } from '@/types/transaction'
@@ -19,6 +21,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const transactionStore = useTransactionStore()
+const receiptPreview = useReceiptPreview()
 
 const transaction = ref<Transaction | null>(null)
 const items = ref<Array<TransactionItem & { product_name: string; variant_name?: string }>>([])
@@ -121,7 +124,7 @@ async function handleReprint() {
 
 async function handlePreview() {
   if (!transaction.value) return
-  await transactionStore.previewReceipt(transaction.value.id)
+  await receiptPreview.open(transaction.value.id)
 }
 
 // Load data
@@ -153,6 +156,13 @@ onMounted(async () => {
 
 <template>
   <Toast />
+
+  <ReceiptPreviewDialog
+    v-model:visible="receiptPreview.visible.value"
+    :text="receiptPreview.text.value"
+    :loading="receiptPreview.loading.value"
+    @print="receiptPreview.print"
+  />
   <div class="transaction-detail-page" v-if="!isLoading && transaction">
     <!-- Header -->
     <div class="detail-page-header">

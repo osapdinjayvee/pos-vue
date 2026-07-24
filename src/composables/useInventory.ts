@@ -1,6 +1,6 @@
 // useInventory composable - Inventory management utilities
 import { ref, computed } from 'vue'
-import { inventoryService } from '@/services/inventoryService'
+import { inventoryService, type ReceiveStockOptions } from '@/services/inventoryService'
 import type { DisplayStockMovement, DisplayStockAlert, MovementType } from '@/types/inventory'
 
 export function useInventory() {
@@ -26,14 +26,7 @@ export function useInventory() {
   async function receiveStock(
     variantId: string,
     quantity: number,
-    options?: {
-      batchId?: string
-      unitCost?: number
-      reason?: string
-      userId?: string
-      terminalId?: string
-      branchId?: string
-    }
+    options?: ReceiveStockOptions
   ) {
     isLoading.value = true
     error.value = null

@@ -39,8 +39,12 @@ export function useCustomers() {
     return store.update(id, data)
   }
 
-  async function deleteCustomer(id: string) {
-    return store.remove(id)
+  async function archiveCustomer(id: string) {
+    return store.archive(id)
+  }
+
+  async function reactivateCustomer(id: string) {
+    return store.reactivate(id)
   }
 
   async function fetchCustomerDetail(id: string) {
@@ -120,7 +124,8 @@ export function useCustomers() {
     getCustomer,
     createCustomer,
     updateCustomer,
-    deleteCustomer,
+    archiveCustomer,
+    reactivateCustomer,
     fetchCustomerDetail,
     fetchCustomerHistory,
 

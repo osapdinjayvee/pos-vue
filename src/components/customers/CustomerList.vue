@@ -15,7 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   add: []
   edit: [customer: Customer]
-  delete: [customer: Customer]
+  archive: [customer: Customer]
+  reactivate: [customer: Customer]
   view: [customer: Customer]
   pay: [customer: Customer]
 }>()
@@ -49,8 +50,8 @@ async function loadCustomers() {
   }
 }
 
-function handleDelete(customer: Customer) {
-  emit('delete', customer)
+function isActive(customer: Customer): boolean {
+  return customer.is_active === 1
 }
 
 function getTypeSeverity(type: CustomerType): string {
@@ -173,14 +174,27 @@ defineExpose({ loadCustomers })
               @click="emit('edit', data)"
               v-tooltip="'Edit'"
             />
+            <!-- Archive replaces delete: customers are soft-deactivated, never
+                 hard-deleted, since sales history references them. -->
             <Button
-              icon="pi pi-trash"
+              v-if="isActive(data)"
+              icon="pi pi-inbox"
               text
               rounded
               severity="danger"
               size="small"
-              @click="handleDelete(data)"
-              v-tooltip="'Delete'"
+              @click="emit('archive', data)"
+              v-tooltip="'Archive'"
+            />
+            <Button
+              v-else
+              icon="pi pi-replay"
+              text
+              rounded
+              severity="success"
+              size="small"
+              @click="emit('reactivate', data)"
+              v-tooltip="'Reactivate'"
             />
           </div>
         </template>

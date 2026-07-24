@@ -127,7 +127,7 @@ function getQuantityClass(quantity: number): string {
   return quantity > 0 ? 'qty-positive' : 'qty-negative'
 }
 
-function handleExport() {
+async function handleExport() {
   const columns: ExportColumn[] = [
     { field: 'createdAt', header: 'Date', formatter: (v) => formatDate(v) },
     { field: 'productName', header: 'Product' },
@@ -140,7 +140,16 @@ function handleExport() {
   ]
 
   const dateStr = toLocalDateStr()
-  exportToCsv(movements.value, `stock-movements-${dateStr}`, columns)
+  const result = await exportToCsv(movements.value, `stock-movements-${dateStr}`, columns)
+  if (!result.success) {
+    toast.add({
+      severity: 'error',
+      summary: 'Export Failed',
+      detail: result.error || 'Could not save the CSV file.',
+      life: 5000
+    })
+    return
+  }
 
   toast.add({
     severity: 'success',

@@ -3,6 +3,8 @@
  * Functions for formatting report data for display and export
  */
 
+import { saveCsvFile, type SaveFileResult } from './fileDownload'
+
 // =====================
 // Currency Formatting
 // =====================
@@ -317,18 +319,10 @@ export function toCSV<T extends Record<string, unknown>>(
 }
 
 /**
- * Download CSV file
+ * Download CSV file (share sheet on Android, blob download elsewhere)
  */
-export function downloadCSV(content: string, filename: string): void {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename.endsWith('.csv') ? filename : `${filename}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+export async function downloadCSV(content: string, filename: string): Promise<SaveFileResult> {
+  return saveCsvFile(content, filename)
 }
 
 // =====================

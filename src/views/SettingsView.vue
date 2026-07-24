@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -24,6 +24,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import EISConfigForm from '@/components/eis/EISConfigForm.vue'
 import { useEIS } from '@/composables/useEIS'
 import { usePrinter } from '@/composables/usePrinter'
+import { saveBinaryFile } from '@/utils/fileDownload'
 import { useSettingsStore } from '@/stores/settings'
 import { useSettings } from '@/composables/useSettings'
 import { testConnection } from '@/services/eisConnectionTestService'
@@ -327,12 +328,22 @@ const printerSettings = ref({
   cashDrawerPin: 2
 })
 
-const connectionTypes = [
-  { label: 'USB', value: 'usb', icon: 'pi pi-desktop' },
-  { label: 'Network (IP)', value: 'network', icon: 'pi pi-wifi' },
-  { label: 'Bluetooth', value: 'bluetooth', icon: 'pi pi-bluetooth' },
-  { label: 'Serial (COM)', value: 'serial', icon: 'pi pi-server' }
-]
+// Bluetooth is the only transport implemented on the mobile build — printerService
+// talks to the native Bluetooth serial plugin and there is no USB/network/serial
+// path. Offering the others on the tablet just lets the user pick a connection
+// type that can never print, which is how receipts silently failed while the
+// Settings test print (which bypasses this config) kept working.
+const connectionTypes = computed(() => {
+  if (printerIsNative.value) {
+    return [{ label: 'Bluetooth', value: 'bluetooth', icon: 'pi pi-bluetooth' }]
+  }
+  return [
+    { label: 'USB', value: 'usb', icon: 'pi pi-desktop' },
+    { label: 'Network (IP)', value: 'network', icon: 'pi pi-wifi' },
+    { label: 'Bluetooth', value: 'bluetooth', icon: 'pi pi-bluetooth' },
+    { label: 'Serial (COM)', value: 'serial', icon: 'pi pi-server' }
+  ]
+})
 
 const baudRateOptions = [
   { label: '9600', value: 9600 },
@@ -377,6 +388,10 @@ const testPrinterConnection = async () => {
     const ok = await btConnect(device)
     printerSettings.value.isConnected = ok
     if (ok) {
+      // Repair configs saved before the connection type was written through.
+      printerSettings.value.connectionType = 'bluetooth'
+      printerSettings.value.printerName = device.name
+      await persistPrinterSelection()
       toast.add({ severity: 'success', summary: 'Connected', detail: `Connected to ${device.name}`, life: 3000 })
     } else {
       toast.add({ severity: 'error', summary: 'Failed', detail: btError.value || 'Could not connect to printer.', life: 3000 })
@@ -426,13 +441,29 @@ const handleBluetoothScan = async () => {
 
 const handleBluetoothConnect = async (device: { name: string; address: string; id: string }) => {
   const ok = await btConnect(device)
-  if (ok) {
-    printerSettings.value.bluetoothDevice = device.address
-    printerSettings.value.printerName = device.name
-    printerSettings.value.isConnected = true
-    toast.add({ severity: 'success', summary: 'Connected', detail: `Connected to ${device.name}`, life: 3000 })
-  } else {
+  if (!ok) {
     toast.add({ severity: 'error', summary: 'Failed', detail: btError.value || 'Could not connect.', life: 3000 })
+    return
+  }
+
+  printerSettings.value.bluetoothDevice = device.address
+  printerSettings.value.printerName = device.name
+  printerSettings.value.isConnected = true
+  // Selecting a Bluetooth printer implies this is the transport to use.
+  printerSettings.value.connectionType = 'bluetooth'
+
+  // Write it through now — a connection the user never saved would not be used
+  // for actual receipts, only for the test print.
+  const saved = await persistPrinterSelection()
+  if (saved) {
+    toast.add({ severity: 'success', summary: 'Connected', detail: `${device.name} connected and set as the receipt printer.`, life: 3000 })
+  } else {
+    toast.add({
+      severity: 'warn',
+      summary: 'Connected, Not Saved',
+      detail: `Connected to ${device.name}, but the setting could not be saved. Press Save Settings to retry.`,
+      life: 6000
+    })
   }
 }
 
@@ -657,7 +688,10 @@ function hydrateFromDB() {
       printDuplicate: rcpt.print_duplicate === 1
     }
     printerSettings.value = {
-      connectionType: rcpt.connection_type,
+      // The stored default is 'usb', which cannot print on the mobile build.
+      // Present Bluetooth instead so the user lands on the only panel that works
+      // (persisted once they actually connect a printer).
+      connectionType: printerIsNative.value ? 'bluetooth' : rcpt.connection_type,
       printerName: rcpt.printer_name,
       ipAddress: rcpt.ip_address,
       port: rcpt.port,
@@ -791,33 +825,52 @@ const saveTaxSettings = async () => {
   }
 }
 
+const buildReceiptPayload = () => ({
+  header_line1: receiptSettings.value.headerLine1,
+  header_line2: receiptSettings.value.headerLine2,
+  header_line3: receiptSettings.value.headerLine3,
+  footer_line1: receiptSettings.value.footerLine1,
+  footer_line2: receiptSettings.value.footerLine2,
+  show_logo: receiptSettings.value.showLogo,
+  paper_width: receiptSettings.value.paperWidth,
+  font_size: receiptSettings.value.fontSize,
+  print_duplicate: receiptSettings.value.printDuplicate,
+  printer_name: printerSettings.value.printerName,
+  connection_type: printerSettings.value.connectionType,
+  ip_address: printerSettings.value.ipAddress,
+  port: printerSettings.value.port,
+  usb_device: printerSettings.value.usbDevice,
+  bluetooth_device: printerSettings.value.bluetoothDevice,
+  serial_port: printerSettings.value.serialPort,
+  baud_rate: printerSettings.value.baudRate,
+  auto_cut: printerSettings.value.autoCut,
+  open_cash_drawer: printerSettings.value.openCashDrawer,
+  cash_drawer_pin: printerSettings.value.cashDrawerPin
+})
+
 const saveReceiptSettings = async () => {
   try {
-    await saveReceipt({
-      header_line1: receiptSettings.value.headerLine1,
-      header_line2: receiptSettings.value.headerLine2,
-      header_line3: receiptSettings.value.headerLine3,
-      footer_line1: receiptSettings.value.footerLine1,
-      footer_line2: receiptSettings.value.footerLine2,
-      show_logo: receiptSettings.value.showLogo,
-      paper_width: receiptSettings.value.paperWidth,
-      font_size: receiptSettings.value.fontSize,
-      print_duplicate: receiptSettings.value.printDuplicate,
-      printer_name: printerSettings.value.printerName,
-      connection_type: printerSettings.value.connectionType,
-      ip_address: printerSettings.value.ipAddress,
-      port: printerSettings.value.port,
-      usb_device: printerSettings.value.usbDevice,
-      bluetooth_device: printerSettings.value.bluetoothDevice,
-      serial_port: printerSettings.value.serialPort,
-      baud_rate: printerSettings.value.baudRate,
-      auto_cut: printerSettings.value.autoCut,
-      open_cash_drawer: printerSettings.value.openCashDrawer,
-      cash_drawer_pin: printerSettings.value.cashDrawerPin
-    })
+    await saveReceipt(buildReceiptPayload())
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Receipt & printer settings saved.', life: 3000 })
   } catch {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save receipt settings.', life: 3000 })
+  }
+}
+
+/**
+ * Persist the printer selection without the generic "settings saved" toast.
+ *
+ * Connecting a printer used to update local refs only, so unless the user also
+ * remembered to press Save, receiptService never saw connection_type
+ * ('usb' by default) or bluetooth_device — and every receipt silently took the
+ * non-Bluetooth path. Connecting now writes the selection through immediately.
+ */
+const persistPrinterSelection = async (): Promise<boolean> => {
+  try {
+    await saveReceipt(buildReceiptPayload())
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -895,17 +948,18 @@ async function exportBackup() {
     const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
     const filename = `zoomin-pos-backup-${stamp}.db`
 
-    const blob = new Blob([data as BlobPart], { type: 'application/x-sqlite3' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const result = await saveBinaryFile(data, filename, 'application/x-sqlite3')
+    if (!result.success) {
+      toast.add({ severity: 'error', summary: 'Backup Failed', detail: result.error || 'Could not save the backup file.', life: 5000 })
+      return
+    }
 
-    toast.add({ severity: 'success', summary: 'Backup Saved', detail: `Downloaded ${filename}`, life: 4000 })
+    toast.add({
+      severity: 'success',
+      summary: 'Backup Saved',
+      detail: result.method === 'share' ? `Backup ready: ${filename}` : `Downloaded ${filename}`,
+      life: 4000
+    })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Backup Failed', detail: e?.message || 'Unexpected error.', life: 5000 })
   } finally {

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
 import { customerRepository } from '@/repositories/customerRepository'
+import { saveCsvFile } from '@/utils/fileDownload'
 import type { Customer } from '@/types/order'
 
 interface Props {
@@ -68,17 +69,8 @@ function generateFilename(): string {
   return `customers_export_${yyyy}-${mm}-${dd}.csv`
 }
 
-function downloadCsv(csvContent: string, filename: string): void {
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.style.display = 'none'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+function downloadCsv(csvContent: string, filename: string) {
+  return saveCsvFile(csvContent, filename)
 }
 
 async function handleExport(): Promise<void> {
@@ -99,7 +91,17 @@ async function handleExport(): Promise<void> {
 
     const csvContent = buildCsvContent(customers)
     const filename = generateFilename()
-    downloadCsv(csvContent, filename)
+    const result = await downloadCsv(csvContent, filename)
+
+    if (!result.success) {
+      toast.add({
+        severity: 'error',
+        summary: 'Export Failed',
+        detail: result.error || 'Could not save the CSV file.',
+        life: 4000
+      })
+      return
+    }
 
     toast.add({
       severity: 'success',

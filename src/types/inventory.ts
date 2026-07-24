@@ -1,5 +1,7 @@
 // Inventory-related TypeScript type definitions
 
+import { daysFromToday } from '@/utils/dateHelpers'
+
 // Movement types
 export type MovementType = 'receive' | 'sale' | 'adjustment' | 'transfer_in' | 'transfer_out' | 'return' | 'void' | 'void_restore'
 
@@ -102,11 +104,13 @@ export interface Batch {
 export interface BatchInput {
   variant_id: string
   batch_number: string
-  expiry_date?: string
-  manufacture_date?: string
+  // Nullable in the schema: `null` clears the value on update, `undefined`
+  // leaves it untouched. Without the null the UI cannot remove an expiry date.
+  expiry_date?: string | null
+  manufacture_date?: string | null
   received_date: string
-  supplier_id?: string
-  notes?: string
+  supplier_id?: string | null
+  notes?: string | null
 }
 
 // Display-friendly batch
@@ -262,16 +266,14 @@ export function toDisplayVariant(variant: ProductVariant, currentStock: number =
 }
 
 export function toDisplayBatch(batch: Batch, currentQuantity: number = 0, supplierName: string | null = null): DisplayBatch {
-  const expiryDate = batch.expiry_date ? new Date(batch.expiry_date) : null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
   let daysUntilExpiry: number | null = null
   let isExpired = false
 
-  if (expiryDate) {
-    const diffTime = expiryDate.getTime() - today.getTime()
-    daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  if (batch.expiry_date) {
+    // Via daysFromToday so the date column is read as local midnight — parsing
+    // it with `new Date()` treats it as UTC and reports an extra day east of
+    // Greenwich, which would mislabel a batch expiring today.
+    daysUntilExpiry = daysFromToday(batch.expiry_date)
     isExpired = daysUntilExpiry < 0
   }
 
